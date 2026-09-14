@@ -39,12 +39,17 @@ Demo login after seeding: **`tide_demo` / `password123`**
 
 1. Push this repo to GitHub.
 2. Import the project in [Vercel](https://vercel.com/new).
-3. Add the **Neon** integration (or paste env vars manually):
-   - `DATABASE_URL` — pooled connection string
-   - `DATABASE_URL_UNPOOLED` — direct connection string (for migrations)
-4. Deploy. The build runs `prisma migrate deploy`, seeds the demo user, then `next build`.
+3. Connect a database (pick one):
+   - **Neon integration** in Vercel → Storage / Marketplace, **or**
+   - Paste env vars from the [Neon console](https://console.neon.tech) under **Settings → Environment Variables**
+4. Ensure these are set for **Production** and **Preview** (empty values count as missing):
+   - `DATABASE_URL` — Neon **pooled** connection string  
+     *(or `POSTGRES_URL` / `POSTGRES_PRISMA_URL` from Vercel Postgres)*
+   - `DATABASE_URL_UNPOOLED` — Neon **direct** connection string  
+     *(or `POSTGRES_URL_NON_POOLING`)*
+5. Redeploy. The build runs `prisma migrate deploy`, seeds the demo user, then `next build`.
 
-Production URL will look like `https://tidework-task-manager.vercel.app` (depends on your project name).
+If the build says the connection URL is empty, the env vars were not applied to that environment — open the failed deployment → **Environment**, confirm `DATABASE_URL` is present, then **Redeploy**.
 
 ## Scripts
 

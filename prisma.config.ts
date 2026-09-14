@@ -1,17 +1,15 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
+import { getMigrationDatabaseUrl } from "./src/lib/db-url";
 
-const migrationUrl =
-  process.env.DATABASE_URL_UNPOOLED ??
-  process.env.DATABASE_URL ??
-  "postgresql://localhost:5432/tidework";
-
+// Prefer unpooled / direct URL for migrate deploy on Neon.
+// Leave undefined during `prisma generate` (postinstall) when env isn't set yet.
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
   },
   datasource: {
-    url: migrationUrl,
+    url: getMigrationDatabaseUrl(),
   },
 });

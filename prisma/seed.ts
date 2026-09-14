@@ -2,13 +2,10 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { getDatabaseUrl } from "../src/lib/db-url";
 
 async function main() {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    throw new Error("DATABASE_URL is required to seed");
-  }
-
+  const connectionString = getDatabaseUrl();
   const prisma = new PrismaClient({
     adapter: new PrismaNeon({ connectionString }),
   });
