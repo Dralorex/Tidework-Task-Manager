@@ -23,6 +23,7 @@ export default async function ProfilePage() {
           className="flex flex-col gap-4"
           action={updateProfileAction}
           submitLabel="Save profile"
+          successMessage="Profile saved."
         >
           <label className="block text-sm text-[#0A3D45]">
             <span className="mb-1 block font-medium">Username</span>
