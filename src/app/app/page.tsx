@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { AppNav } from "@/app/components/app-nav";
 import { InlineActionForm } from "@/app/components/forms";
 import { createWorkspaceAction } from "@/app/actions/workspaces";
 import { getCurrentUser } from "@/lib/auth";
@@ -23,9 +22,7 @@ export default async function AppHomePage() {
   });
 
   return (
-    <div className="tide-wave-bg min-h-screen">
-      <AppNav username={user.username} active="home" />
-      <main className="mx-auto max-w-6xl px-4 py-10">
+    <main className="mx-auto max-w-6xl px-4 py-10">
         <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
           <div className="animate-tide-rise">
             <h1 className="font-[family-name:var(--font-display)] text-4xl text-[#0A3D45] sm:text-5xl">
@@ -80,20 +77,29 @@ export default async function AppHomePage() {
 
         {notifications.length > 0 ? (
           <section className="mt-12">
-            <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
-              Incoming
-            </h2>
+            <div className="flex items-end justify-between gap-3">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
+                Incoming
+              </h2>
+              <Link
+                href="/app/notifications"
+                className="text-sm font-semibold text-[#0A3D45] underline-offset-2 hover:underline"
+              >
+                View all
+              </Link>
+            </div>
             <ul className="mt-4 space-y-2">
               {notifications.map((n) => (
                 <li key={n.id} className="tide-panel px-4 py-3 text-sm">
-                  <span className="font-semibold text-[#0A3D45]">{n.title}</span>
-                  <span className="text-[#0A3D45]/70"> — {n.body}</span>
+                  <Link href="/app/notifications" className="block">
+                    <span className="font-semibold text-[#0A3D45]">{n.title}</span>
+                    <span className="text-[#0A3D45]/70"> — {n.body}</span>
+                  </Link>
                 </li>
               ))}
             </ul>
           </section>
         ) : null}
       </main>
-    </div>
   );
 }

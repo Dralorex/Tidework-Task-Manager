@@ -4,9 +4,14 @@ import { signUpAction } from "@/app/actions/auth";
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
-export default async function SignUpPage() {
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
   const user = await getCurrentUser();
-  if (user) redirect("/app");
+  const { next } = await searchParams;
+  if (user) redirect(next?.startsWith("/") && !next.startsWith("//") ? next : "/app");
 
   return (
     <main className="tide-wave-bg flex min-h-screen items-center justify-center px-4 py-12">
@@ -26,6 +31,7 @@ export default async function SignUpPage() {
 
         <div className="mt-6">
           <AuthForm action={signUpAction} submitLabel="Create account">
+            {next ? <input type="hidden" name="next" value={next} /> : null}
             <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">
               Username
               <input
@@ -68,7 +74,10 @@ export default async function SignUpPage() {
 
         <p className="mt-6 text-center text-sm text-[#0A3D45]/70">
           Already aboard?{" "}
-          <Link href="/login" className="font-semibold text-[#0A3D45] underline-offset-2 hover:underline">
+          <Link
+            href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
+            className="font-semibold text-[#0A3D45] underline-offset-2 hover:underline"
+          >
             Sign in
           </Link>
         </p>
