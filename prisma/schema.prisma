@@ -55,6 +55,13 @@ model User {
   passwordHash String
   email        String?  @unique
   nickname     String?
+  /** Month-day birthday (year ignored for display). Stored as UTC noon on that month/day in a fixed year. */
+  birthday              DateTime?
+  shareBirthdayFriends  Boolean  @default(false)
+  shareBirthdayWorkspaces Boolean @default(false)
+  /** Always prompt before sharing birthday with a new friend/workspace. */
+  askBeforeShareBirthday Boolean @default(true)
+  showBirthdaysOnCalendar Boolean @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -70,6 +77,12 @@ model User {
   privateTags           Tag[]                @relation("TagCreator")
   rememberedPrivateTags RememberedPrivateTag[]
   calendarEvents        CalendarEvent[]
+  personalEvents        PersonalCalendarEvent[]
+  workspaceEventsCreated WorkspaceCalendarEvent[] @relation("WorkspaceEventCreator")
+  calendarWorkspaceFilters CalendarWorkspaceFilter[]
+  birthdaySharesGiven   BirthdayShare[]      @relation("BirthdayShareOwner")
+  birthdaySharesReceived BirthdayShare[]     @relation("BirthdayShareViewer")
+  workspaceBirthdayRequests WorkspaceBirthdayRequest[] @relation("BirthdayRequestSubject")
   friendshipsRequested  Friendship[]         @relation("FriendshipRequester")
   friendshipsReceived   Friendship[]         @relation("FriendshipAddressee")
   chatMemberships       ChatMember[]
@@ -131,6 +144,9 @@ model Workspace {
   tasks       Task[]
   tags        Tag[]
   chatGroups  ChatGroup[]
+  calendarEvents WorkspaceCalendarEvent[]
+  birthdayRequests WorkspaceBirthdayRequest[]
+  calendarFilters CalendarWorkspaceFilter[]
 
   @@index([ownerId])
 }
@@ -261,6 +277,7 @@ model RememberedPrivateTag {
   @@index([taskId])
 }
 
+/** Synced claimed-task due markers on a member’s personal calendar. */
 model CalendarEvent {
   id        String   @id @default(cuid())
   userId    String
@@ -275,6 +292,96 @@ model CalendarEvent {
 
   @@unique([userId, taskId])
   @@index([userId, dueDate])
+}
+
+/** Freeform events on a user’s private calendar. */
+model PersonalCalendarEvent {
+  id          String    @id @default(cuid())
+  userId      String
+  title       String
+  description String    @default("")
+  date        DateTime
+  allDay      Boolean   @default(true)
+  startAt     DateTime?
+  endAt       DateTime?
+  hidden      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+/** Freeform events on a workspace calendar (Editor+ can create). */
+model WorkspaceCalendarEvent {
+  id          String    @id @default(cuid())
+  workspaceId String
+  createdById String
+  title       String
+  description String    @default("")
+  date        DateTime
+  allDay      Boolean   @default(true)
+  startAt     DateTime?
+  endAt       DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation("WorkspaceEventCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, date])
+}
+
+/** Which workspaces’ claimed tasks appear on the personal calendar. */
+model CalendarWorkspaceFilter {
+  userId      String
+  workspaceId String
+  enabled     Boolean  @default(true)
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@id([userId, workspaceId])
+}
+
+enum BirthdayShareStatus {
+  PENDING
+  ACTIVE
+  DECLINED
+  HIDDEN
+}
+
+/** Friend can see this user’s birthday on their personal calendar. */
+model BirthdayShare {
+  id        String              @id @default(cuid())
+  ownerId   String
+  viewerId  String
+  status    BirthdayShareStatus @default(PENDING)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  owner  User @relation("BirthdayShareOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  viewer User @relation("BirthdayShareViewer", fields: [viewerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, viewerId])
+  @@index([viewerId])
+}
+
+/** Owner must approve adding a member’s birthday to the workspace calendar. */
+model WorkspaceBirthdayRequest {
+  id          String              @id @default(cuid())
+  workspaceId String
+  subjectId   String
+  status      BirthdayShareStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  subject   User      @relation("BirthdayRequestSubject", fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, subjectId])
+  @@index([workspaceId])
 }
 
 model Friendship {
