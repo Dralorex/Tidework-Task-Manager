@@ -165,6 +165,94 @@ export async function claimTaskAction(
       assigneeId: user.id,
       status: "CLAIMED",
       claimedAt: new Date(),
+      lastUnclaimReason: null,
+      lastUnclaimWorkNote: null,
+      lastUnclaimedById: null,
+    },
+  });
+
+  // Restore this user's remembered private tags for this task.
+  const remembered = await prisma.rememberedPrivateTag.findMany({
+    where: { userId: user.id, taskId },
+  });
+  if (remembered.length > 0) {
+    await prisma.taskTag.createMany({
+      data: remembered.map((r) => ({ taskId: r.taskId, tagId: r.tagId })),
+      skipDuplicates: true,
+    });
+    await prisma.rememberedPrivateTag.deleteMany({
+      where: { userId: user.id, taskId },
+    });
+  }
+
+  await syncCalendarForTask(taskId);
+  revalidatePath(`/app/w/${workspaceId}`);
+  revalidatePath("/app", "layout");
+  return { ok: true };
+}
+
+export async function unclaimTaskAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const taskId = String(formData.get("taskId") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+  const workNote = String(formData.get("workNote") ?? "").trim();
+  await requireMembership(workspaceId, user.id);
+
+  if (!reason) {
+    return { ok: false, error: "Say why you’re unclaiming this task." };
+  }
+
+  const task = await prisma.task.findFirst({
+    where: { id: taskId, workspaceId },
+    include: {
+      tags: { include: { tag: true } },
+    },
+  });
+  if (!task) return { ok: false, error: "Task not found." };
+  if (task.assigneeId !== user.id) {
+    return { ok: false, error: "Only the assignee can unclaim this task." };
+  }
+  if (task.status === "IN_REVIEW" || task.status === "DONE") {
+    return {
+      ok: false,
+      error: "Finish or wait for review before unclaiming.",
+    };
+  }
+
+  const privateLinks = task.tags.filter(
+    (tt) => !tt.tag.isPublic && tt.tag.creatorId === user.id,
+  );
+
+  if (privateLinks.length > 0) {
+    await prisma.rememberedPrivateTag.createMany({
+      data: privateLinks.map((tt) => ({
+        userId: user.id,
+        taskId,
+        tagId: tt.tagId,
+      })),
+      skipDuplicates: true,
+    });
+    await prisma.taskTag.deleteMany({
+      where: {
+        taskId,
+        tagId: { in: privateLinks.map((tt) => tt.tagId) },
+      },
+    });
+  }
+
+  await prisma.task.update({
+    where: { id: taskId },
+    data: {
+      assigneeId: null,
+      status: "OPEN",
+      claimedAt: null,
+      lastUnclaimReason: reason,
+      lastUnclaimWorkNote: workNote || null,
+      lastUnclaimedById: user.id,
     },
   });
 

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { nanoid } from "nanoid";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { canManagePeople, requireMembership } from "@/lib/permissions";
+import { canManagePeople, isOwnerOnlyAction, requireMembership } from "@/lib/permissions";
 import { isValidEmail, normalizeUsername, personLabel } from "@/lib/utils";
 import type { Role } from "@/generated/prisma/client";
 import type { ActionResult } from "@/app/actions/auth";
@@ -192,5 +192,136 @@ export async function declineInviteAction(
 
   revalidatePath("/app", "layout");
   revalidatePath("/app/notifications");
+  return { ok: true };
+}
+
+export async function renameWorkspaceAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return { ok: false, error: "Workspace needs a name." };
+
+  const membership = await requireMembership(workspaceId, user.id);
+  if (!isOwnerOnlyAction(membership.role)) {
+    return { ok: false, error: "Only the owner can rename this workspace." };
+  }
+
+  await prisma.workspace.update({
+    where: { id: workspaceId },
+    data: { name },
+  });
+
+  revalidatePath("/app");
+  revalidatePath(`/app/w/${workspaceId}`);
+  return { ok: true };
+}
+
+export async function deleteWorkspaceAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const membership = await requireMembership(workspaceId, user.id);
+  if (!isOwnerOnlyAction(membership.role)) {
+    return { ok: false, error: "Only the owner can delete this workspace." };
+  }
+
+  await prisma.workspace.delete({ where: { id: workspaceId } });
+  revalidatePath("/app");
+  return { ok: true, resetUrl: "/app" };
+}
+
+export async function leaveWorkspaceAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const membership = await requireMembership(workspaceId, user.id);
+  if (isOwnerOnlyAction(membership.role)) {
+    return {
+      ok: false,
+      error: "Owners can’t leave — transfer ownership or delete the workspace.",
+    };
+  }
+
+  await prisma.membership.delete({ where: { id: membership.id } });
+  revalidatePath("/app");
+  revalidatePath(`/app/w/${workspaceId}`);
+  return { ok: true, resetUrl: "/app" };
+}
+
+export async function updateMemberRoleAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const memberUserId = String(formData.get("memberUserId") ?? "");
+  const role = String(formData.get("role") ?? "") as Role;
+
+  const membership = await requireMembership(workspaceId, user.id);
+  if (!isOwnerOnlyAction(membership.role)) {
+    return { ok: false, error: "Only the owner can change member roles." };
+  }
+  if (!["ADMIN", "EDITOR", "MEMBER"].includes(role)) {
+    return { ok: false, error: "Pick a valid role." };
+  }
+  if (memberUserId === user.id) {
+    return { ok: false, error: "You can’t change your own owner role here." };
+  }
+
+  const target = await prisma.membership.findUnique({
+    where: { workspaceId_userId: { workspaceId, userId: memberUserId } },
+  });
+  if (!target) return { ok: false, error: "Member not found." };
+  if (target.role === "OWNER") {
+    return { ok: false, error: "Can’t change the owner’s role." };
+  }
+
+  await prisma.membership.update({
+    where: { id: target.id },
+    data: { role },
+  });
+
+  revalidatePath("/app");
+  revalidatePath(`/app/w/${workspaceId}`);
+  return { ok: true };
+}
+
+export async function kickMemberAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const memberUserId = String(formData.get("memberUserId") ?? "");
+
+  const membership = await requireMembership(workspaceId, user.id);
+  if (!isOwnerOnlyAction(membership.role) && !canManagePeople(membership.role)) {
+    return { ok: false, error: "Only owners and admins can remove members." };
+  }
+  if (memberUserId === user.id) {
+    return { ok: false, error: "You can’t remove yourself — leave instead." };
+  }
+
+  const target = await prisma.membership.findUnique({
+    where: { workspaceId_userId: { workspaceId, userId: memberUserId } },
+  });
+  if (!target) return { ok: false, error: "Member not found." };
+  if (target.role === "OWNER") {
+    return { ok: false, error: "Can’t remove the workspace owner." };
+  }
+  if (membership.role === "ADMIN" && target.role === "ADMIN") {
+    return { ok: false, error: "Admins can’t remove other admins." };
+  }
+
+  await prisma.membership.delete({ where: { id: target.id } });
+  revalidatePath("/app");
+  revalidatePath(`/app/w/${workspaceId}`);
   return { ok: true };
 }
