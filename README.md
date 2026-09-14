@@ -43,13 +43,11 @@ Demo login after seeding: **`tide_demo` / `password123`**
    - **Neon integration** in Vercel → Storage / Marketplace, **or**
    - Paste env vars from the [Neon console](https://console.neon.tech) under **Settings → Environment Variables**
 4. Ensure these are set for **Production** and **Preview** (empty values count as missing):
-   - `DATABASE_URL` — Neon **pooled** connection string  
-     *(or `POSTGRES_URL` / `POSTGRES_PRISMA_URL` from Vercel Postgres)*
-   - `DATABASE_URL_UNPOOLED` — Neon **direct** connection string  
-     *(or `POSTGRES_URL_NON_POOLING`)*
+   - `TheHollowCrown_DATABASE_URL` — Neon **pooled** connection string  
+   - `TheHollowCrown_DATABASE_URL_UNPOOLED` — Neon **direct** connection string  
 5. Redeploy. The build runs `prisma migrate deploy`, seeds the demo user, then `next build`.
 
-If the build says the connection URL is empty, the env vars were not applied to that environment — open the failed deployment → **Environment**, confirm `DATABASE_URL` is present, then **Redeploy**.
+If the build says the connection URL is empty, the env vars were not applied to that environment — open the failed deployment → **Environment**, confirm `TheHollowCrown_DATABASE_URL` is present, then **Redeploy**.
 
 ## Scripts
 
