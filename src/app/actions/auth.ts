@@ -9,9 +9,25 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import {
+  passwordResetEmail,
+} from "@/lib/email-templates";
+import { issueEmailVerification } from "@/lib/email-verification";
+import { sendEmail } from "@/lib/mail";
 import { isValidEmail, isValidUsername, normalizeUsername } from "@/lib/utils";
 
-export type ActionResult = { ok: true; resetUrl?: string } | { ok: false; error: string };
+export type ActionResult =
+  | {
+      ok: true;
+      resetUrl?: string;
+      emailed?: boolean;
+      needsEmailVerification?: boolean;
+      email?: string;
+      emailVerified?: boolean;
+      resent?: boolean;
+      retryAfterSec?: number;
+    }
+  | { ok: false; error: string; retryAfterSec?: number };
 
 function safeNextPath(raw: FormDataEntryValue | null): string | null {
   const value = String(raw ?? "").trim();
@@ -26,6 +42,7 @@ export async function signUpAction(
   const usernameRaw = String(formData.get("username") ?? "");
   const password = String(formData.get("password") ?? "");
   const emailRaw = String(formData.get("email") ?? "").trim();
+  const noEmailAck = String(formData.get("noEmailAck") ?? "") === "true";
   const next = safeNextPath(formData.get("next"));
   const username = normalizeUsername(usernameRaw);
 
@@ -41,6 +58,13 @@ export async function signUpAction(
   if (emailRaw && !isValidEmail(emailRaw)) {
     return { ok: false, error: "That email doesn’t look valid." };
   }
+  if (!emailRaw && !noEmailAck) {
+    return {
+      ok: false,
+      error:
+        "Add an email, or confirm you understand the risks of skipping one.",
+    };
+  }
 
   if (await prisma.user.findUnique({ where: { username } })) {
     return { ok: false, error: "That username is already taken." };
@@ -51,15 +75,35 @@ export async function signUpAction(
     }
   }
 
+  const email = emailRaw ? emailRaw.toLowerCase() : null;
+  // Don't attach email until the 4-digit code is verified.
   const user = await prisma.user.create({
     data: {
       username,
       passwordHash: await hashPassword(password),
-      email: emailRaw ? emailRaw.toLowerCase() : null,
+      email: null,
     },
   });
 
   await createSession(user.id);
+
+  if (email) {
+    const issued = await issueEmailVerification({
+      userId: user.id,
+      email,
+      username: user.username,
+    });
+    if (!issued.ok) {
+      return { ok: false, error: issued.error };
+    }
+    return {
+      ok: true,
+      needsEmailVerification: true,
+      email: issued.email,
+      emailed: !issued.mocked,
+    };
+  }
+
   redirect(next ?? "/app");
 }
 
@@ -96,7 +140,8 @@ export async function requestPasswordResetAction(
         where: { username: normalizeUsername(identifier) },
       });
 
-  if (!user) return { ok: true };
+  // Always look successful for unknown users (no account enumeration).
+  if (!user) return { ok: true, emailed: true };
 
   if (!user.email) {
     return {
@@ -115,7 +160,27 @@ export async function requestPasswordResetAction(
     },
   });
 
-  return { ok: true, resetUrl: `/reset-password?token=${token}` };
+  const content = passwordResetEmail({ username: user.username, token });
+  const sent = await sendEmail({
+    to: user.email,
+    subject: content.subject,
+    html: content.html,
+    text: content.text,
+  });
+
+  if (!sent.ok) {
+    return {
+      ok: false,
+      error: "Couldn’t send the reset email. Try again in a moment.",
+    };
+  }
+
+  // In local/dev without RESEND_API_KEY, surface the link so resets still work.
+  if (sent.mocked) {
+    return { ok: true, emailed: false, resetUrl: content.resetUrl };
+  }
+
+  return { ok: true, emailed: true };
 }
 
 export async function resetPasswordAction(

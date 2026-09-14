@@ -16,8 +16,8 @@ export default function ForgotPasswordPage() {
           Reset password
         </h1>
         <p className="mt-2 text-sm text-[#0A3D45]/70">
-          Works only if your account has an email. Otherwise add one after signing in, or
-          ask a workspace admin for help.
+          Enter your username or email. We’ll send a reset link if that account has an
+          email on file.
         </p>
 
         <div className="mt-6">
