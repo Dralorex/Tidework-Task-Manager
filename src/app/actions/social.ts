@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { canCreateGroups, requireMembership } from "@/lib/permissions";
-import { normalizeUsername } from "@/lib/utils";
+import { normalizeUsername, personLabel } from "@/lib/utils";
 import type { ActionResult } from "@/app/actions/auth";
 
 export async function sendFriendRequestAction(
@@ -60,7 +60,7 @@ export async function sendFriendRequestAction(
       userId: other.id,
       type: "FRIEND_REQUEST",
       title: "Friend request",
-      body: `${user.username} wants to be friends on Tidework.`,
+      body: `${personLabel(user)} wants to be friends on Tidework.`,
       meta: JSON.stringify({
         fromUserId: user.id,
         friendshipId: friendship.id,
@@ -186,7 +186,7 @@ export async function requestWorkspaceDmAction(
       data: {
         userId: other.id,
         type: "CHAT_MESSAGE",
-        title: `Message from @${user.username}`,
+        title: `Message from ${personLabel(user)}`,
         body: firstMessage.slice(0, 140),
         meta: JSON.stringify({ groupId, fromUserId: user.id }),
       },
@@ -212,7 +212,7 @@ export async function requestWorkspaceDmAction(
       userId: other.id,
       type: "DM_REQUEST",
       title: "Chat request",
-      body: `${user.username}: ${firstMessage}`,
+      body: `${personLabel(user)}: ${firstMessage}`,
       meta: JSON.stringify({
         fromUserId: user.id,
         requestId: dmRequest.id,
@@ -382,8 +382,8 @@ export async function sendMessageAction(
   if (recipients.length > 0) {
     const preview = body.slice(0, 140);
     const title = group.isDirect
-      ? `Message from @${user.username}`
-      : `${group.name}: @${user.username}`;
+      ? `Message from ${personLabel(user)}`
+      : `${group.name}: ${personLabel(user)}`;
     await prisma.notification.createMany({
       data: recipients.map((userId) => ({
         userId,

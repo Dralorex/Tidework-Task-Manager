@@ -11,6 +11,7 @@ import {
 } from "@/lib/permissions";
 import type { TaskPriority } from "@/generated/prisma/client";
 import type { ActionResult } from "@/app/actions/auth";
+import { personLabel } from "@/lib/utils";
 
 export async function createFolderAction(
   _prev: ActionResult | null,
@@ -212,7 +213,7 @@ export async function completeTaskAction(
       userId: m.userId,
       type: "TASK_REVIEW",
       title: "Ready for review",
-      body: `${user.username} finished “${task.name}”: ${comment}`,
+      body: `${personLabel(user)} finished “${task.name}”: ${comment}`,
       meta: JSON.stringify({
         workspaceId,
         taskId,

@@ -4,6 +4,7 @@ import { LiveRefresh } from "@/app/components/live-refresh";
 import { getCurrentUser } from "@/lib/auth";
 import { syncDeadlineNotifications } from "@/lib/deadline-notifications";
 import { prisma } from "@/lib/db";
+import { personLabel } from "@/lib/utils";
 
 export default async function AppSectionLayout({
   children,
@@ -32,7 +33,7 @@ export default async function AppSectionLayout({
     <div className="tide-wave-bg min-h-screen">
       <LiveRefresh />
       <AppNav
-        username={user.username}
+        displayLabel={personLabel(user)}
         unreadCount={unreadCount}
         chatUnreadCount={chatUnreadCount}
       />

@@ -68,11 +68,13 @@ export function InlineActionForm({
   submitLabel,
   children,
   className,
+  successMessage,
 }: {
   action: FormAction;
   submitLabel: string;
   children: React.ReactNode;
   className?: string;
+  successMessage?: string;
 }) {
   const [state, formAction] = useActionState(action, null);
 
@@ -81,6 +83,9 @@ export function InlineActionForm({
       {children}
       {state && !state.ok ? (
         <p className="text-sm text-[#9b2f22]">{state.error}</p>
+      ) : null}
+      {state && state.ok && successMessage ? (
+        <p className="text-sm text-[#0A3D45]/75">{successMessage}</p>
       ) : null}
       <SubmitButton label={submitLabel} className="tide-btn-secondary text-sm" />
     </form>

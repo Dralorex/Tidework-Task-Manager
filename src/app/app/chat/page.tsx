@@ -11,15 +11,16 @@ import {
 } from "@/app/actions/social";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { personLabel, type UserLabel } from "@/lib/utils";
 
 type Tab = "hub" | "dms" | "groups";
 
 function dmDisplayName(
-  members: { user: { id: string; username: string } }[],
+  members: { user: UserLabel & { id: string } }[],
   userId: string,
 ) {
   const other = members.find((m) => m.user.id !== userId)?.user;
-  return other ? `@${other.username}` : "Direct message";
+  return other ? personLabel(other) : "Direct message";
 }
 
 function snippet(body: string | undefined) {
@@ -162,7 +163,7 @@ export default async function ChatPage({
               {dmRequests.map((r) => (
                 <li key={r.id}>
                   <p>
-                    <span className="font-medium">@{r.fromUser.username}</span>:{" "}
+                    <span className="font-medium">{personLabel(r.fromUser)}</span>:{" "}
                     {r.firstMessage}
                   </p>
                   <div className="mt-2 flex gap-2">
@@ -319,9 +320,7 @@ export default async function ChatPage({
             <ul className="mt-4 space-y-2">
               {(tab === "dms" ? dms : groupChats).map((g) => {
                 const title =
-                  tab === "dms"
-                    ? dmDisplayName(g.members, user.id)
-                    : g.name;
+                  tab === "dms" ? dmDisplayName(g.members, userId) : g.name;
                 const last = g.messages[0];
                 const unread = unreadCounts.get(g.id) ?? 0;
                 return (
@@ -344,7 +343,7 @@ export default async function ChatPage({
                           </div>
                           <p className="mt-0.5 truncate text-sm text-[#0A3D45]/55">
                             {last
-                              ? `${last.sender.id === user.id ? "You" : `@${last.sender.username}`}: ${snippet(last.body)}`
+                              ? `${last.sender.id === userId ? "You" : personLabel(last.sender)}: ${snippet(last.body)}`
                               : snippet(undefined)}
                           </p>
                         </div>
@@ -384,11 +383,11 @@ export default async function ChatPage({
                 </Link>
                 <h1 className="mt-1 font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
                   {active.isDirect
-                    ? dmDisplayName(active.members, user.id)
+                    ? dmDisplayName(active.members, userId)
                     : active.name}
                 </h1>
                 <p className="text-xs text-[#0A3D45]/55">
-                  {active.members.map((m) => m.user.username).join(", ")}
+                  {active.members.map((m) => personLabel(m.user)).join(", ")}
                 </p>
               </div>
               <ChatRowMenu
@@ -401,7 +400,7 @@ export default async function ChatPage({
               {threadMessages.map((msg) => (
                 <div key={msg.id} className="text-sm">
                   <span className="font-semibold text-[#0A3D45]">
-                    @{msg.sender.username}
+                    {personLabel(msg.sender)}
                   </span>{" "}
                   <span className="text-xs text-[#0A3D45]/45">
                     {format(msg.createdAt, "MMM d · HH:mm")}

@@ -6,6 +6,7 @@ import {
 } from "@/app/actions/social";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { personLabel } from "@/lib/utils";
 
 export default async function SocialPage() {
   const user = await getCurrentUser();
@@ -67,7 +68,7 @@ export default async function SocialPage() {
                   key={r.id}
                   className="tide-panel flex items-center justify-between gap-3 p-4"
                 >
-                  <span>@{r.requester.username}</span>
+                  <span>{personLabel(r.requester)}</span>
                   <div className="flex gap-2">
                     <InlineActionForm
                       action={respondFriendRequestAction}
@@ -100,7 +101,7 @@ export default async function SocialPage() {
             ) : (
               friends.map((f) => (
                 <li key={f.id} className="tide-panel px-4 py-3">
-                  @{f.username}
+                  {personLabel(f)}
                 </li>
               ))
             )}
