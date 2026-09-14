@@ -188,6 +188,7 @@ export default async function CalendarPage({
 
   return (
     <CalendarBoard
+      key={`${scope}:${view}:${workspaceId ?? "personal"}`}
       events={events}
       initialScope={scope}
       initialView={view}

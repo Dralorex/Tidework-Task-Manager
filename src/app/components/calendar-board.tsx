@@ -94,17 +94,21 @@ function EventForm({
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [allDay, setAllDay] = useState(event?.allDay ?? true);
-  const [state, formAction] = useActionState(action, null);
-
-  useEffect(() => {
-    if (!state?.ok) return;
-    if (!event) {
-      formRef.current?.reset();
-      setAllDay(true);
-    }
-    onSaved?.();
-    router.refresh();
-  }, [state, event, onSaved, router]);
+  const [state, formAction] = useActionState(
+    async (previous: ActionResult | null, formData: FormData) => {
+      const result = await action(previous, formData);
+      if (result.ok) {
+        if (!event) {
+          formRef.current?.reset();
+          setAllDay(true);
+        }
+        onSaved?.();
+        router.refresh();
+      }
+      return result;
+    },
+    null,
+  );
 
   return (
     <form ref={formRef} action={formAction} className="grid gap-3 sm:grid-cols-2">
@@ -205,11 +209,14 @@ function QuickActionForm({
   danger?: boolean;
 }) {
   const router = useRouter();
-  const [state, formAction] = useActionState(action, null);
-
-  useEffect(() => {
-    if (state?.ok) router.refresh();
-  }, [state, router]);
+  const [state, formAction] = useActionState(
+    async (previous: ActionResult | null, formData: FormData) => {
+      const result = await action(previous, formData);
+      if (result.ok) router.refresh();
+      return result;
+    },
+    null,
+  );
 
   return (
     <form action={formAction}>
@@ -250,16 +257,6 @@ function PersonalFilters({
   );
   const [birthdayValue, setBirthdayValue] = useState(showBirthdays);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setWorkspaceValues(
-      Object.fromEntries(
-        workspaces.map((workspace) => [workspace.id, workspace.filterEnabled]),
-      ),
-    );
-  }, [workspaces]);
-
-  useEffect(() => setBirthdayValue(showBirthdays), [showBirthdays]);
 
   function updateWorkspace(workspaceId: string, enabled: boolean) {
     setWorkspaceValues((current) => ({ ...current, [workspaceId]: enabled }));
@@ -494,8 +491,6 @@ export function CalendarBoard({
     initialScope === "personal" ||
     (initialScope === "workspace" && Boolean(selectedWorkspace?.canEdit));
 
-  useEffect(() => setActiveView(initialView), [initialView]);
-
   useEffect(() => {
     if (!expandedId) return;
     document
@@ -577,6 +572,9 @@ export function CalendarBoard({
           </div>
           {initialScope === "personal" ? (
             <PersonalFilters
+              key={`${showBirthdays}:${workspaces
+                .map((workspace) => `${workspace.id}:${workspace.filterEnabled}`)
+                .join(",")}`}
               workspaces={workspaces}
               showBirthdays={showBirthdays}
             />
