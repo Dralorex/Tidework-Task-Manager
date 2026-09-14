@@ -17,7 +17,11 @@ export async function GET() {
         select: { id: true, createdAt: true },
       }),
       prisma.notification.count({
-        where: { userId: user.id, read: false },
+        where: {
+          userId: user.id,
+          read: false,
+          type: { notIn: ["CHAT_MESSAGE", "DM_REQUEST"] },
+        },
       }),
       prisma.notification.count({
         where: {

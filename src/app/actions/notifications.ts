@@ -8,7 +8,11 @@ import type { ActionResult } from "@/app/actions/auth";
 export async function markAllNotificationsReadAction(): Promise<void> {
   const user = await requireUser();
   await prisma.notification.updateMany({
-    where: { userId: user.id, read: false },
+    where: {
+      userId: user.id,
+      read: false,
+      type: { notIn: ["CHAT_MESSAGE", "DM_REQUEST"] },
+    },
     data: { read: true },
   });
   revalidatePath("/app", "layout");

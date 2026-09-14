@@ -6,6 +6,7 @@ import {
   deleteChatGroupAction,
   leaveChatAction,
 } from "@/app/actions/social";
+import { confirmDelete } from "@/lib/confirm";
 
 export function ChatRowMenu({
   groupId,
@@ -74,7 +75,16 @@ export function ChatRowMenu({
             type="button"
             role="menuitem"
             className="block w-full px-3 py-2 text-left text-sm text-[#0A3D45] hover:bg-[#0A3D45]/8"
-            onClick={() => void run(leaveChatAction)}
+            onClick={() => {
+              if (
+                !confirmDelete(
+                  isDirect ? "this chat" : "your membership in this group",
+                )
+              ) {
+                return;
+              }
+              void run(leaveChatAction);
+            }}
           >
             {isDirect ? "Delete chat" : "Leave group"}
           </button>
@@ -84,13 +94,8 @@ export function ChatRowMenu({
               role="menuitem"
               className="block w-full px-3 py-2 text-left text-sm text-[#9b2f22] hover:bg-[#E85D4C]/10"
               onClick={() => {
-                if (
-                  confirm(
-                    "Delete this group for everyone? Messages will be removed.",
-                  )
-                ) {
-                  void run(deleteChatGroupAction);
-                }
+                if (!confirmDelete("this group for everyone")) return;
+                void run(deleteChatGroupAction);
               }}
             >
               Delete for all

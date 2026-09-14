@@ -139,6 +139,15 @@ export default async function ChatPage({
 
   const adminWorkspaceIds = new Set(adminWorkspaces.map((m) => m.workspaceId));
 
+  let groupsUnread = 0;
+  let dmsUnread = 0;
+  for (const g of groups) {
+    const n = unreadCounts.get(g.id) ?? 0;
+    if (g.isDirect) dmsUnread += n;
+    else groupsUnread += n;
+  }
+  dmsUnread += dmRequests.length;
+
   function canDeleteGroup(g: (typeof groups)[number]) {
     if (g.isDirect) return false;
     if (g.createdById === userId) return true;
@@ -192,8 +201,8 @@ export default async function ChatPage({
           <div>
             <h3 className="font-semibold text-[#0A3D45]">Message someone</h3>
             <p className="mt-1 text-xs text-[#0A3D45]/60">
-              Friends chat freely. Same workspace (not friends): first message waits
-              for accept.
+              Pick Friends to message freely, or a workspace for members (non-friends
+              need to accept the first message).
             </p>
             <InlineActionForm
               className="mt-3 flex flex-col gap-2"
@@ -201,6 +210,7 @@ export default async function ChatPage({
               submitLabel="Send"
             >
               <select name="workspaceId" className="tide-input text-sm" required>
+                <option value="__friends__">Friends</option>
                 {allWorkspaces.map((m) => (
                   <option key={m.workspaceId} value={m.workspaceId}>
                     {m.workspace.name}
@@ -269,8 +279,13 @@ export default async function ChatPage({
                 className="group flex items-center justify-between rounded-lg border border-[#0A3D45]/12 bg-[#0A3D45]/[0.03] px-4 py-5 transition hover:border-[#0A3D45]/25 hover:bg-[#0A3D45]/[0.06]"
               >
                 <div>
-                  <p className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
+                  <p className="flex items-center gap-2 font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
                     Groups
+                    {groupsUnread > 0 ? (
+                      <span className="rounded-full bg-[#E85D4C] px-1.5 text-[11px] font-semibold leading-5 text-white">
+                        {groupsUnread > 99 ? "99+" : groupsUnread}
+                      </span>
+                    ) : null}
                   </p>
                   <p className="mt-1 text-sm text-[#0A3D45]/55">
                     {groupChats.length} conversation
@@ -286,8 +301,13 @@ export default async function ChatPage({
                 className="group flex items-center justify-between rounded-lg border border-[#0A3D45]/12 bg-[#0A3D45]/[0.03] px-4 py-5 transition hover:border-[#0A3D45]/25 hover:bg-[#0A3D45]/[0.06]"
               >
                 <div>
-                  <p className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
+                  <p className="flex items-center gap-2 font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
                     DMs
+                    {dmsUnread > 0 ? (
+                      <span className="rounded-full bg-[#E85D4C] px-1.5 text-[11px] font-semibold leading-5 text-white">
+                        {dmsUnread > 99 ? "99+" : dmsUnread}
+                      </span>
+                    ) : null}
                   </p>
                   <p className="mt-1 text-sm text-[#0A3D45]/55">
                     {dms.length} conversation{dms.length === 1 ? "" : "s"}

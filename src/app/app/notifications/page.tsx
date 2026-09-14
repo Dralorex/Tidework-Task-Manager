@@ -61,7 +61,10 @@ export default async function NotificationsPage() {
   const user = await requireUser();
 
   const notifications = await prisma.notification.findMany({
-    where: { userId: user.id },
+    where: {
+      userId: user.id,
+      type: { notIn: ["CHAT_MESSAGE", "DM_REQUEST"] },
+    },
     orderBy: { createdAt: "desc" },
     take: 50,
   });
@@ -127,8 +130,8 @@ export default async function NotificationsPage() {
         Notifications
       </h1>
       <p className="mt-2 text-[#0A3D45]/70">
-        Invites, chat, friends, deadlines, and task updates. Opening this tab
-        clears the unread badge.
+        Invites, friends, deadlines, and task updates. Chat messages and DM requests
+        live under Chat. Opening this tab clears the unread badge here.
       </p>
 
       <ul className="mt-8 space-y-3">

@@ -18,7 +18,11 @@ export default async function AppSectionLayout({
 
   const [unreadCount, chatUnreadCount] = await Promise.all([
     prisma.notification.count({
-      where: { userId: user.id, read: false },
+      where: {
+        userId: user.id,
+        read: false,
+        type: { notIn: ["CHAT_MESSAGE", "DM_REQUEST"] },
+      },
     }),
     prisma.notification.count({
       where: {

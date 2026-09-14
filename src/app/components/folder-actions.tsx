@@ -6,6 +6,7 @@ import {
   deleteFolderAction,
   renameFolderAction,
 } from "@/app/actions/tasks";
+import { confirmDelete } from "@/lib/confirm";
 
 export function FolderActions({
   workspaceId,
@@ -56,11 +57,7 @@ export function FolderActions({
   }
 
   async function remove() {
-    if (
-      !confirm(
-        `Delete “${folderName}” and everything inside it (subfolders and tasks)?`,
-      )
-    ) {
+    if (!confirmDelete(`folder “${folderName}” and everything inside it`)) {
       return;
     }
     const fd = new FormData();
