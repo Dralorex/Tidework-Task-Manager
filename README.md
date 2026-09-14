@@ -16,27 +16,45 @@ Collaborative task management where urgency rises with due dates — nested fold
 
 ## Stack
 
-Next.js (App Router) · Prisma · SQLite · bcrypt sessions · Tailwind CSS
+Next.js (App Router) · Prisma · Neon Postgres · bcrypt sessions · Tailwind CSS
 
-## Setup
+## Local setup
+
+1. Create a free [Neon](https://neon.tech) database.
+2. Copy env and fill in both connection strings from the Neon console:
 
 ```bash
 cp .env.example .env
 npm install
-npx prisma db push
+npx prisma migrate deploy
+npm run db:seed
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+Demo login after seeding: **`tide_demo` / `password123`**
+
+## Deploy to Vercel
+
+1. Push this repo to GitHub.
+2. Import the project in [Vercel](https://vercel.com/new).
+3. Add the **Neon** integration (or paste env vars manually):
+   - `DATABASE_URL` — pooled connection string
+   - `DATABASE_URL_UNPOOLED` — direct connection string (for migrations)
+4. Deploy. The build runs `prisma migrate deploy`, seeds the demo user, then `next build`.
+
+Production URL will look like `https://tidework-task-manager.vercel.app` (depends on your project name).
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Dev server |
-| `npm run build` | Production build |
-| `npm run start` | Start production server |
-| `npx prisma db push` | Sync schema to SQLite |
+| `npm run build` | Production build (no migrate) |
+| `npm run vercel-build` | Migrate, seed, and build (used on Vercel) |
+| `npm run db:seed` | Seed demo user + sample workspace |
+| `npx prisma migrate deploy` | Apply migrations |
 | `npx prisma studio` | Browse data |
 
 ## Roles
