@@ -46,10 +46,16 @@ export default async function InvitePage({
             to accept.
           </p>
           <div className="mt-6 flex justify-center gap-3">
-            <Link href="/login" className="tide-btn-primary">
+            <Link
+              href={`/login?next=${encodeURIComponent(`/invite/${token}`)}`}
+              className="tide-btn-primary"
+            >
               Sign in
             </Link>
-            <Link href="/signup" className="tide-btn-secondary">
+            <Link
+              href={`/signup?next=${encodeURIComponent(`/invite/${token}`)}`}
+              className="tide-btn-secondary"
+            >
               Sign up
             </Link>
           </div>

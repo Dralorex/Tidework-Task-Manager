@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
-import { AppNav } from "@/app/components/app-nav";
 import { InlineActionForm } from "@/app/components/forms";
 import { PriorityBadge, TaskUrgencyEdge } from "@/app/components/task-ui";
 import {
@@ -104,9 +103,7 @@ export default async function WorkspacePage({
     : [];
 
   return (
-    <div className="tide-wave-bg min-h-screen">
-      <AppNav username={user.username} active="home" />
-      <main className="mx-auto max-w-6xl px-4 py-8">
+    <main className="mx-auto max-w-6xl px-4 py-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <Link href="/app" className="text-sm text-[#0A3D45]/60 hover:underline">
@@ -424,6 +421,5 @@ export default async function WorkspacePage({
           </section>
         </div>
       </main>
-    </div>
   );
 }

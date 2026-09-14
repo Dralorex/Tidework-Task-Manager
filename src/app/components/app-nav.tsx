@@ -1,23 +1,50 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { signOutAction } from "@/app/actions/auth";
 
 export function AppNav({
   username,
-  active,
+  unreadCount = 0,
 }: {
   username: string;
-  active?: "home" | "calendar" | "chat" | "social";
+  unreadCount?: number;
 }) {
-  const link = (href: string, key: typeof active, label: string) => (
+  const pathname = usePathname();
+
+  const active =
+    pathname.startsWith("/app/notifications")
+      ? "notifications"
+      : pathname.startsWith("/app/calendar")
+        ? "calendar"
+        : pathname.startsWith("/app/chat")
+          ? "chat"
+          : pathname.startsWith("/app/social")
+            ? "social"
+            : "home";
+
+  const link = (href: string, key: typeof active, label: string, badge?: number) => (
     <Link
       href={href}
-      className={`rounded-full px-3 py-1.5 text-sm transition ${
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition ${
         active === key
           ? "bg-[#0A3D45] text-[#E8F7F6]"
           : "text-[#0A3D45]/80 hover:bg-[#0A3D45]/8"
       }`}
     >
       {label}
+      {badge && badge > 0 ? (
+        <span
+          className={`min-w-[1.25rem] rounded-full px-1.5 text-center text-[11px] font-semibold leading-5 ${
+            active === key
+              ? "bg-[#E8F7F6] text-[#0A3D45]"
+              : "bg-[#E85D4C] text-white"
+          }`}
+        >
+          {badge > 99 ? "99+" : badge}
+        </span>
+      ) : null}
     </Link>
   );
 
@@ -32,11 +59,15 @@ export function AppNav({
           {link("/app/calendar", "calendar", "Calendar")}
           {link("/app/chat", "chat", "Chat")}
           {link("/app/social", "social", "Friends")}
+          {link("/app/notifications", "notifications", "Notifications", unreadCount)}
         </nav>
         <div className="flex items-center gap-3">
           <span className="hidden text-sm text-[#0A3D45]/70 sm:inline">@{username}</span>
           <form action={signOutAction}>
-            <button type="submit" className="text-sm text-[#0A3D45]/70 underline-offset-2 hover:underline">
+            <button
+              type="submit"
+              className="text-sm text-[#0A3D45]/70 underline-offset-2 hover:underline"
+            >
               Sign out
             </button>
           </form>

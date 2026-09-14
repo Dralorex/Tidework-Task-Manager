@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { AppNav } from "@/app/components/app-nav";
 import { InlineActionForm } from "@/app/components/forms";
 import {
   respondFriendRequestAction,
@@ -30,9 +29,7 @@ export default async function SocialPage() {
   );
 
   return (
-    <div className="tide-wave-bg min-h-screen">
-      <AppNav username={user.username} active="social" />
-      <main className="mx-auto max-w-3xl px-4 py-10">
+    <main className="mx-auto max-w-3xl px-4 py-10">
         <h1 className="font-[family-name:var(--font-display)] text-4xl text-[#0A3D45]">
           Friends
         </h1>
@@ -110,6 +107,5 @@ export default async function SocialPage() {
           </ul>
         </section>
       </main>
-    </div>
   );
 }

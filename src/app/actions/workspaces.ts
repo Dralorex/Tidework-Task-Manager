@@ -54,19 +54,51 @@ export async function inviteMemberAction(
     return { ok: false, error: "That email doesn’t look valid." };
   }
 
-  await prisma.invite.create({
+  const targetUsername = isEmail ? null : normalizeUsername(target);
+  const targetEmail = isEmail ? target.toLowerCase() : null;
+  const token = nanoid(32);
+
+  const workspace = await prisma.workspace.findUniqueOrThrow({
+    where: { id: workspaceId },
+  });
+
+  const invite = await prisma.invite.create({
     data: {
       workspaceId,
       invitedById: user.id,
-      targetUsername: isEmail ? null : normalizeUsername(target),
-      targetEmail: isEmail ? target.toLowerCase() : null,
+      targetUsername,
+      targetEmail,
       role,
-      token: nanoid(32),
+      token,
       expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14),
     },
   });
 
+  const invitee = await prisma.user.findFirst({
+    where: targetUsername
+      ? { username: targetUsername }
+      : { email: targetEmail ?? undefined },
+  });
+
+  if (invitee) {
+    await prisma.notification.create({
+      data: {
+        userId: invitee.id,
+        type: "WORKSPACE_INVITE",
+        title: "Workspace invite",
+        body: `${user.username} invited you to “${workspace.name}” as ${role.toLowerCase()}.`,
+        meta: JSON.stringify({
+          inviteId: invite.id,
+          token: invite.token,
+          workspaceId,
+        }),
+      },
+    });
+  }
+
   revalidatePath(`/app/w/${workspaceId}`);
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
 
@@ -108,7 +140,57 @@ export async function acceptInviteAction(
       where: { id: invite.id },
       data: { status: "ACCEPTED" },
     }),
+    prisma.notification.updateMany({
+      where: {
+        userId: user.id,
+        type: "WORKSPACE_INVITE",
+        read: false,
+        meta: { contains: invite.token },
+      },
+      data: { read: true },
+    }),
   ]);
 
+  revalidatePath("/app", "layout");
+  revalidatePath("/app/notifications");
   redirect(`/app/w/${invite.workspaceId}`);
+}
+
+export async function declineInviteAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const token = String(formData.get("token") ?? "");
+  const invite = await prisma.invite.findUnique({ where: { token } });
+  if (!invite || invite.status !== "PENDING" || invite.expiresAt < new Date()) {
+    return { ok: false, error: "Invite is invalid or expired." };
+  }
+
+  const matchesUsername =
+    invite.targetUsername && invite.targetUsername === user.username;
+  const matchesEmail =
+    invite.targetEmail && user.email && invite.targetEmail === user.email;
+  if (!matchesUsername && !matchesEmail) {
+    return { ok: false, error: "This invite isn’t for your account." };
+  }
+
+  await prisma.$transaction([
+    prisma.invite.update({
+      where: { id: invite.id },
+      data: { status: "DECLINED" },
+    }),
+    prisma.notification.updateMany({
+      where: {
+        userId: user.id,
+        type: "WORKSPACE_INVITE",
+        meta: { contains: invite.token },
+      },
+      data: { read: true },
+    }),
+  ]);
+
+  revalidatePath("/app", "layout");
+  revalidatePath("/app/notifications");
+  return { ok: true };
 }

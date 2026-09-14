@@ -13,6 +13,12 @@ import { isValidEmail, isValidUsername, normalizeUsername } from "@/lib/utils";
 
 export type ActionResult = { ok: true; resetUrl?: string } | { ok: false; error: string };
 
+function safeNextPath(raw: FormDataEntryValue | null): string | null {
+  const value = String(raw ?? "").trim();
+  if (!value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
+}
+
 export async function signUpAction(
   _prev: ActionResult | null,
   formData: FormData,
@@ -20,6 +26,7 @@ export async function signUpAction(
   const usernameRaw = String(formData.get("username") ?? "");
   const password = String(formData.get("password") ?? "");
   const emailRaw = String(formData.get("email") ?? "").trim();
+  const next = safeNextPath(formData.get("next"));
   const username = normalizeUsername(usernameRaw);
 
   if (!isValidUsername(usernameRaw.trim())) {
@@ -53,7 +60,7 @@ export async function signUpAction(
   });
 
   await createSession(user.id);
-  redirect("/app");
+  redirect(next ?? "/app");
 }
 
 export async function signInAction(
@@ -62,12 +69,13 @@ export async function signInAction(
 ): Promise<ActionResult> {
   const username = normalizeUsername(String(formData.get("username") ?? ""));
   const password = String(formData.get("password") ?? "");
+  const next = safeNextPath(formData.get("next"));
   const user = await prisma.user.findUnique({ where: { username } });
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
     return { ok: false, error: "Incorrect username or password." };
   }
   await createSession(user.id);
-  redirect("/app");
+  redirect(next ?? "/app");
 }
 
 export async function signOutAction() {
