@@ -262,6 +262,146 @@ export async function unclaimTaskAction(
   return { ok: true };
 }
 
+export async function updateTaskAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const taskId = String(formData.get("taskId") ?? "");
+
+  const membership = await requireMembership(workspaceId, user.id);
+  if (!canEditContent(membership.role)) {
+    return { ok: false, error: "Only editors and above can modify tasks." };
+  }
+
+  const name = String(formData.get("name") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const priority = String(formData.get("priority") ?? "MEDIUM") as TaskPriority;
+  const dueRaw = String(formData.get("dueDate") ?? "").trim();
+
+  if (!name) return { ok: false, error: "Task needs a name." };
+  if (!["CRITICAL", "HIGH", "MEDIUM", "LOW"].includes(priority)) {
+    return { ok: false, error: "Pick a valid priority." };
+  }
+
+  const task = await prisma.task.findFirst({
+    where: { id: taskId, workspaceId },
+  });
+  if (!task) return { ok: false, error: "Task not found." };
+
+  await prisma.task.update({
+    where: { id: taskId },
+    data: {
+      name,
+      description,
+      priority,
+      dueDate: dueRaw ? new Date(dueRaw) : null,
+    },
+  });
+
+  await syncCalendarForTask(taskId);
+  revalidatePath(`/app/w/${workspaceId}`);
+  revalidatePath("/app", "layout");
+  return { ok: true };
+}
+
+/** Editor+ removes the current assignee and returns the task to OPEN. */
+export async function forceUnclaimTaskAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const taskId = String(formData.get("taskId") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+  const workNote = String(formData.get("workNote") ?? "").trim();
+
+  const membership = await requireMembership(workspaceId, user.id);
+  if (!canEditContent(membership.role)) {
+    return { ok: false, error: "Only editors and above can force-unclaim." };
+  }
+
+  if (!reason) {
+    return { ok: false, error: "Say why you’re force-unclaiming this task." };
+  }
+
+  const task = await prisma.task.findFirst({
+    where: { id: taskId, workspaceId },
+    include: {
+      tags: { include: { tag: true } },
+      assignee: true,
+    },
+  });
+  if (!task) return { ok: false, error: "Task not found." };
+  if (!task.assigneeId) {
+    return { ok: false, error: "This task isn’t claimed." };
+  }
+  if (task.status === "DONE") {
+    return { ok: false, error: "Done tasks can’t be force-unclaimed." };
+  }
+
+  const assigneeId = task.assigneeId;
+  const privateLinks = task.tags.filter(
+    (tt) => !tt.tag.isPublic && tt.tag.creatorId === assigneeId,
+  );
+
+  if (privateLinks.length > 0) {
+    await prisma.rememberedPrivateTag.createMany({
+      data: privateLinks.map((tt) => ({
+        userId: assigneeId,
+        taskId,
+        tagId: tt.tagId,
+      })),
+      skipDuplicates: true,
+    });
+    await prisma.taskTag.deleteMany({
+      where: {
+        taskId,
+        tagId: { in: privateLinks.map((tt) => tt.tagId) },
+      },
+    });
+  }
+
+  const assigneeLabel = task.assignee ? personLabel(task.assignee) : "assignee";
+  const note = workNote
+    ? workNote
+    : `Force-unclaimed from ${assigneeLabel} by ${personLabel(user)}.`;
+
+  await prisma.task.update({
+    where: { id: taskId },
+    data: {
+      assigneeId: null,
+      status: "OPEN",
+      claimedAt: null,
+      completionComment: null,
+      lastUnclaimReason: reason,
+      lastUnclaimWorkNote: note,
+      lastUnclaimedById: user.id,
+    },
+  });
+
+  await prisma.notification.create({
+    data: {
+      userId: assigneeId,
+      type: "TASK_REOPENED",
+      title: "Task unclaimed by editor",
+      body: `“${task.name}” was force-unclaimed: ${reason}`,
+      meta: JSON.stringify({
+        workspaceId,
+        taskId,
+        folderId: task.folderId,
+      }),
+    },
+  });
+
+  await syncCalendarForTask(taskId);
+  revalidatePath(`/app/w/${workspaceId}`);
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
+  return { ok: true };
+}
+
 export async function completeTaskAction(
   _prev: ActionResult | null,
   formData: FormData,

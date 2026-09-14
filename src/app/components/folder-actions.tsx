@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   deleteFolderAction,
   renameFolderAction,
 } from "@/app/actions/tasks";
 import { confirmDelete } from "@/lib/confirm";
+import { MenuSurface, menuItemClass } from "@/app/components/menu-surface";
 
 export function FolderActions({
   workspaceId,
@@ -20,24 +21,11 @@ export function FolderActions({
   const [open, setOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(folderName);
-  const rootRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   useEffect(() => {
     setName(folderName);
   }, [folderName]);
-
-  useEffect(() => {
-    if (!open && !renaming) return;
-    function onDoc(e: MouseEvent) {
-      if (!rootRef.current?.contains(e.target as Node)) {
-        setOpen(false);
-        setRenaming(false);
-      }
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open, renaming]);
 
   async function saveRename(e: React.FormEvent) {
     e.preventDefault();
@@ -72,11 +60,7 @@ export function FolderActions({
   }
 
   return (
-    <div
-      ref={rootRef}
-      className="relative shrink-0"
-      onClick={(e) => e.stopPropagation()}
-    >
+    <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
       {renaming ? (
         <form
           onSubmit={saveRename}
@@ -97,44 +81,58 @@ export function FolderActions({
           >
             Save
           </button>
-        </form>
-      ) : (
-        <>
           <button
             type="button"
-            aria-label="Folder options"
-            className="rounded-md px-1.5 py-0.5 text-[#0A3D45]/45 opacity-40 transition hover:bg-[#0A3D45]/8 hover:opacity-100 group-hover:opacity-100"
-            onClick={() => setOpen((v) => !v)}
+            className="text-xs text-[#0A3D45]/55"
+            onClick={(e) => {
+              e.stopPropagation();
+              setRenaming(false);
+              setName(folderName);
+            }}
           >
-            ···
+            Cancel
           </button>
-          {open ? (
-            <div
-              className="absolute right-0 z-30 mt-1 min-w-[9rem] rounded-lg border border-[#0A3D45]/12 bg-[#E8F7F6] py-1 shadow-md"
-              role="menu"
+        </form>
+      ) : (
+        <MenuSurface
+          open={open}
+          onClose={() => setOpen(false)}
+          trigger={({ ref }) => (
+            <button
+              ref={ref}
+              type="button"
+              aria-label="Folder options"
+              aria-expanded={open}
+              className="rounded-md px-1.5 py-0.5 text-[#0A3D45]/70 transition hover:bg-[#0A3D45]/8 hover:text-[#0A3D45]"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen((v) => !v);
+              }}
             >
-              <button
-                type="button"
-                role="menuitem"
-                className="block w-full px-3 py-2 text-left text-sm text-[#0A3D45] hover:bg-[#0A3D45]/8"
-                onClick={() => {
-                  setRenaming(true);
-                  setOpen(false);
-                }}
-              >
-                Rename
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                className="block w-full px-3 py-2 text-left text-sm text-[#9b2f22] hover:bg-[#E85D4C]/10"
-                onClick={() => void remove()}
-              >
-                Delete
-              </button>
-            </div>
-          ) : null}
-        </>
+              ···
+            </button>
+          )}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className={menuItemClass()}
+            onClick={() => {
+              setRenaming(true);
+              setOpen(false);
+            }}
+          >
+            Rename
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={menuItemClass(true)}
+            onClick={() => void remove()}
+          >
+            Delete
+          </button>
+        </MenuSurface>
       )}
     </div>
   );
