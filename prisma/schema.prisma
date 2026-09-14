@@ -66,7 +66,9 @@ model User {
   invitesSent           Invite[]             @relation("InvitesSent")
   assignedTasks         Task[]               @relation("TaskAssignee")
   createdTasks          Task[]               @relation("TaskCreator")
+  unclaimedTasks        Task[]               @relation("TaskUnclaimer")
   privateTags           Tag[]                @relation("TagCreator")
+  rememberedPrivateTags RememberedPrivateTag[]
   calendarEvents        CalendarEvent[]
   friendshipsRequested  Friendship[]         @relation("FriendshipRequester")
   friendshipsReceived   Friendship[]         @relation("FriendshipAddressee")
@@ -197,6 +199,9 @@ model Task {
   createdById       String
   completionComment String?
   claimedAt         DateTime?
+  lastUnclaimReason String?
+  lastUnclaimWorkNote String?
+  lastUnclaimedById String?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
@@ -204,8 +209,10 @@ model Task {
   folder         Folder          @relation(fields: [folderId], references: [id], onDelete: Cascade)
   assignee       User?           @relation("TaskAssignee", fields: [assigneeId], references: [id])
   createdBy      User            @relation("TaskCreator", fields: [createdById], references: [id])
+  lastUnclaimedBy User?          @relation("TaskUnclaimer", fields: [lastUnclaimedById], references: [id])
   tags           TaskTag[]
   calendarEvents CalendarEvent[]
+  rememberedPrivateTags RememberedPrivateTag[]
 
   @@index([workspaceId])
   @@index([folderId])
@@ -224,6 +231,7 @@ model Tag {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   creator   User?     @relation("TagCreator", fields: [creatorId], references: [id])
   tasks     TaskTag[]
+  rememberedPrivateTags RememberedPrivateTag[]
 
   @@index([workspaceId])
   @@index([creatorId])
@@ -237,6 +245,20 @@ model TaskTag {
   tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([taskId, tagId])
+}
+
+/** Private tags removed on unclaim and restored if the same user reclaims. */
+model RememberedPrivateTag {
+  userId String
+  taskId String
+  tagId  String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([userId, taskId, tagId])
+  @@index([taskId])
 }
 
 model CalendarEvent {

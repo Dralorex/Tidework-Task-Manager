@@ -75,13 +75,14 @@ export function FolderActions({
     <div
       ref={rootRef}
       className="relative shrink-0"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }}
+      onClick={(e) => e.stopPropagation()}
     >
       {renaming ? (
-        <form onSubmit={saveRename} className="flex items-center gap-1">
+        <form
+          onSubmit={saveRename}
+          className="flex items-center gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -89,7 +90,11 @@ export function FolderActions({
             autoFocus
             onClick={(e) => e.stopPropagation()}
           />
-          <button type="submit" className="text-xs font-semibold text-[#0A3D45]">
+          <button
+            type="submit"
+            className="text-xs font-semibold text-[#0A3D45]"
+            onClick={(e) => e.stopPropagation()}
+          >
             Save
           </button>
         </form>

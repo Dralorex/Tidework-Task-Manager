@@ -13,6 +13,7 @@ import {
   createTaskAction,
   reviewTaskAction,
 } from "@/app/actions/tasks";
+import { UnclaimTaskControl } from "@/app/components/unclaim-task-control";
 import { inviteMemberAction } from "@/app/actions/workspaces";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -50,7 +51,11 @@ export default async function WorkspacePage({
 
   const taskCountRows = await prisma.task.groupBy({
     by: ["folderId"],
-    where: { workspaceId },
+    where: {
+      workspaceId,
+      status: "OPEN",
+      assigneeId: null,
+    },
     _count: { _all: true },
   });
   const directCounts = new Map(
@@ -95,6 +100,7 @@ export default async function WorkspacePage({
         include: {
           assignee: true,
           folder: true,
+          lastUnclaimedBy: true,
           tags: { include: { tag: true } },
         },
       })
@@ -104,6 +110,7 @@ export default async function WorkspacePage({
           include: {
             assignee: true,
             folder: true,
+            lastUnclaimedBy: true,
             tags: { include: { tag: true } },
           },
         })
@@ -113,7 +120,9 @@ export default async function WorkspacePage({
     .map((t) => ({
       ...t,
       tags: t.tags.filter(
-        (tt) => tt.tag.isPublic || tt.tag.creatorId === user.id,
+        (tt) =>
+          tt.tag.isPublic ||
+          (tt.tag.creatorId === user.id && t.assigneeId === user.id),
       ),
     }))
     .sort(compareTasksByUrgency);
@@ -386,7 +395,7 @@ export default async function WorkspacePage({
                 <li key={task.id} className="tide-panel relative overflow-hidden p-4 pl-5">
                   <TaskUrgencyEdge priority={task.priority} dueDate={task.dueDate} />
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-lg font-semibold text-[#0A3D45]">{task.name}</h3>
                         <PriorityBadge priority={task.priority} />
@@ -416,6 +425,23 @@ export default async function WorkspacePage({
                           ? ` · claimed by ${personLabel(task.assignee)}`
                           : " · unclaimed"}
                       </p>
+                      {!task.assignee && task.lastUnclaimReason ? (
+                        <div className="mt-2 rounded-md bg-[#0A3D45]/[0.04] px-2.5 py-2 text-xs text-[#0A3D45]/75">
+                          <p>
+                            <span className="font-semibold">Unclaim reason:</span>{" "}
+                            {task.lastUnclaimReason}
+                            {task.lastUnclaimedBy
+                              ? ` — ${personLabel(task.lastUnclaimedBy)}`
+                              : ""}
+                          </p>
+                          {task.lastUnclaimWorkNote ? (
+                            <p className="mt-1">
+                              <span className="font-semibold">Work notes:</span>{" "}
+                              {task.lastUnclaimWorkNote}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
                       {task.completionComment ? (
                         <p className="mt-1 text-xs italic text-[#0A3D45]/65">
                           Review note: {task.completionComment}
@@ -519,6 +545,16 @@ export default async function WorkspacePage({
                       ) : null}
                     </div>
                   </div>
+
+                  {task.assigneeId === user.id &&
+                  (task.status === "CLAIMED" || task.status === "OPEN") ? (
+                    <div className="mt-3 flex justify-start">
+                      <UnclaimTaskControl
+                        workspaceId={workspaceId}
+                        taskId={task.id}
+                      />
+                    </div>
+                  ) : null}
                 </li>
               ))}
               {tasks.length === 0 ? (
