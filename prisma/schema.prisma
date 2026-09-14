@@ -1,0 +1,330 @@
+// Tidework Task Manager — Prisma schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  EDITOR
+  MEMBER
+}
+
+enum TaskPriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TaskStatus {
+  OPEN
+  CLAIMED
+  IN_REVIEW
+  DONE
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum DmRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  email        String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions              Session[]
+  passwordResetTokens   PasswordResetToken[]
+  ownedWorkspaces       Workspace[]          @relation("WorkspaceOwner")
+  memberships           Membership[]
+  invitesSent           Invite[]             @relation("InvitesSent")
+  assignedTasks         Task[]               @relation("TaskAssignee")
+  createdTasks          Task[]               @relation("TaskCreator")
+  privateTags           Tag[]                @relation("TagCreator")
+  calendarEvents        CalendarEvent[]
+  friendshipsRequested  Friendship[]         @relation("FriendshipRequester")
+  friendshipsReceived   Friendship[]         @relation("FriendshipAddressee")
+  chatMemberships       ChatMember[]
+  messages              Message[]
+  dmRequestsSent        DmRequest[]          @relation("DmFrom")
+  dmRequestsReceived    DmRequest[]          @relation("DmTo")
+  notifications         Notification[]
+  groupsCreated         ChatGroup[]          @relation("GroupCreator")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner       User         @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  memberships Membership[]
+  invites     Invite[]
+  folders     Folder[]
+  tasks       Task[]
+  tags        Tag[]
+  chatGroups  ChatGroup[]
+
+  @@index([ownerId])
+}
+
+model Membership {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        Role
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+model Invite {
+  id              String       @id @default(cuid())
+  workspaceId     String
+  invitedById     String
+  targetUsername  String?
+  targetEmail     String?
+  role            Role
+  status          InviteStatus @default(PENDING)
+  token           String       @unique
+  createdAt       DateTime     @default(now())
+  expiresAt       DateTime
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy User      @relation("InvitesSent", fields: [invitedById], references: [id])
+
+  @@index([workspaceId])
+  @@index([targetUsername])
+  @@index([targetEmail])
+}
+
+model Folder {
+  id          String   @id @default(cuid())
+  workspaceId String
+  parentId    String?
+  name        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parent    Folder?   @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Folder[]  @relation("FolderTree")
+  tasks     Task[]
+
+  @@index([workspaceId])
+  @@index([parentId])
+}
+
+model Task {
+  id                String       @id @default(cuid())
+  workspaceId       String
+  folderId          String
+  name              String
+  description       String       @default("")
+  priority          TaskPriority @default(MEDIUM)
+  dueDate           DateTime?
+  status            TaskStatus   @default(OPEN)
+  assigneeId        String?
+  createdById       String
+  completionComment String?
+  claimedAt         DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  folder         Folder          @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  assignee       User?           @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdBy      User            @relation("TaskCreator", fields: [createdById], references: [id])
+  tags           TaskTag[]
+  calendarEvents CalendarEvent[]
+
+  @@index([workspaceId])
+  @@index([folderId])
+  @@index([assigneeId])
+  @@index([status])
+}
+
+model Tag {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  isPublic    Boolean  @default(true)
+  creatorId   String?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creator   User?     @relation("TagCreator", fields: [creatorId], references: [id])
+  tasks     TaskTag[]
+
+  @@index([workspaceId])
+  @@index([creatorId])
+}
+
+model TaskTag {
+  taskId String
+  tagId  String
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, tagId])
+}
+
+model CalendarEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  taskId    String
+  title     String
+  dueDate   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskId])
+  @@index([userId, dueDate])
+}
+
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId])
+}
+
+model ChatGroup {
+  id          String   @id @default(cuid())
+  workspaceId String?
+  name        String
+  isDirect    Boolean  @default(false)
+  createdById String
+  createdAt   DateTime @default(now())
+
+  workspace Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User         @relation("GroupCreator", fields: [createdById], references: [id])
+  members   ChatMember[]
+  messages  Message[]
+  dmRequest DmRequest?
+
+  @@index([workspaceId])
+}
+
+model ChatMember {
+  id       String   @id @default(cuid())
+  groupId  String
+  userId   String
+  joinedAt DateTime @default(now())
+
+  group ChatGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+}
+
+model DmRequest {
+  id           String         @id @default(cuid())
+  fromUserId   String
+  toUserId     String
+  firstMessage String
+  status       DmRequestStatus @default(PENDING)
+  chatGroupId  String?        @unique
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  fromUser  User       @relation("DmFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser    User       @relation("DmTo", fields: [toUserId], references: [id], onDelete: Cascade)
+  chatGroup ChatGroup? @relation(fields: [chatGroupId], references: [id], onDelete: SetNull)
+
+  @@index([toUserId])
+  @@index([fromUserId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  groupId   String
+  senderId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  group  ChatGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  sender User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  meta      String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+}
