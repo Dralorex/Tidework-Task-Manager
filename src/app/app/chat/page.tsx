@@ -345,7 +345,7 @@ export default async function ChatPage({
                 const unread = unreadCounts.get(g.id) ?? 0;
                 return (
                   <li key={g.id}>
-                    <div className="group relative flex items-stretch overflow-hidden rounded-lg border border-[#0A3D45]/10 bg-[#0A3D45]/[0.02] transition hover:border-[#0A3D45]/20 hover:bg-[#0A3D45]/[0.05]">
+                    <div className="group relative flex items-stretch rounded-lg border border-[#0A3D45]/10 bg-[#0A3D45]/[0.02] transition hover:border-[#0A3D45]/20 hover:bg-[#0A3D45]/[0.05]">
                       <Link
                         href={threadHref(tab, g.id)}
                         className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3"

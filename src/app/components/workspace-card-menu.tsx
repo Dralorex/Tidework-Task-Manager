@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   deleteWorkspaceAction,
@@ -11,6 +11,7 @@ import {
 } from "@/app/actions/workspaces";
 import { confirmDelete } from "@/lib/confirm";
 import { personLabel } from "@/lib/utils";
+import { MenuSurface, menuItemClass } from "@/app/components/menu-surface";
 
 type Member = {
   userId: string;
@@ -37,25 +38,17 @@ export function WorkspaceCardMenu({
   const [name, setName] = useState(workspaceName);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const rootRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   useEffect(() => {
     setName(workspaceName);
   }, [workspaceName]);
 
-  useEffect(() => {
-    if (!open) return;
-    function onDoc(e: MouseEvent) {
-      if (!rootRef.current?.contains(e.target as Node)) {
-        setOpen(false);
-        setPanel("menu");
-        setError(null);
-      }
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
+  function close() {
+    setOpen(false);
+    setPanel("menu");
+    setError(null);
+  }
 
   function run(
     action: typeof leaveWorkspaceAction,
@@ -72,8 +65,7 @@ export function WorkspaceCardMenu({
         setError(result.error);
         return;
       }
-      setOpen(false);
-      setPanel("menu");
+      close();
       if (result && result.ok && result.resetUrl) {
         router.push(result.resetUrl);
       } else {
@@ -84,191 +76,171 @@ export function WorkspaceCardMenu({
 
   return (
     <div
-      ref={rootRef}
       className="relative shrink-0"
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => e.stopPropagation()}
     >
-      <button
-        type="button"
-        aria-label="Workspace options"
-        className="rounded-md px-2 py-1 text-[#0A3D45]/45 transition hover:bg-[#0A3D45]/8 hover:text-[#0A3D45]"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setOpen((v) => !v);
-          setPanel("menu");
-          setError(null);
-        }}
+      <MenuSurface
+        open={open}
+        onClose={close}
+        widthClass="w-64"
+        trigger={({ ref }) => (
+          <button
+            ref={ref}
+            type="button"
+            aria-label="Workspace options"
+            aria-expanded={open}
+            className="rounded-md px-2 py-1 text-[#0A3D45]/70 transition hover:bg-[#0A3D45]/8 hover:text-[#0A3D45]"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setOpen((v) => !v);
+              setPanel("menu");
+              setError(null);
+            }}
+          >
+            ···
+          </button>
+        )}
       >
-        ···
-      </button>
-
-      {open ? (
-        <div
-          className="absolute right-0 z-30 mt-1 w-64 rounded-lg border border-[#0A3D45]/12 bg-[#E8F7F6] py-1 shadow-md"
-          role="menu"
-        >
-          {panel === "menu" ? (
-            <>
-              <button
-                type="button"
-                role="menuitem"
-                className="block w-full px-3 py-2 text-left text-sm text-[#0A3D45] hover:bg-[#0A3D45]/8"
-                onClick={() => setPanel("members")}
-              >
-                See all members
-              </button>
-              {isOwner ? (
-                <>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="block w-full px-3 py-2 text-left text-sm text-[#0A3D45] hover:bg-[#0A3D45]/8"
-                    onClick={() => setPanel("rename")}
-                  >
-                    Rename
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="block w-full px-3 py-2 text-left text-sm text-[#9b2f22] hover:bg-[#E85D4C]/10"
-                    onClick={() =>
-                      run(
-                        deleteWorkspaceAction,
-                        { workspaceId },
-                        { confirmLabel: `workspace “${workspaceName}” and all of its content` },
-                      )
-                    }
-                  >
-                    Delete workspace
-                  </button>
-                </>
-              ) : (
+        {panel === "menu" ? (
+          <>
+            <button
+              type="button"
+              role="menuitem"
+              className={menuItemClass()}
+              onClick={() => setPanel("members")}
+            >
+              See all members
+            </button>
+            {isOwner ? (
+              <>
                 <button
                   type="button"
                   role="menuitem"
-                  className="block w-full px-3 py-2 text-left text-sm text-[#9b2f22] hover:bg-[#E85D4C]/10"
+                  className={menuItemClass()}
+                  onClick={() => setPanel("rename")}
+                >
+                  Rename
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={menuItemClass(true)}
                   onClick={() =>
                     run(
-                      leaveWorkspaceAction,
+                      deleteWorkspaceAction,
                       { workspaceId },
-                      { confirmLabel: `your membership in “${workspaceName}”` },
+                      {
+                        confirmLabel: `workspace “${workspaceName}” and all of its content`,
+                      },
                     )
                   }
                 >
-                  Leave workspace
+                  Delete workspace
                 </button>
-              )}
-            </>
-          ) : null}
+              </>
+            ) : (
+              <button
+                type="button"
+                role="menuitem"
+                className={menuItemClass(true)}
+                onClick={() =>
+                  run(
+                    leaveWorkspaceAction,
+                    { workspaceId },
+                    { confirmLabel: `your membership in “${workspaceName}”` },
+                  )
+                }
+              >
+                Leave workspace
+              </button>
+            )}
+          </>
+        ) : null}
 
-          {panel === "rename" ? (
-            <form
-              className="space-y-2 px-3 py-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                run(renameWorkspaceAction, {
-                  workspaceId,
-                  name: name.trim(),
-                });
-              }}
-            >
-              <p className="text-xs font-semibold text-[#0A3D45]">Rename</p>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="tide-input w-full text-sm"
-                autoFocus
-              />
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="text-xs text-[#0A3D45]/60"
-                  onClick={() => setPanel("menu")}
-                >
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  disabled={pending}
-                  className="text-xs font-semibold text-[#0A3D45]"
-                >
-                  Save
-                </button>
-              </div>
-            </form>
-          ) : null}
-
-          {panel === "members" ? (
-            <div className="max-h-72 space-y-2 overflow-y-auto px-3 py-2">
+        {panel === "rename" ? (
+          <form
+            className="space-y-2 px-3 py-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              run(renameWorkspaceAction, {
+                workspaceId,
+                name: name.trim(),
+              });
+            }}
+          >
+            <p className="text-xs font-semibold text-[#0A3D45]">Rename</p>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="tide-input w-full text-sm"
+              autoFocus
+            />
+            <div className="flex gap-2">
               <button
                 type="button"
                 className="text-xs text-[#0A3D45]/60"
                 onClick={() => setPanel("menu")}
               >
-                ← Back
+                Back
               </button>
-              <p className="text-xs font-semibold text-[#0A3D45]">Members</p>
-              <ul className="space-y-2">
-                {members.map((m) => (
-                  <li
-                    key={m.userId}
-                    className="rounded-md border border-[#0A3D45]/10 px-2 py-1.5 text-sm"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate font-medium text-[#0A3D45]">
-                        {personLabel(m)}
-                      </span>
-                      <span className="shrink-0 text-[11px] uppercase tracking-wide text-[#0A3D45]/50">
-                        {m.role.toLowerCase()}
-                      </span>
-                    </div>
-                    {isOwner && m.role !== "OWNER" ? (
-                      <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                        <select
-                          className="tide-input py-1 text-xs"
-                          defaultValue={m.role}
-                          disabled={pending}
-                          onChange={(e) =>
-                            run(updateMemberRoleAction, {
-                              workspaceId,
-                              memberUserId: m.userId,
-                              role: e.target.value,
-                            })
-                          }
-                        >
-                          <option value="ADMIN">Admin</option>
-                          <option value="EDITOR">Editor</option>
-                          <option value="MEMBER">Member</option>
-                        </select>
-                        <button
-                          type="button"
-                          className="text-xs font-semibold text-[#9b2f22]"
-                          onClick={() =>
-                            run(
-                              kickMemberAction,
-                              {
-                                workspaceId,
-                                memberUserId: m.userId,
-                              },
-                              {
-                                confirmLabel: `${personLabel(m)} from this workspace`,
-                              },
-                            )
-                          }
-                        >
-                          Kick
-                        </button>
-                      </div>
-                    ) : null}
-                    {!isOwner &&
-                    canKick &&
-                    m.role !== "OWNER" &&
-                    m.role !== "ADMIN" ? (
+              <button
+                type="submit"
+                disabled={pending}
+                className="text-xs font-semibold text-[#0A3D45]"
+              >
+                Save
+              </button>
+            </div>
+          </form>
+        ) : null}
+
+        {panel === "members" ? (
+          <div className="max-h-72 space-y-2 overflow-y-auto px-3 py-2">
+            <button
+              type="button"
+              className="text-xs text-[#0A3D45]/60"
+              onClick={() => setPanel("menu")}
+            >
+              ← Back
+            </button>
+            <p className="text-xs font-semibold text-[#0A3D45]">Members</p>
+            <ul className="space-y-2">
+              {members.map((m) => (
+                <li
+                  key={m.userId}
+                  className="rounded-md border border-[#0A3D45]/10 px-2 py-1.5 text-sm"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate font-medium text-[#0A3D45]">
+                      {personLabel(m)}
+                    </span>
+                    <span className="shrink-0 text-[11px] uppercase tracking-wide text-[#0A3D45]/50">
+                      {m.role.toLowerCase()}
+                    </span>
+                  </div>
+                  {isOwner && m.role !== "OWNER" ? (
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                      <select
+                        className="tide-input py-1 text-xs"
+                        defaultValue={m.role}
+                        disabled={pending}
+                        onChange={(e) =>
+                          run(updateMemberRoleAction, {
+                            workspaceId,
+                            memberUserId: m.userId,
+                            role: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="ADMIN">Admin</option>
+                        <option value="EDITOR">Editor</option>
+                        <option value="MEMBER">Member</option>
+                      </select>
                       <button
                         type="button"
-                        className="mt-1.5 text-xs font-semibold text-[#9b2f22]"
+                        className="text-xs font-semibold text-[#9b2f22]"
                         onClick={() =>
                           run(
                             kickMemberAction,
@@ -284,20 +256,43 @@ export function WorkspaceCardMenu({
                       >
                         Kick
                       </button>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
+                    </div>
+                  ) : null}
+                  {!isOwner &&
+                  canKick &&
+                  m.role !== "OWNER" &&
+                  m.role !== "ADMIN" ? (
+                    <button
+                      type="button"
+                      className="mt-1.5 text-xs font-semibold text-[#9b2f22]"
+                      onClick={() =>
+                        run(
+                          kickMemberAction,
+                          {
+                            workspaceId,
+                            memberUserId: m.userId,
+                          },
+                          {
+                            confirmLabel: `${personLabel(m)} from this workspace`,
+                          },
+                        )
+                      }
+                    >
+                      Kick
+                    </button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
-          {error ? (
-            <p className="border-t border-[#0A3D45]/10 px-3 py-2 text-xs text-[#9b2f22]">
-              {error}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
+        {error ? (
+          <p className="border-t border-[#0A3D45]/10 px-3 py-2 text-xs text-[#9b2f22]">
+            {error}
+          </p>
+        ) : null}
+      </MenuSurface>
     </div>
   );
 }

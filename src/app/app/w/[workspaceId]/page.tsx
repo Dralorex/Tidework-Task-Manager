@@ -1,26 +1,19 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { format } from "date-fns";
 import { InlineActionForm } from "@/app/components/forms";
 import { FolderActions } from "@/app/components/folder-actions";
-import { PriorityBadge, TaskUrgencyEdge } from "@/app/components/task-ui";
+import { WorkspaceTaskRow } from "@/app/components/workspace-task-row";
 import {
-  addPrivateTagAction,
-  addPublicTagAction,
-  claimTaskAction,
-  completeTaskAction,
   createFolderAction,
   createTaskAction,
-  reviewTaskAction,
 } from "@/app/actions/tasks";
-import { UnclaimTaskControl } from "@/app/components/unclaim-task-control";
 import { inviteMemberAction } from "@/app/actions/workspaces";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { computeFolderTaskCounts } from "@/lib/folder-counts";
 import { canEditContent, canManagePeople } from "@/lib/permissions";
 import { compareTasksByUrgency } from "@/lib/urgency";
-import { personLabel, searchRelevance } from "@/lib/utils";
+import { searchRelevance } from "@/lib/utils";
 
 export default async function WorkspacePage({
   params,
@@ -392,170 +385,14 @@ export default async function WorkspacePage({
 
             <ul className="space-y-3">
               {tasks.map((task) => (
-                <li key={task.id} className="tide-panel relative overflow-hidden p-4 pl-5">
-                  <TaskUrgencyEdge priority={task.priority} dueDate={task.dueDate} />
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg font-semibold text-[#0A3D45]">{task.name}</h3>
-                        <PriorityBadge priority={task.priority} />
-                        <span className="text-xs uppercase tracking-wide text-[#0A3D45]/50">
-                          {task.status.replace("_", " ")}
-                        </span>
-                      </div>
-                      {isRoot && task.folder ? (
-                        <p className="mt-1 text-xs text-[#0A3D45]/55">
-                          In{" "}
-                          <Link
-                            href={`/app/w/${workspaceId}?folder=${task.folderId}`}
-                            className="font-semibold underline-offset-2 hover:underline"
-                          >
-                            {task.folder.name}
-                          </Link>
-                        </p>
-                      ) : null}
-                      {task.description ? (
-                        <p className="mt-1 text-sm text-[#0A3D45]/70">{task.description}</p>
-                      ) : null}
-                      <p className="mt-2 text-xs text-[#0A3D45]/55">
-                        {task.dueDate
-                          ? `Due ${format(task.dueDate, "MMM d, yyyy")}`
-                          : "No due date"}
-                        {task.assignee
-                          ? ` · claimed by ${personLabel(task.assignee)}`
-                          : " · unclaimed"}
-                      </p>
-                      {!task.assignee && task.lastUnclaimReason ? (
-                        <div className="mt-2 rounded-md bg-[#0A3D45]/[0.04] px-2.5 py-2 text-xs text-[#0A3D45]/75">
-                          <p>
-                            <span className="font-semibold">Unclaim reason:</span>{" "}
-                            {task.lastUnclaimReason}
-                            {task.lastUnclaimedBy
-                              ? ` — ${personLabel(task.lastUnclaimedBy)}`
-                              : ""}
-                          </p>
-                          {task.lastUnclaimWorkNote ? (
-                            <p className="mt-1">
-                              <span className="font-semibold">Work notes:</span>{" "}
-                              {task.lastUnclaimWorkNote}
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : null}
-                      {task.completionComment ? (
-                        <p className="mt-1 text-xs italic text-[#0A3D45]/65">
-                          Review note: {task.completionComment}
-                        </p>
-                      ) : null}
-                      {task.tags.length > 0 ? (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {task.tags.map((tt) => (
-                            <span
-                              key={tt.tagId}
-                              className="rounded-md bg-[#1a7a82]/10 px-2 py-0.5 text-xs text-[#0A3D45]"
-                            >
-                              #{tt.tag.name}
-                              {!tt.tag.isPublic ? " (private)" : ""}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="flex flex-col items-stretch gap-2">
-                      {task.status === "OPEN" ||
-                      (task.status === "CLAIMED" && !task.assigneeId) ? (
-                        <InlineActionForm
-                          action={claimTaskAction}
-                          submitLabel="Pick up"
-                        >
-                          <input type="hidden" name="workspaceId" value={workspaceId} />
-                          <input type="hidden" name="taskId" value={task.id} />
-                        </InlineActionForm>
-                      ) : null}
-
-                      {task.assigneeId === user.id &&
-                      (task.status === "CLAIMED" || task.status === "OPEN") ? (
-                        <InlineActionForm
-                          action={completeTaskAction}
-                          submitLabel="Ready for review"
-                        >
-                          <input type="hidden" name="workspaceId" value={workspaceId} />
-                          <input type="hidden" name="taskId" value={task.id} />
-                          <input
-                            name="comment"
-                            required
-                            placeholder="What did you complete?"
-                            className="tide-input text-sm"
-                          />
-                        </InlineActionForm>
-                      ) : null}
-
-                      {task.status === "IN_REVIEW" && canEdit ? (
-                        <div className="flex gap-2">
-                          <InlineActionForm
-                            action={reviewTaskAction}
-                            submitLabel="Approve"
-                          >
-                            <input type="hidden" name="workspaceId" value={workspaceId} />
-                            <input type="hidden" name="taskId" value={task.id} />
-                            <input type="hidden" name="decision" value="approve" />
-                          </InlineActionForm>
-                          <InlineActionForm
-                            action={reviewTaskAction}
-                            submitLabel="Send back"
-                          >
-                            <input type="hidden" name="workspaceId" value={workspaceId} />
-                            <input type="hidden" name="taskId" value={task.id} />
-                            <input type="hidden" name="decision" value="reopen" />
-                          </InlineActionForm>
-                        </div>
-                      ) : null}
-
-                      {task.assigneeId === user.id ? (
-                        <InlineActionForm
-                          action={addPrivateTagAction}
-                          submitLabel="Private tag"
-                        >
-                          <input type="hidden" name="workspaceId" value={workspaceId} />
-                          <input type="hidden" name="taskId" value={task.id} />
-                          <input
-                            name="name"
-                            required
-                            placeholder="my-focus"
-                            className="tide-input text-sm"
-                          />
-                        </InlineActionForm>
-                      ) : null}
-
-                      {canEdit ? (
-                        <InlineActionForm
-                          action={addPublicTagAction}
-                          submitLabel="Public tag"
-                        >
-                          <input type="hidden" name="workspaceId" value={workspaceId} />
-                          <input type="hidden" name="taskId" value={task.id} />
-                          <input
-                            name="name"
-                            required
-                            placeholder="design"
-                            className="tide-input text-sm"
-                          />
-                        </InlineActionForm>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {task.assigneeId === user.id &&
-                  (task.status === "CLAIMED" || task.status === "OPEN") ? (
-                    <div className="mt-3 flex justify-start">
-                      <UnclaimTaskControl
-                        workspaceId={workspaceId}
-                        taskId={task.id}
-                      />
-                    </div>
-                  ) : null}
-                </li>
+                <WorkspaceTaskRow
+                  key={task.id}
+                  workspaceId={workspaceId}
+                  userId={user.id}
+                  canEdit={canEdit}
+                  isRoot={isRoot}
+                  task={task}
+                />
               ))}
               {tasks.length === 0 ? (
                 <li className="text-sm text-[#0A3D45]/60">
