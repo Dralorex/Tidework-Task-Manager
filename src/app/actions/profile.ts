@@ -11,6 +11,8 @@ import {
   normalizeUsername,
 } from "@/lib/utils";
 import type { ActionResult } from "@/app/actions/auth";
+import { welcomeAccountEmail } from "@/lib/email-templates";
+import { sendEmail } from "@/lib/mail";
 
 export async function updateProfileAction(
   _prev: ActionResult | null,
@@ -105,6 +107,19 @@ export async function updateProfileAction(
   revalidatePath("/app/chat");
   revalidatePath("/app/social");
   revalidatePath("/app/notifications");
-  void updated;
+
+  if (email) {
+    const content = welcomeAccountEmail({
+      username: updated.username,
+      nickname: updated.nickname,
+    });
+    await sendEmail({
+      to: email,
+      subject: content.subject,
+      html: content.html,
+      text: content.text,
+    });
+  }
+
   return { ok: true };
 }

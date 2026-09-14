@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AuthForm } from "@/app/components/forms";
+import { SignUpForm } from "@/app/components/signup-form";
 import { signUpAction } from "@/app/actions/auth";
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -26,50 +26,17 @@ export default async function SignUpPage({
           Create your account
         </h1>
         <p className="mt-2 text-sm text-[#0A3D45]/70">
-          Username and password are enough. Add an email if you want password reset later.
+          Username and password are enough. Add an email to get a welcome confirmation
+          and password reset later.
         </p>
 
         <div className="mt-6">
-          <AuthForm action={signUpAction} submitLabel="Create account">
-            {next ? <input type="hidden" name="next" value={next} /> : null}
-            <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">
-              Username
-              <input
-                name="username"
-                required
-                autoComplete="username"
-                className="tide-input"
-                placeholder="tide_rider"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">
-              Password
-              <input
-                name="password"
-                type="password"
-                required
-                minLength={8}
-                autoComplete="new-password"
-                className="tide-input"
-                placeholder="At least 8 characters"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">
-              Email{" "}
-              <span className="font-normal text-[#0A3D45]/55">(optional)</span>
-              <input
-                name="email"
-                type="email"
-                autoComplete="email"
-                className="tide-input"
-                placeholder="you@example.com"
-              />
-            </label>
-            <p className="text-xs leading-relaxed text-[#0A3D45]/60">
-              Email isn’t required. If you skip it, you won’t be able to reset a forgotten
-              password until you add one in settings.
-            </p>
-          </AuthForm>
+          <SignUpForm
+            action={signUpAction}
+            next={
+              next?.startsWith("/") && !next.startsWith("//") ? next : undefined
+            }
+          />
         </div>
 
         <p className="mt-6 text-center text-sm text-[#0A3D45]/70">

@@ -75,7 +75,7 @@ export default async function ProfilePage() {
                   className="tide-input w-full"
                 />
                 <span className="mt-1 block text-xs text-[#0A3D45]/55">
-                  Optional · used for password resets
+                  Optional · we’ll email a welcome confirmation and enable password resets
                 </span>
               </>
             )}

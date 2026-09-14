@@ -49,12 +49,15 @@ export function AuthForm({
       ) : null}
       {state && state.ok && state.resetUrl ? (
         <p className="rounded-lg bg-[#3DBEAB]/15 px-3 py-2 text-sm text-[#0A3D45]">
-          Reset link ready (dev): {state.resetUrl} — in production this would be emailed.
+          Dev mode (no email provider configured). Reset link:{" "}
+          <a href={state.resetUrl} className="font-semibold underline-offset-2 hover:underline">
+            {state.resetUrl}
+          </a>
         </p>
       ) : null}
       {state && state.ok && !state.resetUrl ? (
         <p className="rounded-lg bg-[#3DBEAB]/15 px-3 py-2 text-sm text-[#0A3D45]">
-          If that account has an email, a reset link was prepared.
+          If that account has an email, we sent a password reset link. Check your inbox.
         </p>
       ) : null}
       <SubmitButton label={submitLabel} className="tide-btn-primary" />
