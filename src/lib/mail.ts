@@ -23,6 +23,48 @@ export type SendEmailInput = {
   text: string;
 };
 
+/** Turn Resend/API failures into actionable copy for the UI. */
+export function explainMailError(raw: string): string {
+  const msg = raw.trim();
+  const lower = msg.toLowerCase();
+
+  if (
+    lower.includes("only send testing emails") ||
+    lower.includes("verify a domain") ||
+    lower.includes("you can only send")
+  ) {
+    return (
+      "Resend’s free test sender (onboarding@resend.dev) can only deliver to the " +
+      "email on your Resend account. Either send to that address, or verify a " +
+      "domain at resend.com/domains and set EMAIL_FROM on Vercel to an address " +
+      "on that domain."
+    );
+  }
+
+  if (
+    lower.includes("invalid api key") ||
+    lower.includes("api key is invalid") ||
+    lower.includes("unauthorized") ||
+    lower.includes("missing api key")
+  ) {
+    return (
+      "Resend rejected the API key. Check RESEND_API_KEY in Vercel " +
+      "(Production) and redeploy."
+    );
+  }
+
+  if (lower.includes("domain is not verified") || lower.includes("not verified")) {
+    return (
+      "EMAIL_FROM uses a domain that isn’t verified in Resend. " +
+      "Verify it at resend.com/domains or use Tidework <onboarding@resend.dev> " +
+      "and only mail your Resend account email."
+    );
+  }
+
+  if (msg) return msg;
+  return "Couldn’t send the email. Check Resend / Vercel env vars and try again.";
+}
+
 /**
  * Sends email via Resend when RESEND_API_KEY is set.
  * Without a key, logs the message (local/dev) and returns mocked: true.
@@ -51,14 +93,12 @@ export async function sendEmail(
     });
     if (result.error) {
       console.error("[tidework:mail]", result.error);
-      return { ok: false, error: result.error.message };
+      return { ok: false, error: explainMailError(result.error.message) };
     }
     return { ok: true, mocked: false };
   } catch (err) {
     console.error("[tidework:mail]", err);
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "Failed to send email.",
-    };
+    const raw = err instanceof Error ? err.message : "Failed to send email.";
+    return { ok: false, error: explainMailError(raw) };
   }
 }

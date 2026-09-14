@@ -39,6 +39,8 @@ export async function issueEmailVerification(opts: {
   const expiresAt = new Date(Date.now() + EMAIL_CODE_TTL_MS);
   const now = new Date();
 
+  // Persist the pending code first; only bump lastSentAt after a successful send
+  // so a Resend failure doesn’t start the 30s cooldown.
   await prisma.emailVerification.upsert({
     where: { userId: opts.userId },
     create: {
@@ -46,13 +48,12 @@ export async function issueEmailVerification(opts: {
       email,
       code,
       expiresAt,
-      lastSentAt: now,
+      lastSentAt: existing?.lastSentAt ?? new Date(0),
     },
     update: {
       email,
       code,
       expiresAt,
-      lastSentAt: now,
     },
   });
 
@@ -69,8 +70,13 @@ export async function issueEmailVerification(opts: {
   });
 
   if (!sent.ok) {
-    return { ok: false, error: "Couldn’t send the verification email." };
+    return { ok: false, error: sent.error };
   }
+
+  await prisma.emailVerification.update({
+    where: { userId: opts.userId },
+    data: { lastSentAt: now },
+  });
 
   return { ok: true, email, mocked: sent.mocked };
 }
