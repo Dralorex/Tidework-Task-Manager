@@ -480,7 +480,8 @@ export function CalendarBoard({
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeView, setActiveView] = useState<View>(initialView);
+  const activeView: View =
+    searchParams.get("view") === "month" ? "month" : initialView;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [focusedDate, setFocusedDate] = useState<string | null>(null);
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
@@ -531,14 +532,12 @@ export function CalendarBoard({
   }
 
   function chooseView(view: View) {
-    setActiveView(view);
     updateUrl({ view });
   }
 
   function focusDay(dayKey: string, dayEvents: CalendarBoardEvent[]) {
     setFocusedDate(dayKey);
     setExpandedId(dayEvents[0]?.id ?? null);
-    setActiveView("list");
     updateUrl({ view: "list" });
   }
 
