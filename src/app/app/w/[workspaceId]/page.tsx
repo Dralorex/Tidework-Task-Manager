@@ -178,9 +178,13 @@ export default async function WorkspacePage({
               {canEdit ? (
                 <InlineActionForm
                   className="mt-4 flex flex-col gap-2"
-                  action={createFolderAction.bind(null, workspaceId, currentFolder?.id ?? null)}
+                  action={createFolderAction}
                   submitLabel="New folder"
                 >
+                  <input type="hidden" name="workspaceId" value={workspaceId} />
+                  {currentFolder ? (
+                    <input type="hidden" name="parentId" value={currentFolder.id} />
+                  ) : null}
                   <input
                     name="name"
                     required
@@ -198,9 +202,10 @@ export default async function WorkspacePage({
                 </h2>
                 <InlineActionForm
                   className="mt-3 flex flex-col gap-2"
-                  action={inviteMemberAction.bind(null, workspaceId)}
+                  action={inviteMemberAction}
                   submitLabel="Send invite"
                 >
+                  <input type="hidden" name="workspaceId" value={workspaceId} />
                   <input
                     name="target"
                     required
@@ -255,9 +260,11 @@ export default async function WorkspacePage({
               {canEdit && currentFolder ? (
                 <InlineActionForm
                   className="mt-5 grid gap-2 sm:grid-cols-2"
-                  action={createTaskAction.bind(null, workspaceId, currentFolder.id)}
+                  action={createTaskAction}
                   submitLabel="Add task"
                 >
+                  <input type="hidden" name="workspaceId" value={workspaceId} />
+                  <input type="hidden" name="folderId" value={currentFolder.id} />
                   <input name="name" required placeholder="Task name" className="tide-input" />
                   <select name="priority" className="tide-input" defaultValue="MEDIUM">
                     <option value="CRITICAL">Critical</option>
@@ -328,21 +335,23 @@ export default async function WorkspacePage({
                     <div className="flex flex-col items-stretch gap-2">
                       {task.status === "OPEN" ||
                       (task.status === "CLAIMED" && !task.assigneeId) ? (
-                        <form
-                          action={async () => { await claimTaskAction(workspaceId, task.id); }}
+                        <InlineActionForm
+                          action={claimTaskAction}
+                          submitLabel="Pick up"
                         >
-                          <button type="submit" className="tide-btn-primary w-full text-sm">
-                            Pick up
-                          </button>
-                        </form>
+                          <input type="hidden" name="workspaceId" value={workspaceId} />
+                          <input type="hidden" name="taskId" value={task.id} />
+                        </InlineActionForm>
                       ) : null}
 
                       {task.assigneeId === user.id &&
                       (task.status === "CLAIMED" || task.status === "OPEN") ? (
                         <InlineActionForm
-                          action={completeTaskAction.bind(null, workspaceId, task.id)}
+                          action={completeTaskAction}
                           submitLabel="Ready for review"
                         >
+                          <input type="hidden" name="workspaceId" value={workspaceId} />
+                          <input type="hidden" name="taskId" value={task.id} />
                           <input
                             name="comment"
                             required
@@ -354,28 +363,32 @@ export default async function WorkspacePage({
 
                       {task.status === "IN_REVIEW" && canEdit ? (
                         <div className="flex gap-2">
-                          <form
-action={async () => { await reviewTaskAction(workspaceId, task.id, "approve"); }}
+                          <InlineActionForm
+                            action={reviewTaskAction}
+                            submitLabel="Approve"
                           >
-                            <button type="submit" className="tide-btn-primary text-sm">
-                              Approve
-                            </button>
-                          </form>
-                          <form
-action={async () => { await reviewTaskAction(workspaceId, task.id, "reopen"); }}
+                            <input type="hidden" name="workspaceId" value={workspaceId} />
+                            <input type="hidden" name="taskId" value={task.id} />
+                            <input type="hidden" name="decision" value="approve" />
+                          </InlineActionForm>
+                          <InlineActionForm
+                            action={reviewTaskAction}
+                            submitLabel="Send back"
                           >
-                            <button type="submit" className="tide-btn-secondary text-sm">
-                              Send back
-                            </button>
-                          </form>
+                            <input type="hidden" name="workspaceId" value={workspaceId} />
+                            <input type="hidden" name="taskId" value={task.id} />
+                            <input type="hidden" name="decision" value="reopen" />
+                          </InlineActionForm>
                         </div>
                       ) : null}
 
                       {task.assigneeId === user.id ? (
                         <InlineActionForm
-                          action={addPrivateTagAction.bind(null, workspaceId, task.id)}
+                          action={addPrivateTagAction}
                           submitLabel="Private tag"
                         >
+                          <input type="hidden" name="workspaceId" value={workspaceId} />
+                          <input type="hidden" name="taskId" value={task.id} />
                           <input
                             name="name"
                             required
@@ -387,9 +400,11 @@ action={async () => { await reviewTaskAction(workspaceId, task.id, "reopen"); }}
 
                       {canEdit ? (
                         <InlineActionForm
-                          action={addPublicTagAction.bind(null, workspaceId, task.id)}
+                          action={addPublicTagAction}
                           submitLabel="Public tag"
                         >
+                          <input type="hidden" name="workspaceId" value={workspaceId} />
+                          <input type="hidden" name="taskId" value={task.id} />
                           <input
                             name="name"
                             required

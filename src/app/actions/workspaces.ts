@@ -11,6 +11,7 @@ import type { Role } from "@/generated/prisma/client";
 import type { ActionResult } from "@/app/actions/auth";
 
 export async function createWorkspaceAction(
+  _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireUser();
@@ -31,10 +32,11 @@ export async function createWorkspaceAction(
 }
 
 export async function inviteMemberAction(
-  workspaceId: string,
+  _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
   const membership = await requireMembership(workspaceId, user.id);
   if (!canManagePeople(membership.role)) {
     return { ok: false, error: "Only owners and admins can invite people." };
@@ -68,8 +70,12 @@ export async function inviteMemberAction(
   return { ok: true };
 }
 
-export async function acceptInviteAction(token: string): Promise<ActionResult> {
+export async function acceptInviteAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
   const user = await requireUser();
+  const token = String(formData.get("token") ?? "");
   const invite = await prisma.invite.findUnique({ where: { token } });
   if (!invite || invite.status !== "PENDING" || invite.expiresAt < new Date()) {
     return { ok: false, error: "Invite is invalid or expired." };

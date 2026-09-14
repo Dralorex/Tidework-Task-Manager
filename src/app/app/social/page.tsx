@@ -72,16 +72,20 @@ export default async function SocialPage() {
                 >
                   <span>@{r.requester.username}</span>
                   <div className="flex gap-2">
-                    <form action={async () => { await respondFriendRequestAction(r.id, true); }}>
-                      <button type="submit" className="tide-btn-primary text-sm">
-                        Accept
-                      </button>
-                    </form>
-                    <form action={async () => { await respondFriendRequestAction(r.id, false); }}>
-                      <button type="submit" className="tide-btn-secondary text-sm">
-                        Decline
-                      </button>
-                    </form>
+                    <InlineActionForm
+                      action={respondFriendRequestAction}
+                      submitLabel="Accept"
+                    >
+                      <input type="hidden" name="friendshipId" value={r.id} />
+                      <input type="hidden" name="accept" value="true" />
+                    </InlineActionForm>
+                    <InlineActionForm
+                      action={respondFriendRequestAction}
+                      submitLabel="Decline"
+                    >
+                      <input type="hidden" name="friendshipId" value={r.id} />
+                      <input type="hidden" name="accept" value="false" />
+                    </InlineActionForm>
                   </div>
                 </li>
               ))}

@@ -8,6 +8,7 @@ import { normalizeUsername } from "@/lib/utils";
 import type { ActionResult } from "@/app/actions/auth";
 
 export async function sendFriendRequestAction(
+  _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireUser();
@@ -68,10 +69,13 @@ export async function sendFriendRequestAction(
 }
 
 export async function respondFriendRequestAction(
-  friendshipId: string,
-  accept: boolean,
+  _prev: ActionResult | null,
+  formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireUser();
+  const friendshipId = String(formData.get("friendshipId") ?? "");
+  const accept = String(formData.get("accept") ?? "") === "true";
+
   const friendship = await prisma.friendship.findUnique({
     where: { id: friendshipId },
   });
@@ -85,6 +89,7 @@ export async function respondFriendRequestAction(
   });
 
   revalidatePath("/app/social");
+  revalidatePath("/app/chat");
   return { ok: true };
 }
 
@@ -103,10 +108,11 @@ async function findDirectGroup(userA: string, userB: string) {
 }
 
 export async function requestWorkspaceDmAction(
-  workspaceId: string,
+  _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
   await requireMembership(workspaceId, user.id);
 
   const toUsername = normalizeUsername(String(formData.get("username") ?? ""));
@@ -135,7 +141,7 @@ export async function requestWorkspaceDmAction(
   });
 
   if (areFriends) {
-    let group = await findDirectGroup(user.id, other.id);
+    const group = await findDirectGroup(user.id, other.id);
     if (!group) {
       await prisma.chatGroup.create({
         data: {
@@ -183,10 +189,13 @@ export async function requestWorkspaceDmAction(
 }
 
 export async function respondDmRequestAction(
-  requestId: string,
-  accept: boolean,
+  _prev: ActionResult | null,
+  formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireUser();
+  const requestId = String(formData.get("requestId") ?? "");
+  const accept = String(formData.get("accept") ?? "") === "true";
+
   const request = await prisma.dmRequest.findUnique({
     where: { id: requestId },
     include: { fromUser: true },
@@ -230,32 +239,12 @@ export async function respondDmRequestAction(
   return { ok: true };
 }
 
-export async function sendMessageAction(
-  groupId: string,
-  formData: FormData,
-): Promise<ActionResult> {
-  const user = await requireUser();
-  const body = String(formData.get("body") ?? "").trim();
-  if (!body) return { ok: false, error: "Message can’t be empty." };
-
-  const member = await prisma.chatMember.findUnique({
-    where: { groupId_userId: { groupId, userId: user.id } },
-  });
-  if (!member) return { ok: false, error: "You’re not in this chat." };
-
-  await prisma.message.create({
-    data: { groupId, senderId: user.id, body },
-  });
-
-  revalidatePath("/app/chat");
-  return { ok: true };
-}
-
 export async function createGroupChatAction(
-  workspaceId: string,
+  _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
   const membership = await requireMembership(workspaceId, user.id);
   if (!canCreateGroups(membership.role)) {
     return { ok: false, error: "Only admins and owners can create group chats." };
@@ -276,6 +265,16 @@ export async function createGroupChatAction(
   const memberIds = new Set(users.map((u) => u.id));
   memberIds.add(user.id);
 
+  for (const memberId of memberIds) {
+    if (memberId === user.id) continue;
+    const m = await prisma.membership.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId: memberId } },
+    });
+    if (!m) {
+      return { ok: false, error: "All members must belong to the workspace." };
+    }
+  }
+
   await prisma.chatGroup.create({
     data: {
       workspaceId,
@@ -290,5 +289,27 @@ export async function createGroupChatAction(
 
   revalidatePath("/app/chat");
   revalidatePath(`/app/w/${workspaceId}`);
+  return { ok: true };
+}
+
+export async function sendMessageAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const groupId = String(formData.get("groupId") ?? "");
+  const body = String(formData.get("body") ?? "").trim();
+  if (!body) return { ok: false, error: "Message can’t be empty." };
+
+  const member = await prisma.chatMember.findUnique({
+    where: { groupId_userId: { groupId, userId: user.id } },
+  });
+  if (!member) return { ok: false, error: "You’re not in this chat." };
+
+  await prisma.message.create({
+    data: { groupId, senderId: user.id, body },
+  });
+
+  revalidatePath("/app/chat");
   return { ok: true };
 }
