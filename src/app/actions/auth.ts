@@ -13,7 +13,10 @@ import { isValidEmail, isValidUsername, normalizeUsername } from "@/lib/utils";
 
 export type ActionResult = { ok: true; resetUrl?: string } | { ok: false; error: string };
 
-export async function signUpAction(formData: FormData): Promise<ActionResult> {
+export async function signUpAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
   const usernameRaw = String(formData.get("username") ?? "");
   const password = String(formData.get("password") ?? "");
   const emailRaw = String(formData.get("email") ?? "").trim();
@@ -53,7 +56,10 @@ export async function signUpAction(formData: FormData): Promise<ActionResult> {
   redirect("/app");
 }
 
-export async function signInAction(formData: FormData): Promise<ActionResult> {
+export async function signInAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
   const username = normalizeUsername(String(formData.get("username") ?? ""));
   const password = String(formData.get("password") ?? "");
   const user = await prisma.user.findUnique({ where: { username } });
@@ -70,6 +76,7 @@ export async function signOutAction() {
 }
 
 export async function requestPasswordResetAction(
+  _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
   const identifier = String(formData.get("identifier") ?? "").trim();
@@ -104,6 +111,7 @@ export async function requestPasswordResetAction(
 }
 
 export async function resetPasswordAction(
+  _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
   const token = String(formData.get("token") ?? "");

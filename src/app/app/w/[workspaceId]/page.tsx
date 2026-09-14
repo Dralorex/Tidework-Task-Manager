@@ -329,7 +329,7 @@ export default async function WorkspacePage({
                       {task.status === "OPEN" ||
                       (task.status === "CLAIMED" && !task.assigneeId) ? (
                         <form
-                          action={claimTaskAction.bind(null, workspaceId, task.id)}
+                          action={async () => { await claimTaskAction(workspaceId, task.id); }}
                         >
                           <button type="submit" className="tide-btn-primary w-full text-sm">
                             Pick up
@@ -355,14 +355,14 @@ export default async function WorkspacePage({
                       {task.status === "IN_REVIEW" && canEdit ? (
                         <div className="flex gap-2">
                           <form
-action={reviewTaskAction.bind(null, workspaceId, task.id, "approve")}
+action={async () => { await reviewTaskAction(workspaceId, task.id, "approve"); }}
                           >
                             <button type="submit" className="tide-btn-primary text-sm">
                               Approve
                             </button>
                           </form>
                           <form
-action={reviewTaskAction.bind(null, workspaceId, task.id, "reopen")}
+action={async () => { await reviewTaskAction(workspaceId, task.id, "reopen"); }}
                           >
                             <button type="submit" className="tide-btn-secondary text-sm">
                               Send back

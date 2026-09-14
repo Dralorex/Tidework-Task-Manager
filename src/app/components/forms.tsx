@@ -1,8 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 
-type ActionResult = { ok: true; resetUrl?: string } | { ok: false; error: string };
+export type ActionResult =
+  | { ok: true; resetUrl?: string }
+  | { ok: false; error: string };
+
+type AuthAction = (
+  prev: ActionResult | null,
+  formData: FormData,
+) => Promise<ActionResult | null>;
 
 export function AuthForm({
   action,
@@ -10,44 +17,29 @@ export function AuthForm({
   children,
   extras,
 }: {
-  action: (formData: FormData) => Promise<ActionResult>;
+  action: AuthAction;
   submitLabel: string;
   children: React.ReactNode;
   extras?: React.ReactNode;
 }) {
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [state, formAction, pending] = useActionState(action, null);
 
   return (
-    <form
-      className="flex w-full flex-col gap-4"
-      action={(formData) => {
-        setError(null);
-        setInfo(null);
-        startTransition(async () => {
-          const result = await action(formData);
-          if (!result.ok) {
-            setError(result.error);
-            return;
-          }
-          if ("resetUrl" in result && result.resetUrl) {
-            setInfo(
-              `Reset link ready (dev): ${result.resetUrl} — in production this would be emailed.`,
-            );
-          }
-        });
-      }}
-    >
+    <form className="flex w-full flex-col gap-4" action={formAction}>
       {children}
-      {error ? (
+      {state && !state.ok ? (
         <p className="rounded-lg bg-[#E85D4C]/12 px-3 py-2 text-sm text-[#9b2f22]">
-          {error}
+          {state.error}
         </p>
       ) : null}
-      {info ? (
+      {state && state.ok && state.resetUrl ? (
         <p className="rounded-lg bg-[#3DBEAB]/15 px-3 py-2 text-sm text-[#0A3D45]">
-          {info}
+          Reset link ready (dev): {state.resetUrl} — in production this would be emailed.
+        </p>
+      ) : null}
+      {state && state.ok && !state.resetUrl ? (
+        <p className="rounded-lg bg-[#3DBEAB]/15 px-3 py-2 text-sm text-[#0A3D45]">
+          If that account has an email, a reset link was prepared.
         </p>
       ) : null}
       <button
@@ -62,18 +54,17 @@ export function AuthForm({
   );
 }
 
+/** For bound server actions shaped as (...args, formData) => ActionResult */
 export function InlineActionForm({
   action,
   submitLabel,
   children,
   className,
-  onSuccess,
 }: {
   action: (formData: FormData) => Promise<ActionResult>;
   submitLabel: string;
   children: React.ReactNode;
   className?: string;
-  onSuccess?: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -85,11 +76,7 @@ export function InlineActionForm({
         setError(null);
         startTransition(async () => {
           const result = await action(formData);
-          if (!result.ok) {
-            setError(result.error);
-            return;
-          }
-          onSuccess?.();
+          if (!result.ok) setError(result.error);
         });
       }}
     >

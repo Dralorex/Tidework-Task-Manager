@@ -97,12 +97,12 @@ export default async function ChatPage({
                       {r.firstMessage}
                     </p>
                     <div className="mt-2 flex gap-2">
-                      <form action={respondDmRequestAction.bind(null, r.id, true)}>
+                      <form action={async () => { await respondDmRequestAction(r.id, true); }}>
                         <button type="submit" className="tide-btn-primary text-xs">
                           Accept
                         </button>
                       </form>
-                      <form action={respondDmRequestAction.bind(null, r.id, false)}>
+                      <form action={async () => { await respondDmRequestAction(r.id, false); }}>
                         <button type="submit" className="tide-btn-secondary text-xs">
                           Decline
                         </button>

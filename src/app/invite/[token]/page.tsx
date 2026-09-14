@@ -66,7 +66,7 @@ export default async function InvitePage({
         <p className="mt-2 text-sm text-[#0A3D45]/70">
           Role: {invite.role.toLowerCase()}
         </p>
-        <form action={acceptInviteAction.bind(null, token)} className="mt-6">
+        <form action={async () => { await acceptInviteAction(token); }} className="mt-6">
           <button type="submit" className="tide-btn-primary">
             Accept invite
           </button>

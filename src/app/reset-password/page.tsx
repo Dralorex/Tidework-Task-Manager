@@ -22,10 +22,13 @@ export default async function ResetPasswordPage({
     );
   }
 
-  async function action(formData: FormData) {
+  async function action(
+    prev: { ok: true; resetUrl?: string } | { ok: false; error: string } | null,
+    formData: FormData,
+  ) {
     "use server";
     formData.set("token", token!);
-    return resetPasswordAction(formData);
+    return resetPasswordAction(prev, formData);
   }
 
   return (
