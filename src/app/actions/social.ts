@@ -400,3 +400,111 @@ export async function sendMessageAction(
   revalidatePath("/app", "layout");
   return { ok: true };
 }
+
+export async function leaveChatAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const groupId = String(formData.get("groupId") ?? "");
+
+  const member = await prisma.chatMember.findUnique({
+    where: { groupId_userId: { groupId, userId: user.id } },
+    include: { group: true },
+  });
+  if (!member) return { ok: false, error: "You’re not in this chat." };
+
+  await prisma.chatMember.delete({ where: { id: member.id } });
+
+  await prisma.notification.updateMany({
+    where: {
+      userId: user.id,
+      type: "CHAT_MESSAGE",
+      meta: { contains: groupId },
+    },
+    data: { read: true },
+  });
+
+  const remaining = await prisma.chatMember.count({ where: { groupId } });
+  if (remaining === 0) {
+    await prisma.chatGroup.delete({ where: { id: groupId } }).catch(() => null);
+  }
+
+  revalidatePath("/app/chat");
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
+  return { ok: true };
+}
+
+export async function deleteChatGroupAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const groupId = String(formData.get("groupId") ?? "");
+
+  const group = await prisma.chatGroup.findUnique({
+    where: { id: groupId },
+    include: { members: true },
+  });
+  if (!group) return { ok: false, error: "Chat not found." };
+  if (group.isDirect) {
+    return { ok: false, error: "Leave a DM instead of deleting it for everyone." };
+  }
+
+  const isMember = group.members.some((m) => m.userId === user.id);
+  if (!isMember) return { ok: false, error: "You’re not in this chat." };
+
+  let allowed = group.createdById === user.id;
+  if (!allowed && group.workspaceId) {
+    const membership = await prisma.membership.findUnique({
+      where: {
+        workspaceId_userId: {
+          workspaceId: group.workspaceId,
+          userId: user.id,
+        },
+      },
+    });
+    allowed = Boolean(membership && canCreateGroups(membership.role));
+  }
+  if (!allowed) {
+    return {
+      ok: false,
+      error: "Only the creator or a workspace admin can delete this group.",
+    };
+  }
+
+  await prisma.chatGroup.delete({ where: { id: groupId } });
+
+  revalidatePath("/app/chat");
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
+  return { ok: true };
+}
+
+export async function markChatNotificationsReadAction(
+  groupId: string,
+): Promise<void> {
+  const user = await requireUser();
+  if (!groupId) return;
+
+  const member = await prisma.chatMember.findUnique({
+    where: { groupId_userId: { groupId, userId: user.id } },
+  });
+  if (!member) return;
+
+  await prisma.notification.updateMany({
+    where: {
+      userId: user.id,
+      type: "CHAT_MESSAGE",
+      read: false,
+      meta: { contains: groupId },
+    },
+    data: { read: true },
+  });
+
+  revalidatePath("/app/chat");
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
+}
+

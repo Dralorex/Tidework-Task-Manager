@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppNav } from "@/app/components/app-nav";
+import { LiveRefresh } from "@/app/components/live-refresh";
 import { getCurrentUser } from "@/lib/auth";
 import { syncDeadlineNotifications } from "@/lib/deadline-notifications";
 import { prisma } from "@/lib/db";
@@ -15,13 +16,27 @@ export default async function AppSectionLayout({
 
   await syncDeadlineNotifications(user.id);
 
-  const unreadCount = await prisma.notification.count({
-    where: { userId: user.id, read: false },
-  });
+  const [unreadCount, chatUnreadCount] = await Promise.all([
+    prisma.notification.count({
+      where: { userId: user.id, read: false },
+    }),
+    prisma.notification.count({
+      where: {
+        userId: user.id,
+        read: false,
+        type: { in: ["CHAT_MESSAGE", "DM_REQUEST"] },
+      },
+    }),
+  ]);
 
   return (
     <div className="tide-wave-bg min-h-screen">
-      <AppNav displayLabel={personLabel(user)} unreadCount={unreadCount} />
+      <LiveRefresh />
+      <AppNav
+        displayLabel={personLabel(user)}
+        unreadCount={unreadCount}
+        chatUnreadCount={chatUnreadCount}
+      />
       {children}
     </div>
   );

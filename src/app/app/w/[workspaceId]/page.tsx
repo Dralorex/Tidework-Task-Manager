@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { InlineActionForm } from "@/app/components/forms";
+import { FolderActions } from "@/app/components/folder-actions";
 import { PriorityBadge, TaskUrgencyEdge } from "@/app/components/task-ui";
 import {
   addPrivateTagAction,
@@ -15,6 +16,7 @@ import {
 import { inviteMemberAction } from "@/app/actions/workspaces";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { computeFolderTaskCounts } from "@/lib/folder-counts";
 import { canEditContent, canManagePeople } from "@/lib/permissions";
 import { compareTasksByUrgency } from "@/lib/urgency";
 import { personLabel, searchRelevance } from "@/lib/utils";
@@ -46,16 +48,46 @@ export default async function WorkspacePage({
     orderBy: { name: "asc" },
   });
 
-  // Root = no folder query param. Show all tasks by urgency.
+  const taskCountRows = await prisma.task.groupBy({
+    by: ["folderId"],
+    where: { workspaceId },
+    _count: { _all: true },
+  });
+  const directCounts = new Map(
+    taskCountRows.map((r) => [r.folderId, r._count._all]),
+  );
+  const folderCounts = computeFolderTaskCounts(folders, directCounts);
+  const allTasksCount = [...directCounts.values()].reduce((a, b) => a + b, 0);
+
+  // All Tasks = no folder query param. Show all tasks by urgency.
   const isRoot = !sp.folder;
   const currentFolderId = sp.folder ?? null;
   const currentFolder = currentFolderId
     ? folders.find((f) => f.id === currentFolderId) ?? null
     : null;
 
+  if (currentFolderId && !currentFolder) {
+    redirect(`/app/w/${workspaceId}`);
+  }
+
   const childFolders = folders.filter(
     (f) => f.parentId === (currentFolder?.id ?? null),
   );
+
+  const parentFolder = currentFolder?.parentId
+    ? folders.find((f) => f.id === currentFolder.parentId) ?? null
+    : null;
+
+  const backHref = currentFolder
+    ? parentFolder
+      ? `/app/w/${workspaceId}?folder=${parentFolder.id}`
+      : `/app/w/${workspaceId}`
+    : null;
+  const backLabel = currentFolder
+    ? parentFolder
+      ? parentFolder.name
+      : "All Tasks"
+    : null;
 
   let tasks = isRoot
     ? await prisma.task.findMany({
@@ -163,25 +195,44 @@ export default async function WorkspacePage({
                 <li>
                   <Link
                     href={`/app/w/${workspaceId}`}
-                    className={!currentFolder ? "font-semibold text-[#0A3D45]" : "text-[#0A3D45]/70"}
+                    className={`inline-flex items-center gap-1.5 ${
+                      !currentFolder
+                        ? "font-semibold text-[#0A3D45]"
+                        : "text-[#0A3D45]/70"
+                    }`}
                   >
-                    Root
+                    All Tasks
+                    <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
+                      {allTasksCount}
+                    </span>
                   </Link>
                 </li>
                 {folders
                   .filter((f) => !f.parentId)
                   .map((f) => (
                     <li key={f.id}>
-                      <Link
-                        href={`/app/w/${workspaceId}?folder=${f.id}`}
-                        className={
-                          currentFolder?.id === f.id
-                            ? "font-semibold text-[#0A3D45]"
-                            : "text-[#0A3D45]/70 hover:text-[#0A3D45]"
-                        }
-                      >
-                        {f.name}
-                      </Link>
+                      <div className="group flex items-center justify-between gap-1">
+                        <Link
+                          href={`/app/w/${workspaceId}?folder=${f.id}`}
+                          className={`inline-flex min-w-0 items-center gap-1.5 ${
+                            currentFolder?.id === f.id
+                              ? "font-semibold text-[#0A3D45]"
+                              : "text-[#0A3D45]/70 hover:text-[#0A3D45]"
+                          }`}
+                        >
+                          <span className="truncate">{f.name}</span>
+                          <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
+                            {folderCounts.get(f.id) ?? 0}
+                          </span>
+                        </Link>
+                        {canEdit ? (
+                          <FolderActions
+                            workspaceId={workspaceId}
+                            folderId={f.id}
+                            folderName={f.name}
+                          />
+                        ) : null}
+                      </div>
                     </li>
                   ))}
               </ul>
@@ -246,9 +297,26 @@ export default async function WorkspacePage({
 
           <section className="space-y-6">
             <div className="tide-panel p-5">
-              <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
-                {currentFolder ? currentFolder.name : "All tasks"}
-              </h2>
+              {backHref && backLabel ? (
+                <Link
+                  href={backHref}
+                  className="text-sm text-[#0A3D45]/60 hover:underline"
+                >
+                  ← {backLabel}
+                </Link>
+              ) : null}
+              <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
+                  {currentFolder ? currentFolder.name : "All Tasks"}
+                </h2>
+                {canEdit && currentFolder ? (
+                  <FolderActions
+                    workspaceId={workspaceId}
+                    folderId={currentFolder.id}
+                    folderName={currentFolder.name}
+                  />
+                ) : null}
+              </div>
               <p className="text-sm text-[#0A3D45]/60">
                 {isRoot
                   ? "Every task in this workspace, sorted by urgency (priority + due date)."
@@ -256,15 +324,27 @@ export default async function WorkspacePage({
               </p>
 
               {childFolders.length > 0 ? (
-                <ul className="mt-4 flex flex-wrap gap-2">
+                <ul className="mt-4 space-y-2">
                   {childFolders.map((f) => (
                     <li key={f.id}>
-                      <Link
-                        href={`/app/w/${workspaceId}?folder=${f.id}`}
-                        className="tide-btn-secondary text-sm"
-                      >
-                        {f.name}
-                      </Link>
+                      <div className="group flex items-center justify-between gap-2 rounded-lg border border-[#0A3D45]/10 bg-[#0A3D45]/[0.02] px-3 py-2.5 transition hover:border-[#0A3D45]/20 hover:bg-[#0A3D45]/[0.05]">
+                        <Link
+                          href={`/app/w/${workspaceId}?folder=${f.id}`}
+                          className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-[#0A3D45]"
+                        >
+                          <span className="truncate">{f.name}</span>
+                          <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
+                            {folderCounts.get(f.id) ?? 0}
+                          </span>
+                        </Link>
+                        {canEdit ? (
+                          <FolderActions
+                            workspaceId={workspaceId}
+                            folderId={f.id}
+                            folderName={f.name}
+                          />
+                        ) : null}
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -296,7 +376,7 @@ export default async function WorkspacePage({
 
               {isRoot && canEdit ? (
                 <p className="mt-4 text-sm text-[#0A3D45]/65">
-                  Open a folder to add tasks. Root lists everything by urgency.
+                  Open a folder to add tasks. All Tasks lists everything by urgency.
                 </p>
               ) : null}
             </div>

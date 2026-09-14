@@ -38,6 +38,66 @@ export async function createFolderAction(
   return { ok: true };
 }
 
+export async function renameFolderAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const folderId = String(formData.get("folderId") ?? "");
+
+  const membership = await requireMembership(workspaceId, user.id);
+  if (!canEditContent(membership.role)) {
+    return { ok: false, error: "Members can’t rename folders." };
+  }
+
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return { ok: false, error: "Folder needs a name." };
+
+  const folder = await prisma.folder.findFirst({
+    where: { id: folderId, workspaceId },
+  });
+  if (!folder) return { ok: false, error: "Folder not found." };
+
+  await prisma.folder.update({
+    where: { id: folderId },
+    data: { name },
+  });
+
+  revalidatePath(`/app/w/${workspaceId}`);
+  return { ok: true };
+}
+
+export async function deleteFolderAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const folderId = String(formData.get("folderId") ?? "");
+
+  const membership = await requireMembership(workspaceId, user.id);
+  if (!canEditContent(membership.role)) {
+    return { ok: false, error: "Members can’t delete folders." };
+  }
+
+  const folder = await prisma.folder.findFirst({
+    where: { id: folderId, workspaceId },
+  });
+  if (!folder) return { ok: false, error: "Folder not found." };
+
+  const parentId = folder.parentId;
+  await prisma.folder.delete({ where: { id: folderId } });
+
+  revalidatePath(`/app/w/${workspaceId}`);
+  return {
+    ok: true,
+    resetUrl: parentId
+      ? `/app/w/${workspaceId}?folder=${parentId}`
+      : `/app/w/${workspaceId}`,
+  };
+}
+
 export async function createTaskAction(
   _prev: ActionResult | null,
   formData: FormData,
@@ -110,6 +170,7 @@ export async function claimTaskAction(
 
   await syncCalendarForTask(taskId);
   revalidatePath(`/app/w/${workspaceId}`);
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
 

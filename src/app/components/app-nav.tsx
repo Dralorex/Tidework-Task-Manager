@@ -7,9 +7,11 @@ import { signOutAction } from "@/app/actions/auth";
 export function AppNav({
   displayLabel,
   unreadCount = 0,
+  chatUnreadCount = 0,
 }: {
   displayLabel: string;
   unreadCount?: number;
+  chatUnreadCount?: number;
 }) {
   const pathname = usePathname();
 
@@ -59,7 +61,7 @@ export function AppNav({
         <nav className="flex flex-wrap items-center gap-1">
           {link("/app", "home", "Workspaces")}
           {link("/app/calendar", "calendar", "Calendar")}
-          {link("/app/chat", "chat", "Chat")}
+          {link("/app/chat", "chat", "Chat", chatUnreadCount)}
           {link("/app/social", "social", "Friends")}
           {link("/app/notifications", "notifications", "Notifications", unreadCount)}
         </nav>
