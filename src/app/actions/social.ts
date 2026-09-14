@@ -35,8 +35,9 @@ export async function sendFriendRequestAction(
     return { ok: false, error: "A friend request is already pending." };
   }
 
+  let friendship;
   if (existing) {
-    await prisma.friendship.update({
+    friendship = await prisma.friendship.update({
       where: { id: existing.id },
       data: {
         requesterId: user.id,
@@ -45,7 +46,7 @@ export async function sendFriendRequestAction(
       },
     });
   } else {
-    await prisma.friendship.create({
+    friendship = await prisma.friendship.create({
       data: {
         requesterId: user.id,
         addresseeId: other.id,
@@ -60,11 +61,16 @@ export async function sendFriendRequestAction(
       type: "FRIEND_REQUEST",
       title: "Friend request",
       body: `${user.username} wants to be friends on Tidework.`,
-      meta: JSON.stringify({ fromUserId: user.id }),
+      meta: JSON.stringify({
+        fromUserId: user.id,
+        friendshipId: friendship.id,
+      }),
     },
   });
 
   revalidatePath("/app/social");
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
 
@@ -88,8 +94,19 @@ export async function respondFriendRequestAction(
     data: { status: accept ? "ACCEPTED" : "DECLINED" },
   });
 
+  await prisma.notification.updateMany({
+    where: {
+      userId: user.id,
+      type: "FRIEND_REQUEST",
+      meta: { contains: friendshipId },
+    },
+    data: { read: true },
+  });
+
   revalidatePath("/app/social");
   revalidatePath("/app/chat");
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
 
@@ -142,8 +159,9 @@ export async function requestWorkspaceDmAction(
 
   if (areFriends) {
     const group = await findDirectGroup(user.id, other.id);
+    let groupId: string;
     if (!group) {
-      await prisma.chatGroup.create({
+      const created = await prisma.chatGroup.create({
         data: {
           name: `${user.username} & ${other.username}`,
           isDirect: true,
@@ -156,16 +174,31 @@ export async function requestWorkspaceDmAction(
           },
         },
       });
+      groupId = created.id;
     } else {
       await prisma.message.create({
         data: { groupId: group.id, senderId: user.id, body: firstMessage },
       });
+      groupId = group.id;
     }
+
+    await prisma.notification.create({
+      data: {
+        userId: other.id,
+        type: "CHAT_MESSAGE",
+        title: `Message from @${user.username}`,
+        body: firstMessage.slice(0, 140),
+        meta: JSON.stringify({ groupId, fromUserId: user.id }),
+      },
+    });
+
     revalidatePath("/app/chat");
+    revalidatePath("/app/notifications");
+    revalidatePath("/app", "layout");
     return { ok: true };
   }
 
-  await prisma.dmRequest.create({
+  const dmRequest = await prisma.dmRequest.create({
     data: {
       fromUserId: user.id,
       toUserId: other.id,
@@ -180,11 +213,16 @@ export async function requestWorkspaceDmAction(
       type: "DM_REQUEST",
       title: "Chat request",
       body: `${user.username}: ${firstMessage}`,
-      meta: JSON.stringify({ fromUserId: user.id }),
+      meta: JSON.stringify({
+        fromUserId: user.id,
+        requestId: dmRequest.id,
+      }),
     },
   });
 
   revalidatePath("/app/chat");
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
 
@@ -209,7 +247,17 @@ export async function respondDmRequestAction(
       where: { id: requestId },
       data: { status: "DECLINED" },
     });
+    await prisma.notification.updateMany({
+      where: {
+        userId: user.id,
+        type: "DM_REQUEST",
+        meta: { contains: requestId },
+      },
+      data: { read: true },
+    });
     revalidatePath("/app/chat");
+    revalidatePath("/app/notifications");
+    revalidatePath("/app", "layout");
     return { ok: true };
   }
 
@@ -235,7 +283,18 @@ export async function respondDmRequestAction(
     data: { status: "ACCEPTED", chatGroupId: group.id },
   });
 
+  await prisma.notification.updateMany({
+    where: {
+      userId: user.id,
+      type: "DM_REQUEST",
+      meta: { contains: requestId },
+    },
+    data: { read: true },
+  });
+
   revalidatePath("/app/chat");
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
 
@@ -306,10 +365,38 @@ export async function sendMessageAction(
   });
   if (!member) return { ok: false, error: "You’re not in this chat." };
 
+  const group = await prisma.chatGroup.findUnique({
+    where: { id: groupId },
+    include: { members: true },
+  });
+  if (!group) return { ok: false, error: "Chat not found." };
+
   await prisma.message.create({
     data: { groupId, senderId: user.id, body },
   });
 
+  const recipients = group.members
+    .map((m) => m.userId)
+    .filter((id) => id !== user.id);
+
+  if (recipients.length > 0) {
+    const preview = body.slice(0, 140);
+    const title = group.isDirect
+      ? `Message from @${user.username}`
+      : `${group.name}: @${user.username}`;
+    await prisma.notification.createMany({
+      data: recipients.map((userId) => ({
+        userId,
+        type: "CHAT_MESSAGE",
+        title,
+        body: preview,
+        meta: JSON.stringify({ groupId, fromUserId: user.id }),
+      })),
+    });
+  }
+
   revalidatePath("/app/chat");
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
   return { ok: true };
 }

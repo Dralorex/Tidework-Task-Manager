@@ -152,12 +152,18 @@ export async function completeTaskAction(
       type: "TASK_REVIEW",
       title: "Ready for review",
       body: `${user.username} finished “${task.name}”: ${comment}`,
-      meta: JSON.stringify({ workspaceId, taskId }),
+      meta: JSON.stringify({
+        workspaceId,
+        taskId,
+        folderId: task.folderId,
+      }),
     })),
   });
 
   await syncCalendarForTask(taskId);
   revalidatePath(`/app/w/${workspaceId}`);
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
 
@@ -200,13 +206,19 @@ export async function reviewTaskAction(
           decision === "approve"
             ? `“${task.name}” was approved.`
             : `“${task.name}” was sent back for more work.`,
-        meta: JSON.stringify({ workspaceId, taskId }),
+        meta: JSON.stringify({
+          workspaceId,
+          taskId,
+          folderId: task.folderId,
+        }),
       },
     });
   }
 
   await syncCalendarForTask(taskId);
   revalidatePath(`/app/w/${workspaceId}`);
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
 
