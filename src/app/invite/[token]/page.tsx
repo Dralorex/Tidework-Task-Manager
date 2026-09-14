@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { acceptInviteAction } from "@/app/actions/workspaces";
+import { InlineActionForm } from "@/app/components/forms";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
@@ -66,11 +67,11 @@ export default async function InvitePage({
         <p className="mt-2 text-sm text-[#0A3D45]/70">
           Role: {invite.role.toLowerCase()}
         </p>
-        <form action={acceptInviteAction.bind(null, token)} className="mt-6">
-          <button type="submit" className="tide-btn-primary">
-            Accept invite
-          </button>
-        </form>
+        <div className="mt-6 flex justify-center">
+          <InlineActionForm action={acceptInviteAction} submitLabel="Accept invite">
+            <input type="hidden" name="token" value={token} />
+          </InlineActionForm>
+        </div>
       </div>
     </main>
   );

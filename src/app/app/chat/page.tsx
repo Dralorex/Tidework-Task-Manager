@@ -97,16 +97,20 @@ export default async function ChatPage({
                       {r.firstMessage}
                     </p>
                     <div className="mt-2 flex gap-2">
-                      <form action={respondDmRequestAction.bind(null, r.id, true)}>
-                        <button type="submit" className="tide-btn-primary text-xs">
-                          Accept
-                        </button>
-                      </form>
-                      <form action={respondDmRequestAction.bind(null, r.id, false)}>
-                        <button type="submit" className="tide-btn-secondary text-xs">
-                          Decline
-                        </button>
-                      </form>
+                      <InlineActionForm
+                        action={respondDmRequestAction}
+                        submitLabel="Accept"
+                      >
+                        <input type="hidden" name="requestId" value={r.id} />
+                        <input type="hidden" name="accept" value="true" />
+                      </InlineActionForm>
+                      <InlineActionForm
+                        action={respondDmRequestAction}
+                        submitLabel="Decline"
+                      >
+                        <input type="hidden" name="requestId" value={r.id} />
+                        <input type="hidden" name="accept" value="false" />
+                      </InlineActionForm>
                     </div>
                   </li>
                 ))}
@@ -122,10 +126,7 @@ export default async function ChatPage({
             </p>
             <InlineActionForm
               className="mt-3 flex flex-col gap-2"
-              action={async (fd) => {
-                "use server";
-                return requestWorkspaceDmAction(String(fd.get("workspaceId") ?? ""), fd);
-              }}
+              action={requestWorkspaceDmAction}
               submitLabel="Send"
             >
               <select name="workspaceId" className="tide-input text-sm" required>
@@ -155,10 +156,7 @@ export default async function ChatPage({
               <h3 className="font-semibold text-[#0A3D45]">New group (Admin+)</h3>
               <InlineActionForm
                 className="mt-3 flex flex-col gap-2"
-                action={async (fd) => {
-                  "use server";
-                  return createGroupChatAction(String(fd.get("workspaceId") ?? ""), fd);
-                }}
+                action={createGroupChatAction}
                 submitLabel="Create group"
               >
                 <select name="workspaceId" className="tide-input text-sm" required>
@@ -208,9 +206,10 @@ export default async function ChatPage({
               </div>
               <InlineActionForm
                 className="mt-4 flex gap-2"
-                action={sendMessageAction.bind(null, active.id)}
+                action={sendMessageAction}
                 submitLabel="Send"
               >
+                <input type="hidden" name="groupId" value={active.id} />
                 <input
                   name="body"
                   required

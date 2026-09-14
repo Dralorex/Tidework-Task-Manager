@@ -13,11 +13,14 @@ import type { TaskPriority } from "@/generated/prisma/client";
 import type { ActionResult } from "@/app/actions/auth";
 
 export async function createFolderAction(
-  workspaceId: string,
-  parentId: string | null,
+  _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const parentRaw = String(formData.get("parentId") ?? "").trim();
+  const parentId = parentRaw || null;
+
   const membership = await requireMembership(workspaceId, user.id);
   if (!canEditContent(membership.role)) {
     return { ok: false, error: "Members can’t create folders." };
@@ -35,11 +38,13 @@ export async function createFolderAction(
 }
 
 export async function createTaskAction(
-  workspaceId: string,
-  folderId: string,
+  _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const folderId = String(formData.get("folderId") ?? "");
+
   const membership = await requireMembership(workspaceId, user.id);
   if (!canEditContent(membership.role)) {
     return { ok: false, error: "Members can’t create tasks." };
@@ -77,10 +82,12 @@ export async function createTaskAction(
 }
 
 export async function claimTaskAction(
-  workspaceId: string,
-  taskId: string,
+  _prev: ActionResult | null,
+  formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const taskId = String(formData.get("taskId") ?? "");
   await requireMembership(workspaceId, user.id);
 
   const task = await prisma.task.findFirst({
@@ -106,11 +113,12 @@ export async function claimTaskAction(
 }
 
 export async function completeTaskAction(
-  workspaceId: string,
-  taskId: string,
+  _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const taskId = String(formData.get("taskId") ?? "");
   await requireMembership(workspaceId, user.id);
 
   const comment = String(formData.get("comment") ?? "").trim();
@@ -154,11 +162,14 @@ export async function completeTaskAction(
 }
 
 export async function reviewTaskAction(
-  workspaceId: string,
-  taskId: string,
-  decision: "approve" | "reopen",
+  _prev: ActionResult | null,
+  formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const taskId = String(formData.get("taskId") ?? "");
+  const decision = String(formData.get("decision") ?? "") as "approve" | "reopen";
+
   const membership = await requireMembership(workspaceId, user.id);
   if (!canEditContent(membership.role)) {
     return { ok: false, error: "Only editors and above can review tasks." };
@@ -200,11 +211,12 @@ export async function reviewTaskAction(
 }
 
 export async function addPrivateTagAction(
-  workspaceId: string,
-  taskId: string,
+  _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const taskId = String(formData.get("taskId") ?? "");
   await requireMembership(workspaceId, user.id);
 
   const task = await prisma.task.findFirst({
@@ -248,11 +260,12 @@ export async function addPrivateTagAction(
 }
 
 export async function addPublicTagAction(
-  workspaceId: string,
-  taskId: string,
+  _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const taskId = String(formData.get("taskId") ?? "");
   const membership = await requireMembership(workspaceId, user.id);
   if (!canCreatePublicTags(membership.role)) {
     return { ok: false, error: "Only editors and above manage public tags." };
