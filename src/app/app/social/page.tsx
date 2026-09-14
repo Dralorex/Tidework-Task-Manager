@@ -6,7 +6,9 @@ import {
   respondFriendRequestAction,
   sendFriendRequestAction,
 } from "@/app/actions/social";
+import { toggleFriendBirthdayVisibilityAction } from "@/app/actions/calendar";
 import { getCurrentUser } from "@/lib/auth";
+import { formatBirthday } from "@/lib/birthday";
 import { prisma } from "@/lib/db";
 import { personLabel } from "@/lib/utils";
 
@@ -31,6 +33,20 @@ export default async function SocialPage() {
     friendshipId: f.id,
     user: f.requesterId === user.id ? f.addressee : f.requester,
   }));
+  const birthdayShares =
+    friends.length > 0
+      ? await prisma.birthdayShare.findMany({
+          where: {
+            viewerId: user.id,
+            ownerId: { in: friends.map((friend) => friend.user.id) },
+            status: { in: ["ACTIVE", "HIDDEN"] },
+          },
+          include: { owner: true },
+        })
+      : [];
+  const birthdayByFriend = new Map(
+    birthdayShares.map((share) => [share.ownerId, share]),
+  );
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
@@ -102,28 +118,57 @@ export default async function SocialPage() {
           {friends.length === 0 ? (
             <li className="text-[#0A3D45]/60">No friends yet.</li>
           ) : (
-            friends.map(({ friendshipId, user: friend }) => (
-              <li
-                key={friendshipId}
-                className="group tide-panel flex items-center justify-between gap-3 px-4 py-3"
-              >
-                <span className="min-w-0 truncate font-medium text-[#0A3D45]">
-                  {personLabel(friend)}
-                </span>
-                <div className="flex shrink-0 items-center gap-2">
-                  <InlineActionForm
-                    action={openFriendChatAction}
-                    submitLabel="Message"
-                  >
-                    <input type="hidden" name="friendUserId" value={friend.id} />
-                  </InlineActionForm>
-                  <FriendRowMenu
-                    friendshipId={friendshipId}
-                    friendLabel={personLabel(friend)}
-                  />
-                </div>
-              </li>
-            ))
+            friends.map(({ friendshipId, user: friend }) => {
+              const birthdayShare = birthdayByFriend.get(friend.id);
+              return (
+                <li
+                  key={friendshipId}
+                  className="group tide-panel flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                >
+                  <span className="min-w-0 font-medium text-[#0A3D45]">
+                    {personLabel(friend)}
+                    {birthdayShare?.owner.birthday ? (
+                      <span className="ml-2 text-sm font-normal text-[#0A3D45]/60">
+                        · {formatBirthday(birthdayShare.owner.birthday)}
+                      </span>
+                    ) : null}
+                  </span>
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    {birthdayShare?.owner.birthday ? (
+                      <InlineActionForm
+                        action={toggleFriendBirthdayVisibilityAction}
+                        submitLabel={
+                          birthdayShare.status === "ACTIVE"
+                            ? "Hide birthday"
+                            : "Show birthday"
+                        }
+                      >
+                        <input
+                          type="hidden"
+                          name="shareId"
+                          value={birthdayShare.id}
+                        />
+                        <input
+                          type="hidden"
+                          name="show"
+                          value={String(birthdayShare.status !== "ACTIVE")}
+                        />
+                      </InlineActionForm>
+                    ) : null}
+                    <InlineActionForm
+                      action={openFriendChatAction}
+                      submitLabel="Message"
+                    >
+                      <input type="hidden" name="friendUserId" value={friend.id} />
+                    </InlineActionForm>
+                    <FriendRowMenu
+                      friendshipId={friendshipId}
+                      friendLabel={personLabel(friend)}
+                    />
+                  </div>
+                </li>
+              );
+            })
           )}
         </ul>
       </section>

@@ -63,6 +63,22 @@ export function urgencyLabel(level: UrgencyLevel): string {
   }
 }
 
+/** Short badge copy for collapsed task rows (updates as due pressure rises). */
+export function urgencyTag(level: UrgencyLevel): string {
+  switch (level) {
+    case "critical":
+      return "Critical";
+    case "high":
+      return "High";
+    case "medium":
+      return "Med";
+    case "low":
+      return "Low";
+    default:
+      return "Calm";
+  }
+}
+
 export function compareTasksByUrgency<
   T extends { priority: TaskPriority; dueDate: Date | null; createdAt: Date },
 >(a: T, b: T, now = new Date()): number {

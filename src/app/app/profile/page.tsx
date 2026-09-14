@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { BirthdaySettingsForm } from "@/app/components/birthday-settings-form";
 import { ProfileSettingsForm } from "@/app/components/profile-settings-form";
 import { getCurrentUser } from "@/lib/auth";
 import { personLabel } from "@/lib/utils";
@@ -17,12 +18,21 @@ export default async function ProfilePage() {
         set.
       </p>
 
-      <div className="tide-panel mt-8 p-5">
+      <div className="tide-panel mt-8 space-y-8 p-5">
         <ProfileSettingsForm
           username={user.username}
           nickname={user.nickname ?? ""}
           email={user.email}
         />
+
+        <div className="border-t border-[#0A3D45]/10 pt-6">
+          <BirthdaySettingsForm
+            birthday={user.birthday}
+            shareBirthdayFriends={user.shareBirthdayFriends}
+            shareBirthdayWorkspaces={user.shareBirthdayWorkspaces}
+            askBeforeShareBirthday={user.askBeforeShareBirthday}
+          />
+        </div>
       </div>
     </main>
   );
