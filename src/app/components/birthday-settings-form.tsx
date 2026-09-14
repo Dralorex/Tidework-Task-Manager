@@ -8,7 +8,7 @@ import {
   updateBirthdayAction,
   type BirthdaySaveResult,
 } from "@/app/actions/birthday";
-import { birthdayParts, formatBirthday } from "@/lib/birthday";
+import { birthdayParts, formatBirthday } from "@/lib/birthday-format";
 
 function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
