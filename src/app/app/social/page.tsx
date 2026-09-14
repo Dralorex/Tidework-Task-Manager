@@ -47,7 +47,7 @@ export default async function SocialPage() {
           </h2>
           <InlineActionForm
             className="mt-3 flex flex-col gap-2 sm:flex-row"
-            action={(fd) => sendFriendRequestAction(fd)}
+            action={sendFriendRequestAction}
             submitLabel="Send request"
           >
             <input
@@ -72,12 +72,12 @@ export default async function SocialPage() {
                 >
                   <span>@{r.requester.username}</span>
                   <div className="flex gap-2">
-                    <form action={async () => { await respondFriendRequestAction(r.id, true); }}>
+                    <form action={respondFriendRequestAction.bind(null, r.id, true)}>
                       <button type="submit" className="tide-btn-primary text-sm">
                         Accept
                       </button>
                     </form>
-                    <form action={async () => { await respondFriendRequestAction(r.id, false); }}>
+                    <form action={respondFriendRequestAction.bind(null, r.id, false)}>
                       <button type="submit" className="tide-btn-secondary text-sm">
                         Decline
                       </button>

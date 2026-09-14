@@ -97,12 +97,12 @@ export default async function ChatPage({
                       {r.firstMessage}
                     </p>
                     <div className="mt-2 flex gap-2">
-                      <form action={async () => { await respondDmRequestAction(r.id, true); }}>
+                      <form action={respondDmRequestAction.bind(null, r.id, true)}>
                         <button type="submit" className="tide-btn-primary text-xs">
                           Accept
                         </button>
                       </form>
-                      <form action={async () => { await respondDmRequestAction(r.id, false); }}>
+                      <form action={respondDmRequestAction.bind(null, r.id, false)}>
                         <button type="submit" className="tide-btn-secondary text-xs">
                           Decline
                         </button>
@@ -208,7 +208,7 @@ export default async function ChatPage({
               </div>
               <InlineActionForm
                 className="mt-4 flex gap-2"
-                action={(fd) => sendMessageAction(active.id, fd)}
+                action={sendMessageAction.bind(null, active.id)}
                 submitLabel="Send"
               >
                 <input

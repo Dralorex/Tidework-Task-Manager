@@ -178,9 +178,7 @@ export default async function WorkspacePage({
               {canEdit ? (
                 <InlineActionForm
                   className="mt-4 flex flex-col gap-2"
-                  action={(fd) =>
-                    createFolderAction(workspaceId, currentFolder?.id ?? null, fd)
-                  }
+                  action={createFolderAction.bind(null, workspaceId, currentFolder?.id ?? null)}
                   submitLabel="New folder"
                 >
                   <input
@@ -200,7 +198,7 @@ export default async function WorkspacePage({
                 </h2>
                 <InlineActionForm
                   className="mt-3 flex flex-col gap-2"
-                  action={(fd) => inviteMemberAction(workspaceId, fd)}
+                  action={inviteMemberAction.bind(null, workspaceId)}
                   submitLabel="Send invite"
                 >
                   <input
@@ -257,7 +255,7 @@ export default async function WorkspacePage({
               {canEdit && currentFolder ? (
                 <InlineActionForm
                   className="mt-5 grid gap-2 sm:grid-cols-2"
-                  action={(fd) => createTaskAction(workspaceId, currentFolder.id, fd)}
+                  action={createTaskAction.bind(null, workspaceId, currentFolder.id)}
                   submitLabel="Add task"
                 >
                   <input name="name" required placeholder="Task name" className="tide-input" />
@@ -331,7 +329,7 @@ export default async function WorkspacePage({
                       {task.status === "OPEN" ||
                       (task.status === "CLAIMED" && !task.assigneeId) ? (
                         <form
-                          action={async () => { await claimTaskAction(workspaceId, task.id); }}
+                          action={claimTaskAction.bind(null, workspaceId, task.id)}
                         >
                           <button type="submit" className="tide-btn-primary w-full text-sm">
                             Pick up
@@ -342,7 +340,7 @@ export default async function WorkspacePage({
                       {task.assigneeId === user.id &&
                       (task.status === "CLAIMED" || task.status === "OPEN") ? (
                         <InlineActionForm
-                          action={(fd) => completeTaskAction(workspaceId, task.id, fd)}
+                          action={completeTaskAction.bind(null, workspaceId, task.id)}
                           submitLabel="Ready for review"
                         >
                           <input
@@ -357,18 +355,14 @@ export default async function WorkspacePage({
                       {task.status === "IN_REVIEW" && canEdit ? (
                         <div className="flex gap-2">
                           <form
-                            action={async () => {
-                              await reviewTaskAction(workspaceId, task.id, "approve");
-                            }}
+action={reviewTaskAction.bind(null, workspaceId, task.id, "approve")}
                           >
                             <button type="submit" className="tide-btn-primary text-sm">
                               Approve
                             </button>
                           </form>
                           <form
-                            action={async () => {
-                              await reviewTaskAction(workspaceId, task.id, "reopen");
-                            }}
+action={reviewTaskAction.bind(null, workspaceId, task.id, "reopen")}
                           >
                             <button type="submit" className="tide-btn-secondary text-sm">
                               Send back
@@ -379,7 +373,7 @@ export default async function WorkspacePage({
 
                       {task.assigneeId === user.id ? (
                         <InlineActionForm
-                          action={(fd) => addPrivateTagAction(workspaceId, task.id, fd)}
+                          action={addPrivateTagAction.bind(null, workspaceId, task.id)}
                           submitLabel="Private tag"
                         >
                           <input
@@ -393,7 +387,7 @@ export default async function WorkspacePage({
 
                       {canEdit ? (
                         <InlineActionForm
-                          action={(fd) => addPublicTagAction(workspaceId, task.id, fd)}
+                          action={addPublicTagAction.bind(null, workspaceId, task.id)}
                           submitLabel="Public tag"
                         >
                           <input
