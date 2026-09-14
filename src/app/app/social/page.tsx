@@ -8,7 +8,7 @@ import {
 } from "@/app/actions/social";
 import { toggleFriendBirthdayVisibilityAction } from "@/app/actions/calendar";
 import { getCurrentUser } from "@/lib/auth";
-import { formatBirthday } from "@/lib/birthday";
+import { formatBirthday } from "@/lib/birthday-format";
 import { prisma } from "@/lib/db";
 import { personLabel } from "@/lib/utils";
 
