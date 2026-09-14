@@ -171,7 +171,7 @@ export async function requestPasswordResetAction(
   if (!sent.ok) {
     return {
       ok: false,
-      error: "Couldn’t send the reset email. Try again in a moment.",
+      error: sent.error || "Couldn’t send the reset email. Try again in a moment.",
     };
   }
 
