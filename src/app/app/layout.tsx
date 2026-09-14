@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AppNav } from "@/app/components/app-nav";
 import { getCurrentUser } from "@/lib/auth";
+import { syncDeadlineNotifications } from "@/lib/deadline-notifications";
 import { prisma } from "@/lib/db";
 
 export default async function AppSectionLayout({
@@ -10,6 +11,8 @@ export default async function AppSectionLayout({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+
+  await syncDeadlineNotifications(user.id);
 
   const unreadCount = await prisma.notification.count({
     where: { userId: user.id, read: false },

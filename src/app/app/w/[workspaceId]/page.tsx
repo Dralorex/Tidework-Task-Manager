@@ -46,22 +46,36 @@ export default async function WorkspacePage({
     orderBy: { name: "asc" },
   });
 
-  const currentFolderId = sp.folder ?? folders[0]?.id ?? null;
+  // Root = no folder query param. Show all tasks by urgency.
+  const isRoot = !sp.folder;
+  const currentFolderId = sp.folder ?? null;
   const currentFolder = currentFolderId
     ? folders.find((f) => f.id === currentFolderId) ?? null
     : null;
 
-  const childFolders = folders.filter((f) => f.parentId === (currentFolder?.id ?? null));
+  const childFolders = folders.filter(
+    (f) => f.parentId === (currentFolder?.id ?? null),
+  );
 
-  let tasks = currentFolder
+  let tasks = isRoot
     ? await prisma.task.findMany({
-        where: { folderId: currentFolder.id },
+        where: { workspaceId },
         include: {
           assignee: true,
+          folder: true,
           tags: { include: { tag: true } },
         },
       })
-    : [];
+    : currentFolder
+      ? await prisma.task.findMany({
+          where: { folderId: currentFolder.id },
+          include: {
+            assignee: true,
+            folder: true,
+            tags: { include: { tag: true } },
+          },
+        })
+      : [];
 
   tasks = tasks
     .map((t) => ({
@@ -233,10 +247,12 @@ export default async function WorkspacePage({
           <section className="space-y-6">
             <div className="tide-panel p-5">
               <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
-                {currentFolder ? currentFolder.name : "Root"}
+                {currentFolder ? currentFolder.name : "All tasks"}
               </h2>
               <p className="text-sm text-[#0A3D45]/60">
-                Subfolders and tasks. Urgency edge rises with priority and due dates.
+                {isRoot
+                  ? "Every task in this workspace, sorted by urgency (priority + due date)."
+                  : "Subfolders and tasks. Urgency edge rises with priority and due dates."}
               </p>
 
               {childFolders.length > 0 ? (
@@ -278,9 +294,9 @@ export default async function WorkspacePage({
                 </InlineActionForm>
               ) : null}
 
-              {!currentFolder && canEdit ? (
+              {isRoot && canEdit ? (
                 <p className="mt-4 text-sm text-[#0A3D45]/65">
-                  Create a folder (name required) to start adding tasks inside it.
+                  Open a folder to add tasks. Root lists everything by urgency.
                 </p>
               ) : null}
             </div>
@@ -298,6 +314,17 @@ export default async function WorkspacePage({
                           {task.status.replace("_", " ")}
                         </span>
                       </div>
+                      {isRoot && task.folder ? (
+                        <p className="mt-1 text-xs text-[#0A3D45]/55">
+                          In{" "}
+                          <Link
+                            href={`/app/w/${workspaceId}?folder=${task.folderId}`}
+                            className="font-semibold underline-offset-2 hover:underline"
+                          >
+                            {task.folder.name}
+                          </Link>
+                        </p>
+                      ) : null}
                       {task.description ? (
                         <p className="mt-1 text-sm text-[#0A3D45]/70">{task.description}</p>
                       ) : null}
@@ -414,8 +441,10 @@ export default async function WorkspacePage({
                   </div>
                 </li>
               ))}
-              {currentFolder && tasks.length === 0 ? (
-                <li className="text-sm text-[#0A3D45]/60">No tasks here yet.</li>
+              {tasks.length === 0 ? (
+                <li className="text-sm text-[#0A3D45]/60">
+                  {isRoot ? "No tasks in this workspace yet." : "No tasks here yet."}
+                </li>
               ) : null}
             </ul>
           </section>
