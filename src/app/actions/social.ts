@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { handleBirthdayOnFriendship } from "@/lib/birthday";
 import { prisma } from "@/lib/db";
 import { canCreateGroups, requireMembership } from "@/lib/permissions";
 import { normalizeUsername, personLabel } from "@/lib/utils";
@@ -94,6 +95,13 @@ export async function respondFriendRequestAction(
     where: { id: friendshipId },
     data: { status: accept ? "ACCEPTED" : "DECLINED" },
   });
+
+  if (accept) {
+    await handleBirthdayOnFriendship(
+      friendship.requesterId,
+      friendship.addresseeId,
+    );
+  }
 
   await prisma.notification.updateMany({
     where: {

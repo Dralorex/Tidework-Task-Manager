@@ -173,6 +173,14 @@ export async function respondBirthdaySharePromptAction(
     if (accept) {
       const result = await requestWorkspaceBirthday(user.id, workspaceId);
       if (!result.ok) return { ok: false, error: result.error };
+    } else {
+      await prisma.workspaceBirthdayRequest.upsert({
+        where: {
+          workspaceId_subjectId: { workspaceId, subjectId: user.id },
+        },
+        create: { workspaceId, subjectId: user.id, status: "DECLINED" },
+        update: { status: "DECLINED" },
+      });
     }
   } else {
     return { ok: false, error: "Unknown share prompt." };

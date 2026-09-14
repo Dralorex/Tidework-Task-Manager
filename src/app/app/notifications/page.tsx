@@ -8,6 +8,10 @@ import {
   respondDmRequestAction,
   respondFriendRequestAction,
 } from "@/app/actions/social";
+import {
+  respondBirthdaySharePromptAction,
+  respondWorkspaceBirthdayRequestAction,
+} from "@/app/actions/birthday";
 import { InlineActionForm } from "@/app/components/forms";
 import { MarkNotificationsSeen } from "@/app/components/mark-notifications-seen";
 import { requireUser } from "@/lib/auth";
@@ -23,6 +27,9 @@ type NotifMeta = {
   requestId?: string;
   groupId?: string;
   fromUserId?: string;
+  viewerId?: string;
+  subjectId?: string;
+  kind?: "friend" | "workspace";
 };
 
 function parseMeta(meta: string | null): NotifMeta {
@@ -52,6 +59,13 @@ function typeLabel(type: string) {
       return "Approved";
     case "TASK_REOPENED":
       return "Reopened";
+    case "BIRTHDAY_SHARE_PROMPT":
+      return "Birthday";
+    case "WORKSPACE_BIRTHDAY_REQUEST":
+      return "Birthday request";
+    case "WORKSPACE_BIRTHDAY_DECISION":
+    case "BIRTHDAY_TODAY":
+      return "Birthday";
     default:
       return "Update";
   }
@@ -123,6 +137,62 @@ export default async function NotificationsPage() {
       : [];
   const pendingDmIds = new Set(pendingDmRequests.map((r) => r.id));
 
+  const birthdayPromptMeta = notifications
+    .filter((notification) => notification.type === "BIRTHDAY_SHARE_PROMPT")
+    .map((notification) => parseMeta(notification.meta));
+  const friendPromptViewerIds = birthdayPromptMeta
+    .filter((meta) => meta.kind === "friend")
+    .map((meta) => meta.viewerId)
+    .filter((id): id is string => Boolean(id));
+  const pendingBirthdayShares =
+    friendPromptViewerIds.length > 0
+      ? await prisma.birthdayShare.findMany({
+          where: {
+            ownerId: user.id,
+            viewerId: { in: friendPromptViewerIds },
+            status: "PENDING",
+          },
+        })
+      : [];
+  const pendingBirthdayViewerIds = new Set(
+    pendingBirthdayShares.map((share) => share.viewerId),
+  );
+
+  const birthdayPromptWorkspaceIds = birthdayPromptMeta
+    .filter((meta) => meta.kind === "workspace")
+    .map((meta) => meta.workspaceId)
+    .filter((id): id is string => Boolean(id));
+  const decidedWorkspacePrompts =
+    birthdayPromptWorkspaceIds.length > 0
+      ? await prisma.workspaceBirthdayRequest.findMany({
+          where: {
+            subjectId: user.id,
+            workspaceId: { in: birthdayPromptWorkspaceIds },
+          },
+        })
+      : [];
+  const decidedWorkspaceIds = new Set(
+    decidedWorkspacePrompts.map((request) => request.workspaceId),
+  );
+
+  const birthdayRequestIds = notifications
+    .filter((notification) => notification.type === "WORKSPACE_BIRTHDAY_REQUEST")
+    .map((notification) => parseMeta(notification.meta).requestId)
+    .filter((id): id is string => Boolean(id));
+  const pendingWorkspaceBirthdayRequests =
+    birthdayRequestIds.length > 0
+      ? await prisma.workspaceBirthdayRequest.findMany({
+          where: {
+            id: { in: birthdayRequestIds },
+            status: "PENDING",
+            workspace: { ownerId: user.id },
+          },
+        })
+      : [];
+  const pendingWorkspaceBirthdayRequestIds = new Set(
+    pendingWorkspaceBirthdayRequests.map((request) => request.id),
+  );
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
       <MarkNotificationsSeen hasUnread={hasUnread} />
@@ -152,6 +222,24 @@ export default async function NotificationsPage() {
               n.type === "DM_REQUEST" &&
               meta.requestId &&
               pendingDmIds.has(meta.requestId);
+            const canRespondBirthdayPrompt =
+              n.type === "BIRTHDAY_SHARE_PROMPT" &&
+              ((meta.kind === "friend" &&
+                Boolean(
+                  meta.viewerId &&
+                    pendingBirthdayViewerIds.has(meta.viewerId),
+                )) ||
+                (meta.kind === "workspace" &&
+                  Boolean(
+                    meta.workspaceId &&
+                      !decidedWorkspaceIds.has(meta.workspaceId),
+                  )));
+            const canRespondWorkspaceBirthday =
+              n.type === "WORKSPACE_BIRTHDAY_REQUEST" &&
+              Boolean(
+                meta.requestId &&
+                  pendingWorkspaceBirthdayRequestIds.has(meta.requestId),
+              );
 
             const deepLink =
               n.type === "CHAT_MESSAGE" && meta.groupId
@@ -265,6 +353,100 @@ export default async function NotificationsPage() {
                           type="hidden"
                           name="requestId"
                           value={meta.requestId}
+                        />
+                        <input type="hidden" name="accept" value="false" />
+                      </InlineActionForm>
+                    </div>
+                  ) : null}
+
+                  {canRespondBirthdayPrompt && meta.kind ? (
+                    <div className="flex gap-2">
+                      <InlineActionForm
+                        action={respondBirthdaySharePromptAction}
+                        submitLabel="Accept"
+                      >
+                        <input type="hidden" name="kind" value={meta.kind} />
+                        <input
+                          type="hidden"
+                          name="notificationId"
+                          value={n.id}
+                        />
+                        {meta.viewerId ? (
+                          <input
+                            type="hidden"
+                            name="viewerId"
+                            value={meta.viewerId}
+                          />
+                        ) : null}
+                        {meta.workspaceId ? (
+                          <input
+                            type="hidden"
+                            name="workspaceId"
+                            value={meta.workspaceId}
+                          />
+                        ) : null}
+                        <input type="hidden" name="accept" value="true" />
+                      </InlineActionForm>
+                      <InlineActionForm
+                        action={respondBirthdaySharePromptAction}
+                        submitLabel="Decline"
+                      >
+                        <input type="hidden" name="kind" value={meta.kind} />
+                        <input
+                          type="hidden"
+                          name="notificationId"
+                          value={n.id}
+                        />
+                        {meta.viewerId ? (
+                          <input
+                            type="hidden"
+                            name="viewerId"
+                            value={meta.viewerId}
+                          />
+                        ) : null}
+                        {meta.workspaceId ? (
+                          <input
+                            type="hidden"
+                            name="workspaceId"
+                            value={meta.workspaceId}
+                          />
+                        ) : null}
+                        <input type="hidden" name="accept" value="false" />
+                      </InlineActionForm>
+                    </div>
+                  ) : null}
+
+                  {canRespondWorkspaceBirthday && meta.requestId ? (
+                    <div className="flex gap-2">
+                      <InlineActionForm
+                        action={respondWorkspaceBirthdayRequestAction}
+                        submitLabel="Accept"
+                      >
+                        <input
+                          type="hidden"
+                          name="requestId"
+                          value={meta.requestId}
+                        />
+                        <input
+                          type="hidden"
+                          name="notificationId"
+                          value={n.id}
+                        />
+                        <input type="hidden" name="accept" value="true" />
+                      </InlineActionForm>
+                      <InlineActionForm
+                        action={respondWorkspaceBirthdayRequestAction}
+                        submitLabel="Decline"
+                      >
+                        <input
+                          type="hidden"
+                          name="requestId"
+                          value={meta.requestId}
+                        />
+                        <input
+                          type="hidden"
+                          name="notificationId"
+                          value={n.id}
                         />
                         <input type="hidden" name="accept" value="false" />
                       </InlineActionForm>

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { nanoid } from "nanoid";
 import { requireUser } from "@/lib/auth";
+import { handleBirthdayOnWorkspaceJoin } from "@/lib/birthday";
 import { prisma } from "@/lib/db";
 import { canManagePeople, isOwnerOnlyAction, requireMembership } from "@/lib/permissions";
 import { isValidEmail, normalizeUsername, personLabel } from "@/lib/utils";
@@ -150,6 +151,8 @@ export async function acceptInviteAction(
       data: { read: true },
     }),
   ]);
+
+  await handleBirthdayOnWorkspaceJoin(user.id, invite.workspaceId);
 
   revalidatePath("/app", "layout");
   revalidatePath("/app/notifications");

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AppNav } from "@/app/components/app-nav";
 import { LiveRefresh } from "@/app/components/live-refresh";
 import { getCurrentUser } from "@/lib/auth";
+import { syncBirthdayNotifications } from "@/lib/birthday";
 import { syncDeadlineNotifications } from "@/lib/deadline-notifications";
 import { prisma } from "@/lib/db";
 import { personLabel } from "@/lib/utils";
@@ -14,7 +15,10 @@ export default async function AppSectionLayout({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  await syncDeadlineNotifications(user.id);
+  await Promise.all([
+    syncDeadlineNotifications(user.id),
+    syncBirthdayNotifications(user.id),
+  ]);
 
   const [unreadCount, chatUnreadCount] = await Promise.all([
     prisma.notification.count({
