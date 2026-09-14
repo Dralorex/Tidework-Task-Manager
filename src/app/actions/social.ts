@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { canCreateGroups, requireMembership } from "@/lib/permissions";
@@ -124,64 +125,56 @@ async function findDirectGroup(userA: string, userB: string) {
   return groups.find((g) => g.members.length === 2) ?? null;
 }
 
-export async function requestWorkspaceDmAction(
-  _prev: ActionResult | null,
-  formData: FormData,
-): Promise<ActionResult> {
-  const user = await requireUser();
-  const workspaceId = String(formData.get("workspaceId") ?? "");
-  await requireMembership(workspaceId, user.id);
-
-  const toUsername = normalizeUsername(String(formData.get("username") ?? ""));
-  const firstMessage = String(formData.get("message") ?? "").trim();
-  if (!firstMessage) return { ok: false, error: "Write a first message." };
-
-  const other = await prisma.user.findUnique({ where: { username: toUsername } });
-  if (!other) return { ok: false, error: "User not found." };
-  if (other.id === user.id) return { ok: false, error: "That’s you." };
-
-  const otherMembership = await prisma.membership.findUnique({
-    where: { workspaceId_userId: { workspaceId, userId: other.id } },
-  });
-  if (!otherMembership) {
-    return { ok: false, error: "They’re not in this workspace." };
-  }
-
-  const areFriends = await prisma.friendship.findFirst({
+async function areAcceptedFriends(userA: string, userB: string) {
+  return prisma.friendship.findFirst({
     where: {
       status: "ACCEPTED",
       OR: [
-        { requesterId: user.id, addresseeId: other.id },
-        { requesterId: other.id, addresseeId: user.id },
+        { requesterId: userA, addresseeId: userB },
+        { requesterId: userB, addresseeId: userA },
       ],
     },
   });
+}
 
-  if (areFriends) {
-    const group = await findDirectGroup(user.id, other.id);
-    let groupId: string;
-    if (!group) {
-      const created = await prisma.chatGroup.create({
-        data: {
-          name: `${user.username} & ${other.username}`,
-          isDirect: true,
-          createdById: user.id,
-          members: {
-            create: [{ userId: user.id }, { userId: other.id }],
-          },
-          messages: {
-            create: { senderId: user.id, body: firstMessage },
-          },
+/** Create or reuse a DM; optionally post a first/next message and notify. */
+async function openOrMessageDirect(
+  user: { id: string; username: string; nickname?: string | null },
+  other: { id: string; username: string },
+  firstMessage?: string,
+) {
+  const existing = await findDirectGroup(user.id, other.id);
+  let groupId: string;
+
+  if (!existing) {
+    const created = await prisma.chatGroup.create({
+      data: {
+        name: `${user.username} & ${other.username}`,
+        isDirect: true,
+        createdById: user.id,
+        members: {
+          create: [{ userId: user.id }, { userId: other.id }],
         },
-      });
-      groupId = created.id;
-    } else {
+        ...(firstMessage
+          ? {
+              messages: {
+                create: { senderId: user.id, body: firstMessage },
+              },
+            }
+          : {}),
+      },
+    });
+    groupId = created.id;
+  } else {
+    groupId = existing.id;
+    if (firstMessage) {
       await prisma.message.create({
-        data: { groupId: group.id, senderId: user.id, body: firstMessage },
+        data: { groupId, senderId: user.id, body: firstMessage },
       });
-      groupId = group.id;
     }
+  }
 
+  if (firstMessage) {
     await prisma.notification.create({
       data: {
         userId: other.id,
@@ -191,11 +184,54 @@ export async function requestWorkspaceDmAction(
         meta: JSON.stringify({ groupId, fromUserId: user.id }),
       },
     });
+  }
 
+  return groupId;
+}
+
+export async function requestWorkspaceDmAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const toUsername = normalizeUsername(String(formData.get("username") ?? ""));
+  const firstMessage = String(formData.get("message") ?? "").trim();
+  if (!firstMessage) return { ok: false, error: "Write a first message." };
+
+  const other = await prisma.user.findUnique({ where: { username: toUsername } });
+  if (!other) return { ok: false, error: "User not found." };
+  if (other.id === user.id) return { ok: false, error: "That’s you." };
+
+  // Friends scope: unlocked DM (no workspace gate, no accept request).
+  if (workspaceId === "__friends__") {
+    const friendship = await areAcceptedFriends(user.id, other.id);
+    if (!friendship) {
+      return { ok: false, error: "You’re not friends with that user." };
+    }
+
+    const groupId = await openOrMessageDirect(user, other, firstMessage);
     revalidatePath("/app/chat");
-    revalidatePath("/app/notifications");
     revalidatePath("/app", "layout");
-    return { ok: true };
+    redirect(`/app/chat?tab=dms&group=${groupId}`);
+  }
+
+  await requireMembership(workspaceId, user.id);
+
+  const otherMembership = await prisma.membership.findUnique({
+    where: { workspaceId_userId: { workspaceId, userId: other.id } },
+  });
+  if (!otherMembership) {
+    return { ok: false, error: "They’re not in this workspace." };
+  }
+
+  const friendship = await areAcceptedFriends(user.id, other.id);
+
+  if (friendship) {
+    const groupId = await openOrMessageDirect(user, other, firstMessage);
+    revalidatePath("/app/chat");
+    revalidatePath("/app", "layout");
+    redirect(`/app/chat?tab=dms&group=${groupId}`);
   }
 
   const dmRequest = await prisma.dmRequest.create({
@@ -222,6 +258,54 @@ export async function requestWorkspaceDmAction(
 
   revalidatePath("/app/chat");
   revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
+  return { ok: true };
+}
+
+export async function openFriendChatAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const friendUserId = String(formData.get("friendUserId") ?? "");
+  if (!friendUserId) return { ok: false, error: "Missing friend." };
+
+  const other = await prisma.user.findUnique({ where: { id: friendUserId } });
+  if (!other) return { ok: false, error: "User not found." };
+
+  const friendship = await areAcceptedFriends(user.id, other.id);
+  if (!friendship) {
+    return { ok: false, error: "You’re not friends with that user." };
+  }
+
+  const groupId = await openOrMessageDirect(user, other);
+  revalidatePath("/app/chat");
+  redirect(`/app/chat?tab=dms&group=${groupId}`);
+}
+
+export async function removeFriendAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const friendshipId = String(formData.get("friendshipId") ?? "");
+  const friendship = await prisma.friendship.findUnique({
+    where: { id: friendshipId },
+  });
+  if (
+    !friendship ||
+    (friendship.requesterId !== user.id && friendship.addresseeId !== user.id)
+  ) {
+    return { ok: false, error: "Friendship not found." };
+  }
+  if (friendship.status !== "ACCEPTED") {
+    return { ok: false, error: "That friendship isn’t active." };
+  }
+
+  await prisma.friendship.delete({ where: { id: friendshipId } });
+
+  revalidatePath("/app/social");
+  revalidatePath("/app/chat");
   revalidatePath("/app", "layout");
   return { ok: true };
 }
