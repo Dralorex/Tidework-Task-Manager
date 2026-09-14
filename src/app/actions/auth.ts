@@ -11,14 +11,23 @@ import {
 import { prisma } from "@/lib/db";
 import {
   passwordResetEmail,
-  welcomeAccountEmail,
 } from "@/lib/email-templates";
+import { issueEmailVerification } from "@/lib/email-verification";
 import { sendEmail } from "@/lib/mail";
 import { isValidEmail, isValidUsername, normalizeUsername } from "@/lib/utils";
 
 export type ActionResult =
-  | { ok: true; resetUrl?: string; emailed?: boolean }
-  | { ok: false; error: string };
+  | {
+      ok: true;
+      resetUrl?: string;
+      emailed?: boolean;
+      needsEmailVerification?: boolean;
+      email?: string;
+      emailVerified?: boolean;
+      resent?: boolean;
+      retryAfterSec?: number;
+    }
+  | { ok: false; error: string; retryAfterSec?: number };
 
 function safeNextPath(raw: FormDataEntryValue | null): string | null {
   const value = String(raw ?? "").trim();
@@ -67,25 +76,34 @@ export async function signUpAction(
   }
 
   const email = emailRaw ? emailRaw.toLowerCase() : null;
+  // Don't attach email until the 4-digit code is verified.
   const user = await prisma.user.create({
     data: {
       username,
       passwordHash: await hashPassword(password),
-      email,
+      email: null,
     },
   });
 
+  await createSession(user.id);
+
   if (email) {
-    const content = welcomeAccountEmail({ username: user.username });
-    await sendEmail({
-      to: email,
-      subject: content.subject,
-      html: content.html,
-      text: content.text,
+    const issued = await issueEmailVerification({
+      userId: user.id,
+      email,
+      username: user.username,
     });
+    if (!issued.ok) {
+      return { ok: false, error: issued.error };
+    }
+    return {
+      ok: true,
+      needsEmailVerification: true,
+      email: issued.email,
+      emailed: !issued.mocked,
+    };
   }
 
-  await createSession(user.id);
   redirect(next ?? "/app");
 }
 

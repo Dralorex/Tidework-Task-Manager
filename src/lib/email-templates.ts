@@ -30,6 +30,30 @@ function shell(title: string, bodyHtml: string, bodyText: string) {
   };
 }
 
+export function emailVerificationCodeEmail(opts: {
+  username: string;
+  code: string;
+  email: string;
+}) {
+  return {
+    subject: "Your Tidework verification code",
+    ...shell(
+      "Confirm your email",
+      `<p style="margin:0 0 12px;font-size:16px;line-height:1.5;color:rgba(10,61,69,0.85);">
+        Hi @${escapeHtml(opts.username)}, use this code to confirm
+        <strong>${escapeHtml(opts.email)}</strong> on Tidework:
+      </p>
+      <p style="margin:0 0 20px;font-size:36px;letter-spacing:0.35em;font-weight:700;color:#0A3D45;">
+        ${escapeHtml(opts.code)}
+      </p>
+      <p style="margin:0;font-size:14px;line-height:1.5;color:rgba(10,61,69,0.7);">
+        This code expires in 15 minutes. If you didn’t request it, you can ignore this email.
+      </p>`,
+      `Hi @${opts.username}, your Tidework verification code for ${opts.email} is: ${opts.code}\n\nIt expires in 15 minutes.`,
+    ),
+  };
+}
+
 export function welcomeAccountEmail(opts: {
   username: string;
   nickname?: string | null;

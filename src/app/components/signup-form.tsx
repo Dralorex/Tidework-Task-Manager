@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import type { ActionResult } from "@/app/actions/auth";
+import { EmailVerifyModal } from "@/app/components/email-verify-modal";
 
 type FormAction = (
   prev: ActionResult | null,
@@ -29,11 +31,19 @@ export function SignUpForm({
   action: FormAction;
   next?: string;
 }) {
+  const router = useRouter();
   const [state, formAction] = useActionState(action, null);
   const [email, setEmail] = useState("");
   const [acked, setAcked] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
+  const [verifyEmail, setVerifyEmail] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (state && state.ok && state.needsEmailVerification && state.email) {
+      setVerifyEmail(state.email);
+    }
+  }, [state]);
 
   function trySubmit(e: React.FormEvent<HTMLFormElement>) {
     const hasEmail = email.trim().length > 0;
@@ -46,7 +56,6 @@ export function SignUpForm({
   function confirmWithoutEmail() {
     if (!acked) return;
     setShowWarning(false);
-    // Let the next submit through with ack recorded.
     queueMicrotask(() => formRef.current?.requestSubmit());
   }
 
@@ -103,8 +112,7 @@ export function SignUpForm({
           />
         </label>
         <p className="text-xs leading-relaxed text-[#0A3D45]/60">
-          Add an email to receive a welcome confirmation and so you can reset your
-          password later.
+          Add an email to verify with a 4-digit code and enable password resets.
         </p>
 
         {state && !state.ok ? (
@@ -166,6 +174,15 @@ export function SignUpForm({
             </div>
           </div>
         </div>
+      ) : null}
+
+      {verifyEmail ? (
+        <EmailVerifyModal
+          email={verifyEmail}
+          next={next ?? "/app"}
+          redirectAfter
+          onVerified={() => router.push(next ?? "/app")}
+        />
       ) : null}
     </>
   );
