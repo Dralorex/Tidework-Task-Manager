@@ -1,5 +1,5 @@
 /**
- * Resolve a Postgres URL from the env names Vercel / Neon commonly inject.
+ * Resolve a Postgres URL from the env names used by this project / Vercel.
  * Empty strings are treated as unset (integrations sometimes create blank placeholders).
  */
 function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
@@ -11,6 +11,7 @@ function firstNonEmpty(...values: Array<string | undefined>): string | undefined
 }
 
 const POOLED_CANDIDATES = [
+  "TheHollowCrown_DATABASE_URL",
   "DATABASE_URL",
   "POSTGRES_PRISMA_URL",
   "POSTGRES_URL",
@@ -18,8 +19,10 @@ const POOLED_CANDIDATES = [
 ] as const;
 
 const DIRECT_CANDIDATES = [
+  "TheHollowCrown_DATABASE_URL_UNPOOLED",
   "DATABASE_URL_UNPOOLED",
   "POSTGRES_URL_NON_POOLING",
+  "TheHollowCrown_DATABASE_URL",
   "DATABASE_URL",
   "POSTGRES_PRISMA_URL",
   "POSTGRES_URL",
@@ -35,7 +38,7 @@ export function getDatabaseUrl(): string {
   const url = readEnv(POOLED_CANDIDATES);
   if (!url) {
     throw new Error(
-      "No database URL found. In Vercel → Project → Settings → Environment Variables, set DATABASE_URL (Neon pooled) for Production and Preview. Neon/Vercel Postgres also works via POSTGRES_URL.",
+      "No database URL found. Set TheHollowCrown_DATABASE_URL (Neon pooled) for Production and Preview in Vercel.",
     );
   }
   return url;
@@ -53,7 +56,7 @@ export function requireMigrationDatabaseUrl(): string {
   const url = getMigrationDatabaseUrl();
   if (!url) {
     throw new Error(
-      "No migration database URL found. Set DATABASE_URL_UNPOOLED (Neon direct) or DATABASE_URL in Vercel env for Production/Preview.",
+      "No migration database URL found. Set TheHollowCrown_DATABASE_URL_UNPOOLED (Neon direct) or TheHollowCrown_DATABASE_URL in Vercel.",
     );
   }
   return url;
