@@ -3,6 +3,7 @@ import { AppNav } from "@/app/components/app-nav";
 import { getCurrentUser } from "@/lib/auth";
 import { syncDeadlineNotifications } from "@/lib/deadline-notifications";
 import { prisma } from "@/lib/db";
+import { personLabel } from "@/lib/utils";
 
 export default async function AppSectionLayout({
   children,
@@ -20,7 +21,7 @@ export default async function AppSectionLayout({
 
   return (
     <div className="tide-wave-bg min-h-screen">
-      <AppNav username={user.username} unreadCount={unreadCount} />
+      <AppNav displayLabel={personLabel(user)} unreadCount={unreadCount} />
       {children}
     </div>
   );

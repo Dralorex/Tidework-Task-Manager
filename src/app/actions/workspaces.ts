@@ -6,7 +6,7 @@ import { nanoid } from "nanoid";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { canManagePeople, requireMembership } from "@/lib/permissions";
-import { isValidEmail, normalizeUsername } from "@/lib/utils";
+import { isValidEmail, normalizeUsername, personLabel } from "@/lib/utils";
 import type { Role } from "@/generated/prisma/client";
 import type { ActionResult } from "@/app/actions/auth";
 
@@ -86,7 +86,7 @@ export async function inviteMemberAction(
         userId: invitee.id,
         type: "WORKSPACE_INVITE",
         title: "Workspace invite",
-        body: `${user.username} invited you to “${workspace.name}” as ${role.toLowerCase()}.`,
+        body: `${personLabel(user)} invited you to “${workspace.name}” as ${role.toLowerCase()}.`,
         meta: JSON.stringify({
           inviteId: invite.id,
           token: invite.token,

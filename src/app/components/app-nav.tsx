@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { signOutAction } from "@/app/actions/auth";
 
 export function AppNav({
-  username,
+  displayLabel,
   unreadCount = 0,
 }: {
-  username: string;
+  displayLabel: string;
   unreadCount?: number;
 }) {
   const pathname = usePathname();
@@ -22,7 +22,9 @@ export function AppNav({
           ? "chat"
           : pathname.startsWith("/app/social")
             ? "social"
-            : "home";
+            : pathname.startsWith("/app/profile")
+              ? "profile"
+              : "home";
 
   const link = (href: string, key: typeof active, label: string, badge?: number) => (
     <Link
@@ -62,7 +64,17 @@ export function AppNav({
           {link("/app/notifications", "notifications", "Notifications", unreadCount)}
         </nav>
         <div className="flex items-center gap-3">
-          <span className="hidden text-sm text-[#0A3D45]/70 sm:inline">@{username}</span>
+          <Link
+            href="/app/profile"
+            className={`text-sm underline-offset-2 hover:underline ${
+              active === "profile"
+                ? "font-semibold text-[#0A3D45]"
+                : "text-[#0A3D45]/70"
+            }`}
+            title="Profile settings"
+          >
+            {displayLabel}
+          </Link>
           <form action={signOutAction}>
             <button
               type="submit"

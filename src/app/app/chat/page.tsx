@@ -8,6 +8,7 @@ import {
 } from "@/app/actions/social";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { personLabel } from "@/lib/utils";
 import { format } from "date-fns";
 
 export default async function ChatPage({
@@ -72,8 +73,13 @@ export default async function ChatPage({
                         : "text-[#0A3D45]/70"
                     }
                   >
-                    {g.isDirect ? "DM · " : ""}
-                    {g.name}
+                    {g.isDirect
+                      ? personLabel(
+                          g.members.find((m) => m.user.id !== user.id)?.user ?? {
+                            username: g.name,
+                          },
+                        )
+                      : g.name}
                   </a>
                 </li>
               ))}
@@ -90,7 +96,7 @@ export default async function ChatPage({
                 {dmRequests.map((r) => (
                   <li key={r.id}>
                     <p>
-                      <span className="font-medium">@{r.fromUser.username}</span>:{" "}
+                      <span className="font-medium">{personLabel(r.fromUser)}</span>:{" "}
                       {r.firstMessage}
                     </p>
                     <div className="mt-2 flex gap-2">
@@ -183,16 +189,22 @@ export default async function ChatPage({
           {active ? (
             <>
               <h1 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
-                {active.name}
+                {active.isDirect
+                  ? personLabel(
+                      active.members.find((m) => m.user.id !== user.id)?.user ?? {
+                        username: active.name,
+                      },
+                    )
+                  : active.name}
               </h1>
               <p className="text-xs text-[#0A3D45]/55">
-                {active.members.map((m) => m.user.username).join(", ")}
+                {active.members.map((m) => personLabel(m.user)).join(", ")}
               </p>
               <div className="mt-4 flex-1 space-y-3 overflow-y-auto">
                 {active.messages.map((msg) => (
                   <div key={msg.id} className="text-sm">
                     <span className="font-semibold text-[#0A3D45]">
-                      @{msg.sender.username}
+                      {personLabel(msg.sender)}
                     </span>{" "}
                     <span className="text-xs text-[#0A3D45]/45">
                       {format(msg.createdAt, "MMM d · HH:mm")}

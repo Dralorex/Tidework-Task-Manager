@@ -17,7 +17,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { canEditContent, canManagePeople } from "@/lib/permissions";
 import { compareTasksByUrgency } from "@/lib/urgency";
-import { searchRelevance } from "@/lib/utils";
+import { personLabel, searchRelevance } from "@/lib/utils";
 
 export default async function WorkspacePage({
   params,
@@ -333,7 +333,7 @@ export default async function WorkspacePage({
                           ? `Due ${format(task.dueDate, "MMM d, yyyy")}`
                           : "No due date"}
                         {task.assignee
-                          ? ` · claimed by @${task.assignee.username}`
+                          ? ` · claimed by ${personLabel(task.assignee)}`
                           : " · unclaimed"}
                       </p>
                       {task.completionComment ? (

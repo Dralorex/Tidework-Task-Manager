@@ -82,6 +82,9 @@ export function InlineActionForm({
       {state && !state.ok ? (
         <p className="text-sm text-[#9b2f22]">{state.error}</p>
       ) : null}
+      {state && state.ok ? (
+        <p className="text-sm text-[#0A3D45]/75">Saved.</p>
+      ) : null}
       <SubmitButton label={submitLabel} className="tide-btn-secondary text-sm" />
     </form>
   );

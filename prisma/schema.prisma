@@ -54,6 +54,7 @@ model User {
   username     String   @unique
   passwordHash String
   email        String?  @unique
+  nickname     String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
