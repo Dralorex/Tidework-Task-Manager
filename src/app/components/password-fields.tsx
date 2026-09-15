@@ -34,7 +34,16 @@ export function PasswordFields({
           className="tide-input"
           placeholder={placeholder}
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            setPassword(value);
+            const confirmEl = document.getElementById(confirmId) as HTMLInputElement | null;
+            if (confirmEl) {
+              confirmEl.setCustomValidity(
+                confirm.length > 0 && value !== confirm ? "Passwords don’t match." : "",
+              );
+            }
+          }}
         />
       </label>
       <label className="flex items-center gap-2 text-sm text-[#0A3D45]/80">
