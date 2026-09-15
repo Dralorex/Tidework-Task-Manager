@@ -4,7 +4,13 @@ import { nanoid } from "nanoid";
 import { prisma } from "@/lib/db";
 
 const SESSION_COOKIE = "tidework_session";
-const SESSION_DAYS = 30;
+/** Persistent “remember me” login length. */
+const REMEMBER_DAYS = 30;
+/**
+ * Server-side ceiling for browser-session logins (cookie itself is cleared
+ * when the browser closes). Keeps abandoned DB rows from lasting forever.
+ */
+const QUICK_SESSION_DAYS = 1;
 
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 12);
@@ -14,10 +20,16 @@ export async function verifyPassword(password: string, hash: string) {
   return bcrypt.compare(password, hash);
 }
 
-export async function createSession(userId: string) {
+export async function createSession(
+  userId: string,
+  opts: { remember?: boolean } = {},
+) {
+  const remember = opts.remember ?? true;
   const token = nanoid(48);
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + SESSION_DAYS);
+  expiresAt.setDate(
+    expiresAt.getDate() + (remember ? REMEMBER_DAYS : QUICK_SESSION_DAYS),
+  );
 
   await prisma.session.create({
     data: { token, userId, expiresAt },
@@ -29,7 +41,9 @@ export async function createSession(userId: string) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    expires: expiresAt,
+    // Remember me → persistent cookie. Otherwise a session cookie that
+    // disappears when the browser is closed.
+    ...(remember ? { expires: expiresAt } : {}),
   });
 
   return token;

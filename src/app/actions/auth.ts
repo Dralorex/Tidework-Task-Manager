@@ -131,7 +131,7 @@ export async function signUpAction(
     },
   });
 
-  await createSession(user.id);
+  await createSession(user.id, { remember: true });
   redirect(next ?? "/app");
 }
 
@@ -142,6 +142,9 @@ export async function signInAction(
   const username = normalizeUsername(String(formData.get("username") ?? ""));
   const password = String(formData.get("password") ?? "");
   const next = safeNextPath(formData.get("next"));
+  const remember =
+    String(formData.get("remember") ?? "") === "on" ||
+    String(formData.get("remember") ?? "") === "true";
   const user = await prisma.user.findUnique({ where: { username } });
   if (
     !user ||
@@ -150,7 +153,7 @@ export async function signInAction(
   ) {
     return { ok: false, error: "Incorrect username or password." };
   }
-  await createSession(user.id);
+  await createSession(user.id, { remember });
   redirect(next ?? "/app");
 }
 
@@ -277,6 +280,6 @@ export async function resetPasswordAction(
     prisma.passwordResetToken.deleteMany({ where: { userId: record.userId } }),
   ]);
 
-  await createSession(record.userId);
+  await createSession(record.userId, { remember: true });
   redirect("/app");
 }
