@@ -14,26 +14,37 @@ import { MarkChatSeen } from "@/app/components/mark-chat-seen";
 
 const STORAGE_KEY = "tidework.chat.widget";
 
+type ChatTab = "dms" | "groups" | "workspace-groups";
+type View = "hub" | "list" | "thread";
+
 type WidgetPrefs = {
   open: boolean;
   lastGroupId: string | null;
+  lastTab: ChatTab | null;
 };
 
 function readPrefs(): WidgetPrefs {
   if (typeof window === "undefined") {
-    return { open: false, lastGroupId: null };
+    return { open: false, lastGroupId: null, lastTab: null };
   }
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { open: false, lastGroupId: null };
+    if (!raw) return { open: false, lastGroupId: null, lastTab: null };
     const parsed = JSON.parse(raw) as Partial<WidgetPrefs>;
+    const lastTab =
+      parsed.lastTab === "dms" ||
+      parsed.lastTab === "groups" ||
+      parsed.lastTab === "workspace-groups"
+        ? parsed.lastTab
+        : null;
     return {
       open: Boolean(parsed.open),
       lastGroupId:
         typeof parsed.lastGroupId === "string" ? parsed.lastGroupId : null,
+      lastTab,
     };
   } catch {
-    return { open: false, lastGroupId: null };
+    return { open: false, lastGroupId: null, lastTab: null };
   }
 }
 
@@ -45,10 +56,22 @@ function writePrefs(prefs: WidgetPrefs) {
   }
 }
 
-function kindLabel(kind: FloatingChatSummary["kind"]) {
-  if (kind === "dm") return "DM";
-  if (kind === "workspace") return "Workspace";
-  return "Group";
+function kindForTab(tab: ChatTab): FloatingChatSummary["kind"] {
+  if (tab === "dms") return "dm";
+  if (tab === "workspace-groups") return "workspace";
+  return "group";
+}
+
+function tabForKind(kind: FloatingChatSummary["kind"]): ChatTab {
+  if (kind === "dm") return "dms";
+  if (kind === "workspace") return "workspace-groups";
+  return "groups";
+}
+
+function tabTitle(tab: ChatTab) {
+  if (tab === "dms") return "DMs";
+  if (tab === "workspace-groups") return "Workspace groups";
+  return "Groups";
 }
 
 export function FloatingChatWidget({
@@ -62,7 +85,9 @@ export function FloatingChatWidget({
   const [ready, setReady] = useState(false);
   const [open, setOpen] = useState(false);
   const [lastGroupId, setLastGroupId] = useState<string | null>(null);
-  const [view, setView] = useState<"list" | "thread">("list");
+  const [lastTab, setLastTab] = useState<ChatTab | null>(null);
+  const [view, setView] = useState<View>("hub");
+  const [listTab, setListTab] = useState<ChatTab>("dms");
   const [chats, setChats] = useState<FloatingChatSummary[]>([]);
   const [thread, setThread] = useState<FloatingChatThread | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,15 +95,24 @@ export function FloatingChatWidget({
   const [pending, startTransition] = useTransition();
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const prefsRef = useRef<WidgetPrefs>({ open: false, lastGroupId: null });
+  const composerRef = useRef<HTMLInputElement | null>(null);
+  const prefsRef = useRef<WidgetPrefs>({
+    open: false,
+    lastGroupId: null,
+    lastTab: null,
+  });
 
   useEffect(() => {
     const prefs = readPrefs();
     prefsRef.current = prefs;
     setOpen(prefs.open);
     setLastGroupId(prefs.lastGroupId);
+    setLastTab(prefs.lastTab);
     if (prefs.open && prefs.lastGroupId) {
       setView("thread");
+      if (prefs.lastTab) setListTab(prefs.lastTab);
+    } else if (prefs.open) {
+      setView("hub");
     }
     setReady(true);
   }, []);
@@ -90,11 +124,14 @@ export function FloatingChatWidget({
         next.lastGroupId !== undefined
           ? next.lastGroupId
           : prefsRef.current.lastGroupId,
+      lastTab:
+        next.lastTab !== undefined ? next.lastTab : prefsRef.current.lastTab,
     };
     prefsRef.current = merged;
     writePrefs(merged);
     if (next.open !== undefined) setOpen(merged.open);
     if (next.lastGroupId !== undefined) setLastGroupId(merged.lastGroupId);
+    if (next.lastTab !== undefined) setLastTab(merged.lastTab);
   }, []);
 
   const refreshList = useCallback(async () => {
@@ -108,21 +145,27 @@ export function FloatingChatWidget({
   }, []);
 
   const openThread = useCallback(
-    async (groupId: string) => {
+    async (groupId: string, tabHint?: ChatTab) => {
       setError(null);
       const result = await loadFloatingChatThreadAction(groupId);
       if (!result.ok) {
         setError(result.error);
-        setView("list");
+        setView(tabHint || lastTab ? "list" : "hub");
         setThread(null);
         return;
       }
+      const chatMeta = chats.find((c) => c.id === groupId);
+      const nextTab =
+        tabHint ??
+        (chatMeta ? tabForKind(chatMeta.kind) : lastTab) ??
+        "dms";
+      setListTab(nextTab);
       setThread(result.thread);
       setView("thread");
-      persist({ lastGroupId: groupId });
+      persist({ lastGroupId: groupId, lastTab: nextTab });
       setDraft("");
     },
-    [persist],
+    [chats, lastTab, persist],
   );
 
   // Load list / last thread when panel opens.
@@ -133,7 +176,7 @@ export function FloatingChatWidget({
       void (async () => {
         await refreshList();
         if (view === "thread" && lastGroupId) {
-          await openThread(lastGroupId);
+          await openThread(lastGroupId, lastTab ?? undefined);
         }
       })();
     });
@@ -141,7 +184,7 @@ export function FloatingChatWidget({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, open, hideOnChatPage]);
 
-  // Soft-poll thread + list while open so messages stay fresh across tabs.
+  // Soft-poll thread + list while open.
   useEffect(() => {
     if (!ready || !open || hideOnChatPage) return;
     const id = window.setInterval(() => {
@@ -170,7 +213,31 @@ export function FloatingChatWidget({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [view, thread?.messages.length]);
 
+  useEffect(() => {
+    if (view !== "thread" || !thread || thread.closed) return;
+    const id = window.setTimeout(() => composerRef.current?.focus(), 30);
+    return () => window.clearTimeout(id);
+  }, [view, thread?.id, thread?.closed]);
+
   if (!ready || hideOnChatPage) return null;
+
+  const filtered = chats.filter((c) => c.kind === kindForTab(listTab));
+  const counts = {
+    groups: chats.filter((c) => c.kind === "group").length,
+    workspace: chats.filter((c) => c.kind === "workspace").length,
+    dms: chats.filter((c) => c.kind === "dm").length,
+  };
+  const unread = {
+    groups: chats
+      .filter((c) => c.kind === "group")
+      .reduce((n, c) => n + c.unread, 0),
+    workspace: chats
+      .filter((c) => c.kind === "workspace")
+      .reduce((n, c) => n + c.unread, 0),
+    dms: chats
+      .filter((c) => c.kind === "dm")
+      .reduce((n, c) => n + c.unread, 0),
+  };
 
   const toggleOpen = () => {
     const next = !open;
@@ -178,7 +245,7 @@ export function FloatingChatWidget({
     if (next && lastGroupId) {
       setView("thread");
     } else if (next) {
-      setView("list");
+      setView("hub");
     }
   };
 
@@ -186,10 +253,23 @@ export function FloatingChatWidget({
     persist({ open: false });
   };
 
-  const backToList = () => {
+  const openList = (tab: ChatTab) => {
+    setListTab(tab);
+    setView("list");
+    setThread(null);
+    persist({ lastTab: tab });
+    void refreshList();
+  };
+
+  const backFromThread = () => {
     setView("list");
     setThread(null);
     void refreshList();
+  };
+
+  const backFromList = () => {
+    setView("hub");
+    setThread(null);
   };
 
   const onSend = async (e: React.FormEvent) => {
@@ -207,8 +287,9 @@ export function FloatingChatWidget({
         return;
       }
       setDraft("");
-      await openThread(thread.id);
+      await openThread(thread.id, listTab);
       await refreshList();
+      composerRef.current?.focus();
     } finally {
       setSending(false);
     }
@@ -221,6 +302,13 @@ export function FloatingChatWidget({
         : String(chatUnreadCount)
       : null;
 
+  const headerTitle =
+    view === "thread" && thread
+      ? thread.title
+      : view === "list"
+        ? tabTitle(listTab)
+        : "Messages";
+
   return (
     <div className="pointer-events-none fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
       {open ? (
@@ -231,21 +319,29 @@ export function FloatingChatWidget({
         >
           <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[#0A3D45]/10 px-3 py-2.5">
             <div className="min-w-0">
-              {view === "thread" && thread ? (
+              {view === "thread" ? (
                 <button
                   type="button"
-                  onClick={backToList}
+                  onClick={backFromThread}
                   className="text-left text-xs text-[#0A3D45]/60 hover:underline"
                 >
-                  ← All chats
+                  ← {tabTitle(listTab)}
+                </button>
+              ) : view === "list" ? (
+                <button
+                  type="button"
+                  onClick={backFromList}
+                  className="text-left text-xs text-[#0A3D45]/60 hover:underline"
+                >
+                  ← Chat
                 </button>
               ) : (
                 <p className="text-xs font-medium uppercase tracking-wide text-[#0A3D45]/50">
-                  Chats
+                  Chat
                 </p>
               )}
               <h2 className="truncate font-[family-name:var(--font-display)] text-lg text-[#0A3D45]">
-                {view === "thread" && thread ? thread.title : "Messages"}
+                {headerTitle}
               </h2>
             </div>
             <button
@@ -262,19 +358,80 @@ export function FloatingChatWidget({
             <p className="shrink-0 px-3 py-2 text-sm text-[#9b2f22]">{error}</p>
           ) : null}
 
+          {view === "hub" ? (
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+              <p className="mb-3 text-xs text-[#0A3D45]/60">
+                Choose Groups, Workspace groups, or DMs.
+              </p>
+              <div className="flex flex-col gap-2">
+                {(
+                  [
+                    {
+                      tab: "groups" as const,
+                      label: "Groups",
+                      count: counts.groups,
+                      unread: unread.groups,
+                      blurb: "Conversations with friends",
+                    },
+                    {
+                      tab: "workspace-groups" as const,
+                      label: "Workspace groups",
+                      count: counts.workspace,
+                      unread: unread.workspace,
+                      blurb: "Workspace chats",
+                    },
+                    {
+                      tab: "dms" as const,
+                      label: "DMs",
+                      count: counts.dms,
+                      unread: unread.dms,
+                      blurb: "Direct messages",
+                    },
+                  ] as const
+                ).map((item) => (
+                  <button
+                    key={item.tab}
+                    type="button"
+                    onClick={() => openList(item.tab)}
+                    className="group flex w-full items-center justify-between rounded-lg border border-[#0A3D45]/12 bg-[#0A3D45]/[0.03] px-3 py-3.5 text-left transition hover:border-[#0A3D45]/25 hover:bg-[#0A3D45]/[0.06]"
+                  >
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-2 font-[family-name:var(--font-display)] text-base text-[#0A3D45]">
+                        {item.label}
+                        {item.unread > 0 ? (
+                          <span className="rounded-full bg-[#E85D4C] px-1.5 text-[10px] font-semibold leading-4 text-white">
+                            {item.unread > 99 ? "99+" : item.unread}
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="mt-0.5 text-xs text-[#0A3D45]/55">
+                        {item.count} conversation{item.count === 1 ? "" : "s"}
+                        {" · "}
+                        {item.blurb}
+                      </p>
+                    </div>
+                    <span className="text-[#0A3D45]/40 transition group-hover:text-[#0A3D45]">
+                      →
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           {view === "list" ? (
             <div className="min-h-0 flex-1 overflow-y-auto">
-              {pending && chats.length === 0 ? (
+              {pending && filtered.length === 0 ? (
                 <p className="px-3 py-4 text-sm text-[#0A3D45]/55">Loading…</p>
               ) : null}
               <ul className="divide-y divide-[#0A3D45]/8">
-                {chats.map((chat) => (
+                {filtered.map((chat) => (
                   <li key={chat.id}>
                     <button
                       type="button"
                       onClick={() => {
                         startTransition(() => {
-                          void openThread(chat.id);
+                          void openThread(chat.id, listTab);
                         });
                       }}
                       className="flex w-full items-start gap-2 px-3 py-2.5 text-left hover:bg-[#0A3D45]/[0.04]"
@@ -283,9 +440,6 @@ export function FloatingChatWidget({
                         <div className="flex items-center gap-1.5">
                           <span className="truncate text-sm font-semibold text-[#0A3D45]">
                             {chat.title}
-                          </span>
-                          <span className="shrink-0 text-[10px] uppercase tracking-wide text-[#0A3D45]/40">
-                            {kindLabel(chat.kind)}
                           </span>
                           {chat.closed ? (
                             <span className="shrink-0 text-[10px] uppercase tracking-wide text-[#0A3D45]/40">
@@ -306,9 +460,9 @@ export function FloatingChatWidget({
                   </li>
                 ))}
               </ul>
-              {!pending && chats.length === 0 ? (
+              {!pending && filtered.length === 0 ? (
                 <p className="px-3 py-4 text-sm text-[#0A3D45]/55">
-                  No chats yet. Open the Chat tab to start one.
+                  No conversations here yet. Open the Chat tab to start one.
                 </p>
               ) : null}
             </div>
@@ -348,11 +502,13 @@ export function FloatingChatWidget({
                 ) : (
                   <form className="flex gap-2" onSubmit={onSend}>
                     <input
+                      ref={composerRef}
                       value={draft}
                       onChange={(e) => setDraft(e.target.value)}
                       placeholder="Write a message…"
                       className="tide-input flex-1 !py-2 text-sm"
                       disabled={sending}
+                      autoComplete="off"
                     />
                     <button
                       type="submit"

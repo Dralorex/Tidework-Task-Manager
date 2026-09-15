@@ -1,7 +1,6 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { nanoid } from "nanoid";
 import {
   createSession,
   destroySession,
@@ -13,6 +12,7 @@ import {
   passwordResetEmail,
 } from "@/lib/email-templates";
 import {
+  generateEmailCode,
   issueEmailVerification,
   issuePendingSignup,
 } from "@/lib/email-verification";
@@ -23,6 +23,8 @@ export type ActionResult =
   | {
       ok: true;
       resetUrl?: string;
+      /** Dev-only: 4-digit password reset code when email is mocked. */
+      resetCode?: string;
       emailed?: boolean;
       needsEmailVerification?: boolean;
       email?: string;
@@ -186,16 +188,17 @@ export async function requestPasswordResetAction(
     };
   }
 
-  const token = nanoid(48);
+  const code = generateEmailCode();
+  await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
   await prisma.passwordResetToken.create({
     data: {
-      token,
+      token: code,
       userId: user.id,
-      expiresAt: new Date(Date.now() + 1000 * 60 * 60),
+      expiresAt: new Date(Date.now() + 1000 * 60 * 15),
     },
   });
 
-  const content = passwordResetEmail({ username: user.username, token });
+  const content = passwordResetEmail({ username: user.username, code });
   const sent = await sendEmail({
     to: user.email,
     subject: content.subject,
@@ -210,9 +213,9 @@ export async function requestPasswordResetAction(
     };
   }
 
-  // In local/dev without RESEND_API_KEY, surface the link so resets still work.
+  // In local/dev without RESEND_API_KEY, surface the code so resets still work.
   if (sent.mocked) {
-    return { ok: true, emailed: false, resetUrl: content.resetUrl };
+    return { ok: true, emailed: false, resetCode: code };
   }
 
   return { ok: true, emailed: true };
@@ -222,9 +225,17 @@ export async function resetPasswordAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  const token = String(formData.get("token") ?? "");
+  const identifier = String(formData.get("identifier") ?? "").trim();
+  const code = String(formData.get("code") ?? formData.get("token") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
+
+  if (!identifier) {
+    return { ok: false, error: "Enter the username or email you used to request a reset." };
+  }
+  if (!/^\d{4}$/.test(code)) {
+    return { ok: false, error: "Enter the 4-digit code from your email." };
+  }
   if (password.length < 8) {
     return { ok: false, error: "Password must be at least 8 characters." };
   }
@@ -232,9 +243,30 @@ export async function resetPasswordAction(
     return { ok: false, error: "Passwords don’t match." };
   }
 
-  const record = await prisma.passwordResetToken.findUnique({ where: { token } });
-  if (!record || record.expiresAt < new Date()) {
-    return { ok: false, error: "This reset link is invalid or expired." };
+  const user = identifier.includes("@")
+    ? await prisma.user.findFirst({
+        where: { email: identifier.toLowerCase(), deletedAt: null },
+      })
+    : await prisma.user.findFirst({
+        where: {
+          username: normalizeUsername(identifier),
+          deletedAt: null,
+        },
+      });
+
+  if (!user) {
+    return { ok: false, error: "This reset code is invalid or expired." };
+  }
+
+  const record = await prisma.passwordResetToken.findFirst({
+    where: {
+      userId: user.id,
+      token: code,
+      expiresAt: { gt: new Date() },
+    },
+  });
+  if (!record) {
+    return { ok: false, error: "This reset code is invalid or expired." };
   }
 
   await prisma.$transaction([
