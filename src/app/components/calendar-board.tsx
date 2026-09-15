@@ -241,6 +241,48 @@ function QuickActionForm({
   );
 }
 
+function HiddenEventsPanel({ events }: { events: CalendarBoardEvent[] }) {
+  return (
+    <details className="relative">
+      <summary className="tide-btn-secondary cursor-pointer list-none text-sm">
+        Hidden events{events.length > 0 ? ` (${events.length})` : ""}
+      </summary>
+      <div className="tide-panel absolute right-0 z-20 mt-2 w-80 space-y-3 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[#0A3D45]/60">
+          Unhide personal events
+        </p>
+        {events.length > 0 ? (
+          <ul className="max-h-72 space-y-3 overflow-y-auto">
+            {events.map((event) => (
+              <li
+                key={event.id}
+                className="flex items-start justify-between gap-3 border-b border-[#0A3D45]/10 pb-3 last:border-b-0 last:pb-0"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-[#0A3D45]">
+                    {event.title}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[#0A3D45]/55">
+                    {eventWhen(event)}
+                  </p>
+                </div>
+                <QuickActionForm
+                  action={hidePersonalEventAction}
+                  eventId={event.recordId}
+                  label="Unhide"
+                  hidden={false}
+                />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-xs text-[#0A3D45]/55">No hidden events.</p>
+        )}
+      </div>
+    </details>
+  );
+}
+
 function PersonalFilters({
   workspaces,
   showBirthdays,
@@ -464,6 +506,7 @@ function EventRow({
 
 export function CalendarBoard({
   events,
+  hiddenEvents = [],
   initialScope,
   initialView,
   selectedWorkspaceId,
@@ -471,6 +514,7 @@ export function CalendarBoard({
   workspaces,
 }: {
   events: CalendarBoardEvent[];
+  hiddenEvents?: CalendarBoardEvent[];
   initialScope: Scope;
   initialView: View;
   selectedWorkspaceId: string | null;
@@ -570,13 +614,16 @@ export function CalendarBoard({
             ))}
           </div>
           {initialScope === "personal" ? (
-            <PersonalFilters
-              key={`${showBirthdays}:${workspaces
-                .map((workspace) => `${workspace.id}:${workspace.filterEnabled}`)
-                .join(",")}`}
-              workspaces={workspaces}
-              showBirthdays={showBirthdays}
-            />
+            <>
+              <HiddenEventsPanel events={hiddenEvents} />
+              <PersonalFilters
+                key={`${showBirthdays}:${workspaces
+                  .map((workspace) => `${workspace.id}:${workspace.filterEnabled}`)
+                  .join(",")}`}
+                workspaces={workspaces}
+                showBirthdays={showBirthdays}
+              />
+            </>
           ) : null}
         </div>
       </div>
