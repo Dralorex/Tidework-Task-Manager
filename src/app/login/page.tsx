@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AuthForm } from "@/app/components/forms";
+import { ShowPasswordField } from "@/app/components/show-password-field";
 import { signInAction } from "@/app/actions/auth";
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -50,16 +51,7 @@ export default async function LoginPage({
                 className="tide-input"
               />
             </label>
-            <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">
-              Password
-              <input
-                name="password"
-                type="password"
-                required
-                autoComplete="current-password"
-                className="tide-input"
-              />
-            </label>
+            <ShowPasswordField autoComplete="current-password" />
           </AuthForm>
         </div>
 

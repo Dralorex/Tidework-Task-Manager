@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { InlineActionForm } from "@/app/components/forms";
+import { ChatMessageComposer } from "@/app/components/chat-message-composer";
 import { ChatRowMenu } from "@/app/components/chat-row-menu";
 import { MarkChatSeen } from "@/app/components/mark-chat-seen";
 import { StartDmForm } from "@/app/components/start-dm-form";
 import { CreateFriendGroupForm } from "@/app/components/create-friend-group-form";
 import { CreateWorkspaceGroupForm } from "@/app/components/create-workspace-group-form";
-import { respondDmRequestAction, sendMessageAction } from "@/app/actions/social";
+import { respondDmRequestAction } from "@/app/actions/social";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { personLabel, type UserLabel } from "@/lib/utils";
@@ -342,7 +343,7 @@ export default async function ChatPage({
             <p className="mt-1 text-sm text-[#0A3D45]/60">
               Choose Groups, Workspace groups, or DMs to browse conversations.
             </p>
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            <div className="mt-8 flex flex-col gap-3">
               <Link
                 href={listHref("groups")}
                 className="group flex items-center justify-between rounded-lg border border-[#0A3D45]/12 bg-[#0A3D45]/[0.03] px-4 py-5 transition hover:border-[#0A3D45]/25 hover:bg-[#0A3D45]/[0.06]"
@@ -561,19 +562,7 @@ export default async function ChatPage({
                   off. Start a new DM with them to chat again.
                 </p>
               ) : (
-                <InlineActionForm
-                  className="flex gap-2"
-                  action={sendMessageAction}
-                  submitLabel="Send"
-                >
-                  <input type="hidden" name="groupId" value={active.id} />
-                  <input
-                    name="body"
-                    required
-                    placeholder="Write a message…"
-                    className="tide-input flex-1"
-                  />
-                </InlineActionForm>
+                <ChatMessageComposer groupId={active.id} />
               )}
             </div>
           </>

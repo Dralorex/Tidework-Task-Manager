@@ -81,26 +81,23 @@ export function welcomeAccountEmail(opts: {
   };
 }
 
-export function passwordResetEmail(opts: { username: string; token: string }) {
-  const resetUrl = `${getAppBaseUrl()}/reset-password?token=${encodeURIComponent(opts.token)}`;
+export function passwordResetEmail(opts: { username: string; code: string }) {
   return {
-    subject: "Reset your Tidework password",
-    resetUrl,
+    subject: "Your Tidework password reset code",
+    code: opts.code,
     ...shell(
       "Password reset",
       `<p style="margin:0 0 12px;font-size:16px;line-height:1.5;color:rgba(10,61,69,0.85);">
         We received a request to reset the password for <strong>@${escapeHtml(opts.username)}</strong>.
       </p>
-      <p style="margin:0 0 20px;font-size:16px;line-height:1.5;color:rgba(10,61,69,0.85);">
-        This link expires in one hour. If you didn’t ask for a reset, you can ignore this email.
+      <p style="margin:0 0 20px;font-size:36px;letter-spacing:0.35em;font-weight:700;color:#0A3D45;">
+        ${escapeHtml(opts.code)}
       </p>
-      <p style="margin:0;">
-        <a href="${resetUrl}" style="display:inline-block;background:#0A3D45;color:#E8F7F6;text-decoration:none;padding:12px 18px;border-radius:999px;font-size:14px;">
-          Reset password
-        </a>
-      </p>
-      <p style="margin:16px 0 0;font-size:12px;word-break:break-all;color:rgba(10,61,69,0.55);">${escapeHtml(resetUrl)}</p>`,
-      `Reset the password for @${opts.username}.\n\nOpen this link within one hour:\n${resetUrl}\n\nIf you didn’t ask for a reset, ignore this email.`,
+      <p style="margin:0;font-size:14px;line-height:1.5;color:rgba(10,61,69,0.7);">
+        Enter this code on the Tidework website to choose a new password. It expires in 15 minutes.
+        If you didn’t ask for a reset, you can ignore this email.
+      </p>`,
+      `Reset the password for @${opts.username}.\n\nYour code: ${opts.code}\n\nEnter it on the Tidework website within 15 minutes.\n\nIf you didn’t ask for a reset, ignore this email.`,
     ),
   };
 }

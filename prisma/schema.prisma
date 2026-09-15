@@ -113,13 +113,15 @@ model Session {
 
 model PasswordResetToken {
   id        String   @id @default(cuid())
-  token     String   @unique
+  /** 4-digit email code for website-based password reset. */
+  token     String
   userId    String
   expiresAt DateTime
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([token])
 }
 
 model EmailVerification {
