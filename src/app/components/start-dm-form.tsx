@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { InlineActionForm } from "@/app/components/forms";
 import { ChatSidebarSection } from "@/app/components/chat-sidebar-section";
 import {
@@ -11,23 +11,31 @@ import { requestWorkspaceDmAction } from "@/app/actions/social";
 
 type WorkspaceOption = { id: string; name: string };
 
-/** Start a DM: friend picker (hides existing DMs) or workspace username. */
+/** Start a DM: friend or workspace-member picker (hides people with an open DM). */
 export function StartDmForm({
   friends,
-  friendsWithDmIds,
+  peopleWithDmIds,
   workspaces,
+  membersByWorkspace,
 }: {
   friends: InviteFriendOption[];
-  friendsWithDmIds: string[];
+  /** Anyone who already has an open (non-closed) DM with the viewer. */
+  peopleWithDmIds: string[];
   workspaces: WorkspaceOption[];
+  membersByWorkspace: Record<string, InviteFriendOption[]>;
 }) {
   const [scope, setScope] = useState("__friends__");
   const friendsMode = scope === "__friends__";
 
+  const workspaceMembers = useMemo(
+    () => membersByWorkspace[scope] ?? [],
+    [membersByWorkspace, scope],
+  );
+
   return (
     <ChatSidebarSection
       title="Message someone"
-      description="Pick Friends to message freely, or a workspace for members (non-friends need to accept the first message). Friends who already have a DM with you stay hidden under Friends."
+      description="Pick Friends or a workspace. People you already have an open DM with stay hidden. Closed DMs don’t block starting a new chat."
     >
       <InlineActionForm
         className="flex flex-col gap-2"
@@ -51,17 +59,20 @@ export function StartDmForm({
         {friendsMode ? (
           <FriendInvitePicker
             friends={friends}
-            excludeIds={friendsWithDmIds}
+            excludeIds={peopleWithDmIds}
             targetName="username"
             placeholder="Search friends"
             emptyMessage="No friends yet — add friends from the Friends tab."
           />
         ) : (
-          <input
-            name="username"
-            required
-            placeholder="Username"
-            className="tide-input text-sm"
+          <FriendInvitePicker
+            key={scope}
+            friends={workspaceMembers}
+            excludeIds={peopleWithDmIds}
+            targetName="username"
+            placeholder="Search members"
+            searchPlaceholder="Search members"
+            emptyMessage="No other members in this workspace yet."
           />
         )}
         <input

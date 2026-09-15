@@ -135,6 +135,7 @@ async function findDirectGroup(userA: string, userB: string) {
   const groups = await prisma.chatGroup.findMany({
     where: {
       isDirect: true,
+      closedAt: null,
       AND: [
         { members: { some: { userId: userA } } },
         { members: { some: { userId: userB } } },
@@ -530,6 +531,12 @@ export async function sendMessageAction(
     include: { members: true },
   });
   if (!group) return { ok: false, error: "Chat not found." };
+  if (group.closedAt) {
+    return {
+      ok: false,
+      error: "This chat was closed. Start a new DM to message again.",
+    };
+  }
 
   await prisma.message.create({
     data: { groupId, senderId: user.id, body },
@@ -579,6 +586,30 @@ export async function leaveChatAction(
     include: { group: true },
   });
   if (!member) return { ok: false, error: "You’re not in this chat." };
+
+  // Closing a DM keeps history for both people but blocks further messages.
+  if (member.group.isDirect) {
+    if (!member.group.closedAt) {
+      await prisma.chatGroup.update({
+        where: { id: groupId },
+        data: { closedAt: new Date(), closedById: user.id },
+      });
+    }
+
+    await prisma.notification.updateMany({
+      where: {
+        userId: user.id,
+        type: "CHAT_MESSAGE",
+        meta: { contains: groupId },
+      },
+      data: { read: true },
+    });
+
+    revalidatePath("/app/chat");
+    revalidatePath("/app/notifications");
+    revalidatePath("/app", "layout");
+    return { ok: true };
+  }
 
   await prisma.chatMember.delete({ where: { id: member.id } });
 

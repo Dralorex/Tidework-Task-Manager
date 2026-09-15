@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "Membership" ADD COLUMN "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+-- AlterTable
+ALTER TABLE "ChatGroup" ADD COLUMN "closedAt" TIMESTAMP(3),
+ADD COLUMN "closedById" TEXT;
