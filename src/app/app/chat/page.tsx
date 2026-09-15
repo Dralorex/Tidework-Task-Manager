@@ -290,7 +290,7 @@ export default async function ChatPage({
           </div>
         ) : null}
 
-        <div className="tide-panel space-y-6 p-4">
+        <div className="tide-panel p-4">
           <StartDmForm
             friends={friendOptions}
             friendsWithDmIds={friendsWithDmIds}
@@ -312,7 +312,13 @@ export default async function ChatPage({
         </div>
       </aside>
 
-      <section className="tide-panel flex min-h-[28rem] flex-col p-5">
+      <section
+        className={`tide-panel flex flex-col p-5 ${
+          active
+            ? "h-[min(36rem,calc(100dvh-6rem))] min-h-[28rem]"
+            : "min-h-[28rem]"
+        }`}
+      >
         {tab === "hub" && !active ? (
           <>
             <h1 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
@@ -463,7 +469,7 @@ export default async function ChatPage({
         {active ? (
           <>
             <MarkChatSeen groupId={active.id} />
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex shrink-0 items-start justify-between gap-3">
               <div>
                 <Link
                   href={listHref(listKindForGroup(active))}
@@ -484,10 +490,32 @@ export default async function ChatPage({
                 groupId={active.id}
                 isDirect={active.isDirect}
                 canDelete={canDeleteGroup(active)}
+                canEditMembers={!active.isDirect && canDeleteGroup(active)}
                 listTab={listKindForGroup(active)}
+                currentMembers={active.members.map((m) => ({
+                  userId: m.user.id,
+                  label: personLabel(m.user),
+                }))}
+                addCandidates={
+                  active.isDirect
+                    ? []
+                    : active.workspaceId
+                      ? (membersByWorkspace[active.workspaceId] ?? []).filter(
+                          (c) =>
+                            !active.members.some((m) => m.user.id === c.id),
+                        )
+                      : friendOptions.filter(
+                          (c) =>
+                            !active.members.some((m) => m.user.id === c.id),
+                        )
+                }
+                addSearchPlaceholder={
+                  active.workspaceId ? "Search members" : "Search friends"
+                }
+                addItemNoun={active.workspaceId ? "member" : "friend"}
               />
             </div>
-            <div className="mt-4 flex-1 space-y-3 overflow-y-auto">
+            <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto">
               {threadMessages.map((msg) => (
                 <div key={msg.id} className="text-sm">
                   <span className="font-semibold text-[#0A3D45]">
@@ -503,19 +531,21 @@ export default async function ChatPage({
                 <p className="text-sm text-[#0A3D45]/55">No messages yet.</p>
               ) : null}
             </div>
-            <InlineActionForm
-              className="mt-4 flex gap-2"
-              action={sendMessageAction}
-              submitLabel="Send"
-            >
-              <input type="hidden" name="groupId" value={active.id} />
-              <input
-                name="body"
-                required
-                placeholder="Write a message…"
-                className="tide-input flex-1"
-              />
-            </InlineActionForm>
+            <div className="mt-3 shrink-0 border-t border-[#0A3D45]/10 bg-[var(--tide-panel-bg,inherit)] pt-3">
+              <InlineActionForm
+                className="flex gap-2"
+                action={sendMessageAction}
+                submitLabel="Send"
+              >
+                <input type="hidden" name="groupId" value={active.id} />
+                <input
+                  name="body"
+                  required
+                  placeholder="Write a message…"
+                  className="tide-input flex-1"
+                />
+              </InlineActionForm>
+            </div>
           </>
         ) : null}
       </section>
