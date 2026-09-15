@@ -137,6 +137,16 @@ export async function requestWorkspaceBirthday(
     return { ok: false as const, error: "No birthday set." };
   }
 
+  // Owners adding their own birthday don’t need a self-approval loop.
+  if (workspace.ownerId === subjectId) {
+    await prisma.workspaceBirthdayRequest.upsert({
+      where: { workspaceId_subjectId: { workspaceId, subjectId } },
+      create: { workspaceId, subjectId, status: "ACTIVE" },
+      update: { status: "ACTIVE" },
+    });
+    return { ok: true as const };
+  }
+
   const row = await prisma.workspaceBirthdayRequest.upsert({
     where: { workspaceId_subjectId: { workspaceId, subjectId } },
     create: { workspaceId, subjectId, status: "PENDING" },

@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   shareBirthdayWithFriendsAction,
+  shareBirthdayWithWorkspacesAction,
   updateBirthdayAction,
   type BirthdaySaveResult,
 } from "@/app/actions/birthday";
@@ -22,6 +23,8 @@ function SubmitButton({ label }: { label: string }) {
     </button>
   );
 }
+
+type PickerOption = { id: string; label: string };
 
 export function BirthdaySettingsForm({
   birthday,
@@ -45,28 +48,51 @@ export function BirthdaySettingsForm({
     updateBirthdayAction,
     null as BirthdaySaveResult | null,
   );
-  const [pickerFriends, setPickerFriends] = useState<
-    { id: string; label: string }[] | null
+  const [pickerFriends, setPickerFriends] = useState<PickerOption[] | null>(
+    null,
+  );
+  const [pickerWorkspaces, setPickerWorkspaces] = useState<
+    PickerOption[] | null
   >(null);
   const [shareMode, setShareMode] = useState<"all" | "select" | null>(null);
+  const [workspaceShareMode, setWorkspaceShareMode] = useState<
+    "all" | "select" | null
+  >(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [selectedWorkspaces, setSelectedWorkspaces] = useState<string[]>([]);
   const [shareState, shareAction] = useActionState(
     shareBirthdayWithFriendsAction,
     null,
   );
+  const [workspaceShareState, workspaceShareAction] = useActionState(
+    shareBirthdayWithWorkspacesAction,
+    null,
+  );
 
   useEffect(() => {
-    if (
-      state &&
-      state.ok &&
+    if (!state || !state.ok) return;
+
+    const nextFriends =
       "needsFriendPicker" in state &&
-      state.needsFriendPicker
-    ) {
-      setPickerFriends(state.friends);
-      setShareMode(null);
-      setSelected([]);
-    } else if (state && state.ok && !("needsFriendPicker" in state)) {
-      setPickerFriends(null);
+      state.needsFriendPicker &&
+      state.friends?.length
+        ? state.friends
+        : null;
+    const nextWorkspaces =
+      "needsWorkspacePicker" in state &&
+      state.needsWorkspacePicker &&
+      state.workspaces?.length
+        ? state.workspaces
+        : null;
+
+    setPickerFriends(nextFriends);
+    setPickerWorkspaces(nextWorkspaces);
+    setShareMode(null);
+    setWorkspaceShareMode(null);
+    setSelected([]);
+    setSelectedWorkspaces([]);
+
+    if (!nextFriends && !nextWorkspaces) {
       router.refresh();
     }
   }, [state, router]);
@@ -75,9 +101,37 @@ export function BirthdaySettingsForm({
     if (shareState?.ok) {
       setPickerFriends(null);
       setShareMode(null);
+      setSelected([]);
+      if (!pickerWorkspaces?.length) {
+        router.refresh();
+      }
+    }
+  }, [shareState, pickerWorkspaces, router]);
+
+  useEffect(() => {
+    if (workspaceShareState?.ok) {
+      setPickerWorkspaces(null);
+      setWorkspaceShareMode(null);
+      setSelectedWorkspaces([]);
       router.refresh();
     }
-  }, [shareState, router]);
+  }, [workspaceShareState, router]);
+
+  const finishFriendPicker = () => {
+    setPickerFriends(null);
+    setShareMode(null);
+    setSelected([]);
+    if (!pickerWorkspaces?.length) {
+      router.refresh();
+    }
+  };
+
+  const finishWorkspacePicker = () => {
+    setPickerWorkspaces(null);
+    setWorkspaceShareMode(null);
+    setSelectedWorkspaces([]);
+    router.refresh();
+  };
 
   return (
     <div className="space-y-4">
@@ -169,8 +223,8 @@ export function BirthdaySettingsForm({
           <span>
             <span className="font-medium">Ask before sharing</span>
             <span className="block text-xs text-[#0A3D45]/60">
-              Always ask when you add a friend or join a workspace — whether the
-              options above are on or off.
+              Ask when you add a birthday, add a friend, or join a workspace —
+              whether the options above are on or off.
             </span>
           </span>
         </label>
@@ -222,7 +276,7 @@ export function BirthdaySettingsForm({
               <button
                 type="button"
                 className="text-sm text-[#0A3D45]/60"
-                onClick={() => setPickerFriends(null)}
+                onClick={finishFriendPicker}
               >
                 Skip
               </button>
@@ -264,6 +318,83 @@ export function BirthdaySettingsForm({
                   Back
                 </button>
                 <SubmitButton label="Share birthday" />
+              </div>
+            </form>
+          )}
+        </div>
+      ) : null}
+
+      {!pickerFriends && pickerWorkspaces ? (
+        <div className="rounded-lg border border-[#0A3D45]/15 bg-[#0A3D45]/[0.03] p-4">
+          <p className="text-sm font-semibold text-[#0A3D45]">
+            Add to workspace calendars?
+          </p>
+          <p className="mt-1 text-xs text-[#0A3D45]/65">
+            You’re already in workspaces. Request your birthday on all of them,
+            pick specific ones, or skip. Owners still approve (except for
+            workspaces you own).
+          </p>
+
+          {workspaceShareMode === null ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <form action={workspaceShareAction}>
+                <input type="hidden" name="mode" value="all" />
+                <SubmitButton label="Add to all workspaces" />
+              </form>
+              <button
+                type="button"
+                className="tide-btn-secondary text-sm"
+                onClick={() => setWorkspaceShareMode("select")}
+              >
+                Select workspaces
+              </button>
+              <button
+                type="button"
+                className="text-sm text-[#0A3D45]/60"
+                onClick={finishWorkspacePicker}
+              >
+                Skip
+              </button>
+            </div>
+          ) : (
+            <form className="mt-3 space-y-2" action={workspaceShareAction}>
+              <input type="hidden" name="mode" value="select" />
+              <ul className="max-h-56 space-y-1 overflow-y-auto">
+                {pickerWorkspaces.map((ws) => (
+                  <li key={ws.id}>
+                    <label className="flex items-center gap-2 text-sm text-[#0A3D45]">
+                      <input
+                        type="checkbox"
+                        name="workspaceId"
+                        value={ws.id}
+                        checked={selectedWorkspaces.includes(ws.id)}
+                        onChange={(e) => {
+                          setSelectedWorkspaces((prev) =>
+                            e.target.checked
+                              ? [...prev, ws.id]
+                              : prev.filter((id) => id !== ws.id),
+                          );
+                        }}
+                      />
+                      {ws.label}
+                    </label>
+                  </li>
+                ))}
+              </ul>
+              {workspaceShareState && !workspaceShareState.ok ? (
+                <p className="text-sm text-[#9b2f22]">
+                  {workspaceShareState.error}
+                </p>
+              ) : null}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="text-xs text-[#0A3D45]/60"
+                  onClick={() => setWorkspaceShareMode(null)}
+                >
+                  Back
+                </button>
+                <SubmitButton label="Request birthday" />
               </div>
             </form>
           )}
