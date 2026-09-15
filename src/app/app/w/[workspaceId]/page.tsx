@@ -297,22 +297,37 @@ export default async function WorkspacePage({
               </ul>
 
               {canEdit ? (
-                <InlineActionForm
-                  className="mt-4 flex flex-col gap-2"
-                  action={createFolderAction}
-                  submitLabel="New folder"
-                >
-                  <input type="hidden" name="workspaceId" value={workspaceId} />
-                  {currentFolder ? (
-                    <input type="hidden" name="parentId" value={currentFolder.id} />
-                  ) : null}
-                  <input
-                    name="name"
-                    required
-                    placeholder="Folder name"
-                    className="tide-input text-sm"
-                  />
-                </InlineActionForm>
+                <div className="mt-4">
+                  <ChatSidebarSection
+                    title="New folder"
+                    description={
+                      currentFolder
+                        ? `Create a subfolder inside “${currentFolder.name}”.`
+                        : "Create a folder at the workspace root."
+                    }
+                  >
+                    <InlineActionForm
+                      className="flex flex-col gap-2"
+                      action={createFolderAction}
+                      submitLabel="Create folder"
+                    >
+                      <input type="hidden" name="workspaceId" value={workspaceId} />
+                      {currentFolder ? (
+                        <input
+                          type="hidden"
+                          name="parentId"
+                          value={currentFolder.id}
+                        />
+                      ) : null}
+                      <input
+                        name="name"
+                        required
+                        placeholder="Folder name"
+                        className="tide-input text-sm"
+                      />
+                    </InlineActionForm>
+                  </ChatSidebarSection>
+                </div>
               ) : null}
             </div>
 
