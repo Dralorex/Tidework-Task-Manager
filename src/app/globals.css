@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-:root {
+:root,
+[data-theme="cool"] {
   --tide-deep: #0a3d45;
   --tide-mid: #1a7a82;
   --tide-foam: #e8f7f6;
@@ -10,6 +11,120 @@
   --tide-ink: #10262a;
   --background: var(--tide-foam);
   --foreground: var(--tide-ink);
+  --header-bg: color-mix(in srgb, var(--tide-foam) 85%, transparent);
+  --wave-1: rgba(61, 190, 171, 0.35);
+  --wave-2: rgba(26, 122, 130, 0.28);
+  --wave-3: rgba(232, 93, 76, 0.12);
+  --wave-base: linear-gradient(165deg, #d8f3f0 0%, #e8f7f6 40%, #f0faf8 100%);
+  --panel-bg: rgba(255, 255, 255, 0.65);
+  --panel-border: rgba(10, 61, 69, 0.08);
+  --input-bg: rgba(255, 255, 255, 0.75);
+  --btn-secondary-bg: rgba(255, 255, 255, 0.55);
+}
+
+[data-theme="light"] {
+  --tide-deep: #1c2b33;
+  --tide-mid: #3a5560;
+  --tide-foam: #ffffff;
+  --tide-sea: #5bb8c4;
+  --tide-coral: #e85d4c;
+  --tide-sand: #f7f7f5;
+  --tide-ink: #142028;
+  --background: #fbfbfa;
+  --foreground: var(--tide-ink);
+  --header-bg: rgba(255, 255, 255, 0.9);
+  --wave-1: rgba(91, 184, 196, 0.18);
+  --wave-2: rgba(28, 43, 51, 0.06);
+  --wave-3: rgba(232, 93, 76, 0.06);
+  --wave-base: linear-gradient(165deg, #ffffff 0%, #f7fafb 45%, #eef4f5 100%);
+  --panel-bg: rgba(255, 255, 255, 0.88);
+  --panel-border: rgba(28, 43, 51, 0.08);
+  --input-bg: #ffffff;
+  --btn-secondary-bg: rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="bright"] {
+  --tide-deep: #05353c;
+  --tide-mid: #0e7c88;
+  --tide-foam: #f5fffd;
+  --tide-sea: #1fd6c0;
+  --tide-coral: #ff5a45;
+  --tide-sand: #fff8e8;
+  --tide-ink: #04262c;
+  --background: #f5fffd;
+  --foreground: var(--tide-ink);
+  --header-bg: rgba(245, 255, 253, 0.92);
+  --wave-1: rgba(31, 214, 192, 0.45);
+  --wave-2: rgba(14, 124, 136, 0.28);
+  --wave-3: rgba(255, 90, 69, 0.18);
+  --wave-base: linear-gradient(165deg, #d4fff6 0%, #f5fffd 40%, #fff8e8 100%);
+  --panel-bg: rgba(255, 255, 255, 0.78);
+  --panel-border: rgba(5, 53, 60, 0.1);
+  --input-bg: rgba(255, 255, 255, 0.92);
+  --btn-secondary-bg: rgba(255, 255, 255, 0.75);
+}
+
+[data-theme="gray"] {
+  --tide-deep: #2a2f36;
+  --tide-mid: #5b6572;
+  --tide-foam: #eef0f3;
+  --tide-sea: #7d8b9a;
+  --tide-coral: #c45c4e;
+  --tide-sand: #e7e5e1;
+  --tide-ink: #1b1f24;
+  --background: #eef0f3;
+  --foreground: var(--tide-ink);
+  --header-bg: rgba(238, 240, 243, 0.92);
+  --wave-1: rgba(125, 139, 154, 0.28);
+  --wave-2: rgba(42, 47, 54, 0.12);
+  --wave-3: rgba(196, 92, 78, 0.1);
+  --wave-base: linear-gradient(165deg, #e2e6eb 0%, #eef0f3 45%, #f5f5f4 100%);
+  --panel-bg: rgba(255, 255, 255, 0.7);
+  --panel-border: rgba(42, 47, 54, 0.1);
+  --input-bg: rgba(255, 255, 255, 0.85);
+  --btn-secondary-bg: rgba(255, 255, 255, 0.7);
+}
+
+[data-theme="dark"] {
+  --tide-deep: #d7ebe8;
+  --tide-mid: #7ec8c0;
+  --tide-foam: #0b1719;
+  --tide-sea: #3dbeab;
+  --tide-coral: #f07a6a;
+  --tide-sand: #1a2426;
+  --tide-ink: #e8f7f6;
+  --background: #0b1719;
+  --foreground: var(--tide-ink);
+  --header-bg: rgba(11, 23, 25, 0.92);
+  --wave-1: rgba(61, 190, 171, 0.22);
+  --wave-2: rgba(126, 200, 192, 0.12);
+  --wave-3: rgba(240, 122, 106, 0.12);
+  --wave-base: linear-gradient(165deg, #0b1719 0%, #102226 45%, #0f1c1e 100%);
+  --panel-bg: rgba(22, 36, 39, 0.85);
+  --panel-border: rgba(215, 235, 232, 0.12);
+  --input-bg: rgba(16, 28, 30, 0.9);
+  --btn-secondary-bg: rgba(22, 36, 39, 0.9);
+}
+
+[data-theme="burn"] {
+  --tide-deep: #3b1d14;
+  --tide-mid: #a34528;
+  --tide-foam: #fff4ec;
+  --tide-sea: #e07a3d;
+  --tide-coral: #d9402a;
+  --tide-sand: #f6e0cb;
+  --tide-ink: #2a140e;
+  --background: #fff4ec;
+  --foreground: var(--tide-ink);
+  --header-bg: rgba(255, 244, 236, 0.92);
+  --wave-1: rgba(224, 122, 61, 0.35);
+  --wave-2: rgba(163, 69, 40, 0.22);
+  --wave-3: rgba(217, 64, 42, 0.16);
+  --wave-base: linear-gradient(165deg, #ffe0c8 0%, #fff4ec 40%, #f6e0cb 100%);
+  --panel-bg: rgba(255, 252, 248, 0.75);
+  --panel-border: rgba(59, 29, 20, 0.1);
+  --input-bg: rgba(255, 255, 255, 0.85);
+  --btn-secondary-bg: rgba(255, 255, 255, 0.7);
 }
 
 @theme inline {
@@ -27,10 +142,10 @@ body {
 
 .tide-wave-bg {
   background:
-    radial-gradient(ellipse 80% 50% at 10% 20%, rgba(61, 190, 171, 0.35), transparent 55%),
-    radial-gradient(ellipse 70% 45% at 90% 10%, rgba(26, 122, 130, 0.28), transparent 50%),
-    radial-gradient(ellipse 60% 40% at 50% 100%, rgba(232, 93, 76, 0.12), transparent 45%),
-    linear-gradient(165deg, #d8f3f0 0%, #e8f7f6 40%, #f0faf8 100%);
+    radial-gradient(ellipse 80% 50% at 10% 20%, var(--wave-1), transparent 55%),
+    radial-gradient(ellipse 70% 45% at 90% 10%, var(--wave-2), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 50% 100%, var(--wave-3), transparent 45%),
+    var(--wave-base);
 }
 
 .tide-btn-primary {
@@ -48,7 +163,7 @@ body {
 .tide-btn-primary:hover {
   background: var(--tide-mid);
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(10, 61, 69, 0.18);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--tide-deep) 18%, transparent);
 }
 
 .tide-btn-secondary {
@@ -56,8 +171,8 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  border: 1.5px solid rgba(10, 61, 69, 0.2);
-  background: rgba(255, 255, 255, 0.55);
+  border: 1.5px solid color-mix(in srgb, var(--tide-deep) 20%, transparent);
+  background: var(--btn-secondary-bg);
   color: var(--tide-deep);
   padding: 0.55rem 1.1rem;
   font-weight: 600;
@@ -65,15 +180,15 @@ body {
 }
 
 .tide-btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: rgba(10, 61, 69, 0.35);
+  background: color-mix(in srgb, var(--tide-foam) 90%, white);
+  border-color: color-mix(in srgb, var(--tide-deep) 35%, transparent);
 }
 
 .tide-input {
   width: 100%;
   border-radius: 0.85rem;
-  border: 1.5px solid rgba(10, 61, 69, 0.15);
-  background: rgba(255, 255, 255, 0.75);
+  border: 1.5px solid color-mix(in srgb, var(--tide-deep) 15%, transparent);
+  background: var(--input-bg);
   padding: 0.7rem 0.9rem;
   color: var(--tide-ink);
   outline: none;
@@ -82,15 +197,15 @@ body {
 
 .tide-input:focus {
   border-color: var(--tide-sea);
-  box-shadow: 0 0 0 3px rgba(61, 190, 171, 0.25);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tide-sea) 25%, transparent);
 }
 
 .tide-panel {
   border-radius: 1.25rem;
-  border: 1px solid rgba(10, 61, 69, 0.08);
-  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
   backdrop-filter: blur(8px);
-  box-shadow: 0 12px 40px rgba(10, 61, 69, 0.06);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--tide-deep) 6%, transparent);
 }
 
 @keyframes tide-rise {
