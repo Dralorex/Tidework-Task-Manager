@@ -4,6 +4,75 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOutAction } from "@/app/actions/auth";
 
+type NavKey =
+  | "home"
+  | "calendar"
+  | "chat"
+  | "social"
+  | "notifications"
+  | "profile";
+
+const TABS: {
+  href: string;
+  key: Exclude<NavKey, "profile">;
+  label: string;
+  shortLabel: string;
+  badge?: "chat" | "notifications";
+}[] = [
+  { href: "/app", key: "home", label: "Workspaces", shortLabel: "Spaces" },
+  {
+    href: "/app/calendar",
+    key: "calendar",
+    label: "Calendar",
+    shortLabel: "Calendar",
+  },
+  {
+    href: "/app/chat",
+    key: "chat",
+    label: "Chat",
+    shortLabel: "Chat",
+    badge: "chat",
+  },
+  {
+    href: "/app/social",
+    key: "social",
+    label: "Friends",
+    shortLabel: "Friends",
+  },
+  {
+    href: "/app/notifications",
+    key: "notifications",
+    label: "Notifications",
+    shortLabel: "Alerts",
+    badge: "notifications",
+  },
+];
+
+function Badge({
+  count,
+  active,
+  compact,
+}: {
+  count: number;
+  active: boolean;
+  compact?: boolean;
+}) {
+  if (count <= 0) return null;
+  return (
+    <span
+      className={`rounded-full font-semibold ${
+        compact
+          ? "min-w-[1rem] px-1 text-[9px] leading-4"
+          : "min-w-[1.25rem] px-1.5 text-[11px] leading-5"
+      } ${
+        active ? "bg-[#E8F7F6] text-[#0A3D45]" : "bg-[#E85D4C] text-white"
+      }`}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
 export function AppNav({
   displayLabel,
   unreadCount = 0,
@@ -15,55 +84,114 @@ export function AppNav({
 }) {
   const pathname = usePathname();
 
-  const active =
-    pathname.startsWith("/app/notifications")
-      ? "notifications"
-      : pathname.startsWith("/app/calendar")
-        ? "calendar"
-        : pathname.startsWith("/app/chat")
-          ? "chat"
-          : pathname.startsWith("/app/social")
-            ? "social"
-            : pathname.startsWith("/app/profile")
-              ? "profile"
-              : "home";
+  const active: NavKey = pathname.startsWith("/app/notifications")
+    ? "notifications"
+    : pathname.startsWith("/app/calendar")
+      ? "calendar"
+      : pathname.startsWith("/app/chat")
+        ? "chat"
+        : pathname.startsWith("/app/social")
+          ? "social"
+          : pathname.startsWith("/app/profile")
+            ? "profile"
+            : "home";
 
-  const link = (href: string, key: typeof active, label: string, badge?: number) => (
-    <Link
-      href={href}
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition ${
-        active === key
-          ? "bg-[#0A3D45] text-[#E8F7F6]"
-          : "text-[#0A3D45]/80 hover:bg-[#0A3D45]/8"
-      }`}
-    >
-      {label}
-      {badge && badge > 0 ? (
-        <span
-          className={`min-w-[1.25rem] rounded-full px-1.5 text-center text-[11px] font-semibold leading-5 ${
-            active === key
-              ? "bg-[#E8F7F6] text-[#0A3D45]"
-              : "bg-[#E85D4C] text-white"
-          }`}
-        >
-          {badge > 99 ? "99+" : badge}
-        </span>
-      ) : null}
-    </Link>
-  );
+  const badgeFor = (kind?: "chat" | "notifications") => {
+    if (kind === "chat") return chatUnreadCount;
+    if (kind === "notifications") return unreadCount;
+    return 0;
+  };
 
   return (
     <header className="sticky top-0 z-20 border-b border-[#0A3D45]/10 bg-[#E8F7F6]/85 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <Link href="/app" className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
+      {/* Phone: brand row + compact equal tab strip */}
+      <div className="mx-auto max-w-6xl px-3 pt-2.5 pb-2 md:hidden">
+        <div className="flex items-center justify-between gap-3">
+          <Link
+            href="/app"
+            className="font-[family-name:var(--font-display)] text-lg text-[#0A3D45]"
+          >
+            Tidework
+          </Link>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <Link
+              href="/app/profile"
+              className={`max-w-[9rem] truncate text-xs underline-offset-2 hover:underline ${
+                active === "profile"
+                  ? "font-semibold text-[#0A3D45]"
+                  : "text-[#0A3D45]/70"
+              }`}
+              title="Profile settings"
+            >
+              {displayLabel}
+            </Link>
+            <form action={signOutAction}>
+              <button
+                type="submit"
+                className="shrink-0 text-xs text-[#0A3D45]/70 underline-offset-2 hover:underline"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <nav
+          className="mt-2.5 grid grid-cols-5 gap-0.5 rounded-xl bg-[#0A3D45]/[0.06] p-1"
+          aria-label="Main"
+        >
+          {TABS.map((tab) => {
+            const isActive = active === tab.key;
+            const count = badgeFor(tab.badge);
+            return (
+              <Link
+                key={tab.key}
+                href={tab.href}
+                className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-center transition ${
+                  isActive
+                    ? "bg-[#0A3D45] text-[#E8F7F6] shadow-sm"
+                    : "text-[#0A3D45]/75"
+                }`}
+              >
+                <span className="inline-flex max-w-full items-center justify-center gap-0.5">
+                  <span className="truncate text-[11px] font-semibold leading-tight">
+                    {tab.shortLabel}
+                  </span>
+                  <Badge count={count} active={isActive} compact />
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Desktop: single-row layout */}
+      <div className="mx-auto hidden max-w-6xl items-center justify-between gap-4 px-4 py-3 md:flex">
+        <Link
+          href="/app"
+          className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]"
+        >
           Tidework
         </Link>
         <nav className="flex flex-wrap items-center gap-1">
-          {link("/app", "home", "Workspaces")}
-          {link("/app/calendar", "calendar", "Calendar")}
-          {link("/app/chat", "chat", "Chat", chatUnreadCount)}
-          {link("/app/social", "social", "Friends")}
-          {link("/app/notifications", "notifications", "Notifications", unreadCount)}
+          {TABS.map((tab) => {
+            const isActive = active === tab.key;
+            const count = badgeFor(tab.badge);
+            return (
+              <Link
+                key={tab.key}
+                href={tab.href}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition ${
+                  isActive
+                    ? "bg-[#0A3D45] text-[#E8F7F6]"
+                    : "text-[#0A3D45]/80 hover:bg-[#0A3D45]/8"
+                }`}
+              >
+                {tab.label}
+                <Badge count={count} active={isActive} />
+              </Link>
+            );
+          })}
         </nav>
         <div className="flex items-center gap-3">
           <Link
