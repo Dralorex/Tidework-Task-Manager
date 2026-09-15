@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppNav } from "@/app/components/app-nav";
+import { FloatingChatWidget } from "@/app/components/floating-chat-widget";
 import { LiveRefresh } from "@/app/components/live-refresh";
 import { getCurrentUser } from "@/lib/auth";
 import { syncBirthdayNotifications } from "@/lib/birthday";
@@ -46,6 +47,7 @@ export default async function AppSectionLayout({
         chatUnreadCount={chatUnreadCount}
       />
       {children}
+      <FloatingChatWidget chatUnreadCount={chatUnreadCount} />
     </div>
   );
 }
