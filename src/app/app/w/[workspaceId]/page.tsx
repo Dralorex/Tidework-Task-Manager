@@ -331,7 +331,11 @@ export default async function WorkspacePage({
                     submitLabel="Send invite"
                   >
                     <input type="hidden" name="workspaceId" value={workspaceId} />
-                    <FriendInvitePicker friends={inviteFriends} targetName="target" />
+                    <FriendInvitePicker
+                      friends={inviteFriends}
+                      targetName="target"
+                      excludeIds={workspaceMembers.map((m) => m.userId)}
+                    />
                     <select name="role" className="tide-input text-sm" defaultValue="MEMBER">
                       <option value="ADMIN">Admin</option>
                       <option value="EDITOR">Editor</option>
