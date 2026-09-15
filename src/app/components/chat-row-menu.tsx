@@ -13,10 +13,13 @@ export function ChatRowMenu({
   groupId,
   isDirect,
   canDelete,
+  listTab = "groups",
 }: {
   groupId: string;
   isDirect: boolean;
   canDelete: boolean;
+  /** Where to return after leave/delete for non-DM chats. */
+  listTab?: "dms" | "groups" | "workspace-groups";
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -33,7 +36,7 @@ export function ChatRowMenu({
     const result = await action(null, fd);
     setOpen(false);
     if (result?.ok) {
-      router.push(isDirect ? "/app/chat?tab=dms" : "/app/chat?tab=groups");
+      router.push(isDirect ? "/app/chat?tab=dms" : `/app/chat?tab=${listTab}`);
       router.refresh();
     } else if (result && !result.ok) alert(result.error);
   }

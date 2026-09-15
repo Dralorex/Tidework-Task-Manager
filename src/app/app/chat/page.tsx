@@ -3,9 +3,10 @@ import { format } from "date-fns";
 import { InlineActionForm } from "@/app/components/forms";
 import { ChatRowMenu } from "@/app/components/chat-row-menu";
 import { MarkChatSeen } from "@/app/components/mark-chat-seen";
+import { StartDmForm } from "@/app/components/start-dm-form";
+import { CreateFriendGroupForm } from "@/app/components/create-friend-group-form";
 import {
   createGroupChatAction,
-  requestWorkspaceDmAction,
   respondDmRequestAction,
   sendMessageAction,
 } from "@/app/actions/social";
@@ -13,7 +14,7 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { personLabel, type UserLabel } from "@/lib/utils";
 
-type Tab = "hub" | "dms" | "groups";
+type Tab = "hub" | "dms" | "groups" | "workspace-groups";
 
 function dmDisplayName(
   members: { user: UserLabel & { id: string } }[],
@@ -29,6 +30,10 @@ function snippet(body: string | undefined) {
   return trimmed.length > 72 ? `${trimmed.slice(0, 72)}…` : trimmed;
 }
 
+function isChatTab(value: string | undefined): value is Exclude<Tab, "hub"> {
+  return value === "dms" || value === "groups" || value === "workspace-groups";
+}
+
 export default async function ChatPage({
   searchParams,
 }: {
@@ -38,13 +43,10 @@ export default async function ChatPage({
   const sp = await searchParams;
   const userId = user.id;
 
-  const tabParam = sp.tab === "dms" || sp.tab === "groups" ? sp.tab : null;
+  const tabParam = isChatTab(sp.tab) ? sp.tab : null;
   const groupId = sp.group ?? null;
 
   let tab: Tab = "hub";
-  if (groupId || tabParam) {
-    tab = tabParam ?? "hub";
-  }
 
   const memberships = await prisma.chatMember.findMany({
     where: { userId },
@@ -81,24 +83,29 @@ export default async function ChatPage({
       if (aDel !== bDel) return aDel - bDel;
       return latestMessageAt(b) - latestMessageAt(a);
     });
-  const groupChats = groups
-    .filter((g) => !g.isDirect)
+
+  const friendGroups = groups
+    .filter((g) => !g.isDirect && !g.workspaceId)
     .sort((a, b) => latestMessageAt(b) - latestMessageAt(a));
 
-  // Infer tab from opened group when not specified
+  const workspaceGroups = groups
+    .filter((g) => !g.isDirect && Boolean(g.workspaceId))
+    .sort((a, b) => latestMessageAt(b) - latestMessageAt(a));
+
   if (groupId && !tabParam) {
     const g = groups.find((x) => x.id === groupId);
-    tab = g?.isDirect ? "dms" : "groups";
+    if (g?.isDirect) tab = "dms";
+    else if (g?.workspaceId) tab = "workspace-groups";
+    else tab = "groups";
   } else if (tabParam) {
     tab = tabParam;
   }
 
   const active =
-    groupId && (tab === "dms" || tab === "groups")
-      ? groups.find((g) => g.id === groupId) ?? null
+    groupId && tab !== "hub"
+      ? (groups.find((g) => g.id === groupId) ?? null)
       : null;
 
-  // Full message history for the open thread
   const threadMessages = active
     ? await prisma.message.findMany({
         where: { groupId: active.id },
@@ -146,12 +153,35 @@ export default async function ChatPage({
 
   const adminWorkspaceIds = new Set(adminWorkspaces.map((m) => m.workspaceId));
 
-  let groupsUnread = 0;
+  const acceptedFriendships = await prisma.friendship.findMany({
+    where: {
+      status: "ACCEPTED",
+      OR: [{ requesterId: user.id }, { addresseeId: user.id }],
+    },
+    include: { requester: true, addressee: true },
+  });
+
+  const friendOptions = acceptedFriendships.map((row) => {
+    const friend = row.requesterId === user.id ? row.addressee : row.requester;
+    return {
+      id: friend.id,
+      username: friend.username,
+      label: personLabel(friend),
+    };
+  });
+
+  const friendsWithDmIds = dms
+    .map((g) => g.members.find((m) => m.user.id !== userId)?.user.id)
+    .filter((id): id is string => Boolean(id));
+
+  let friendGroupsUnread = 0;
+  let workspaceGroupsUnread = 0;
   let dmsUnread = 0;
   for (const g of groups) {
     const n = unreadCounts.get(g.id) ?? 0;
     if (g.isDirect) dmsUnread += n;
-    else groupsUnread += n;
+    else if (g.workspaceId) workspaceGroupsUnread += n;
+    else friendGroupsUnread += n;
   }
   dmsUnread += dmRequests.length;
 
@@ -161,13 +191,42 @@ export default async function ChatPage({
     return Boolean(g.workspaceId && adminWorkspaceIds.has(g.workspaceId));
   }
 
-  function listHref(kind: "dms" | "groups") {
+  function listHref(kind: Exclude<Tab, "hub">) {
     return `/app/chat?tab=${kind}`;
   }
 
-  function threadHref(kind: "dms" | "groups", id: string) {
+  function threadHref(kind: Exclude<Tab, "hub">, id: string) {
     return `/app/chat?tab=${kind}&group=${id}`;
   }
+
+  function listKindForGroup(g: (typeof groups)[number]): Exclude<Tab, "hub"> {
+    if (g.isDirect) return "dms";
+    if (g.workspaceId) return "workspace-groups";
+    return "groups";
+  }
+
+  const listItems =
+    tab === "dms"
+      ? dms
+      : tab === "groups"
+        ? friendGroups
+        : tab === "workspace-groups"
+          ? workspaceGroups
+          : [];
+  const listTitle =
+    tab === "dms"
+      ? "DMs"
+      : tab === "groups"
+        ? "Groups"
+        : tab === "workspace-groups"
+          ? "Workspace groups"
+          : "";
+  const listEmpty =
+    tab === "dms"
+      ? "No direct messages yet. Message someone from the sidebar."
+      : tab === "groups"
+        ? "No friend groups yet. Create one from the sidebar."
+        : "No workspace groups yet.";
 
   return (
     <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[280px_1fr]">
@@ -205,49 +264,32 @@ export default async function ChatPage({
         ) : null}
 
         <div className="tide-panel space-y-6 p-4">
-          <div>
-            <h3 className="font-semibold text-[#0A3D45]">Message someone</h3>
-            <p className="mt-1 text-xs text-[#0A3D45]/60">
-              Pick Friends to message freely, or a workspace for members (non-friends
-              need to accept the first message).
-            </p>
-            <InlineActionForm
-              className="mt-3 flex flex-col gap-2"
-              action={requestWorkspaceDmAction}
-              submitLabel="Send"
-            >
-              <select name="workspaceId" className="tide-input text-sm" required>
-                <option value="__friends__">Friends</option>
-                {allWorkspaces.map((m) => (
-                  <option key={m.workspaceId} value={m.workspaceId}>
-                    {m.workspace.name}
-                  </option>
-                ))}
-              </select>
-              <input
-                name="username"
-                required
-                placeholder="Username"
-                className="tide-input text-sm"
-              />
-              <input
-                name="message"
-                required
-                placeholder="First message"
-                className="tide-input text-sm"
-              />
-            </InlineActionForm>
-          </div>
+          <StartDmForm
+            friends={friendOptions}
+            friendsWithDmIds={friendsWithDmIds}
+            workspaces={allWorkspaces.map((m) => ({
+              id: m.workspaceId,
+              name: m.workspace.name,
+            }))}
+          />
+
+          <CreateFriendGroupForm friends={friendOptions} />
 
           {adminWorkspaces.length > 0 ? (
             <div className="border-t border-[#0A3D45]/10 pt-5">
-              <h3 className="font-semibold text-[#0A3D45]">New group (Admin+)</h3>
+              <h3 className="font-semibold text-[#0A3D45]">
+                New workspace group (Admin+)
+              </h3>
               <InlineActionForm
                 className="mt-3 flex flex-col gap-2"
                 action={createGroupChatAction}
-                submitLabel="Create group"
+                submitLabel="Create workspace group"
               >
-                <select name="workspaceId" className="tide-input text-sm" required>
+                <select
+                  name="workspaceId"
+                  className="tide-input text-sm"
+                  required
+                >
                   {adminWorkspaces.map((m) => (
                     <option key={m.workspaceId} value={m.workspaceId}>
                       {m.workspace.name}
@@ -278,9 +320,9 @@ export default async function ChatPage({
               Chat
             </h1>
             <p className="mt-1 text-sm text-[#0A3D45]/60">
-              Choose Groups or DMs to browse conversations.
+              Choose Groups, Workspace groups, or DMs to browse conversations.
             </p>
-            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
               <Link
                 href={listHref("groups")}
                 className="group flex items-center justify-between rounded-lg border border-[#0A3D45]/12 bg-[#0A3D45]/[0.03] px-4 py-5 transition hover:border-[#0A3D45]/25 hover:bg-[#0A3D45]/[0.06]"
@@ -288,15 +330,39 @@ export default async function ChatPage({
                 <div>
                   <p className="flex items-center gap-2 font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
                     Groups
-                    {groupsUnread > 0 ? (
+                    {friendGroupsUnread > 0 ? (
                       <span className="rounded-full bg-[#E85D4C] px-1.5 text-[11px] font-semibold leading-5 text-white">
-                        {groupsUnread > 99 ? "99+" : groupsUnread}
+                        {friendGroupsUnread > 99 ? "99+" : friendGroupsUnread}
                       </span>
                     ) : null}
                   </p>
                   <p className="mt-1 text-sm text-[#0A3D45]/55">
-                    {groupChats.length} conversation
-                    {groupChats.length === 1 ? "" : "s"}
+                    {friendGroups.length} conversation
+                    {friendGroups.length === 1 ? "" : "s"} with friends
+                  </p>
+                </div>
+                <span className="text-[#0A3D45]/40 transition group-hover:text-[#0A3D45]">
+                  →
+                </span>
+              </Link>
+              <Link
+                href={listHref("workspace-groups")}
+                className="group flex items-center justify-between rounded-lg border border-[#0A3D45]/12 bg-[#0A3D45]/[0.03] px-4 py-5 transition hover:border-[#0A3D45]/25 hover:bg-[#0A3D45]/[0.06]"
+              >
+                <div>
+                  <p className="flex items-center gap-2 font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
+                    Workspace groups
+                    {workspaceGroupsUnread > 0 ? (
+                      <span className="rounded-full bg-[#E85D4C] px-1.5 text-[11px] font-semibold leading-5 text-white">
+                        {workspaceGroupsUnread > 99
+                          ? "99+"
+                          : workspaceGroupsUnread}
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="mt-1 text-sm text-[#0A3D45]/55">
+                    {workspaceGroups.length} conversation
+                    {workspaceGroups.length === 1 ? "" : "s"}
                   </p>
                 </div>
                 <span className="text-[#0A3D45]/40 transition group-hover:text-[#0A3D45]">
@@ -331,7 +397,8 @@ export default async function ChatPage({
           </>
         ) : null}
 
-        {(tab === "dms" || tab === "groups") && !active ? (
+        {(tab === "dms" || tab === "groups" || tab === "workspace-groups") &&
+        !active ? (
           <>
             <div className="flex items-center gap-3">
               <Link
@@ -342,10 +409,10 @@ export default async function ChatPage({
               </Link>
             </div>
             <h1 className="mt-2 font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
-              {tab === "dms" ? "DMs" : "Groups"}
+              {listTitle}
             </h1>
             <ul className="mt-4 space-y-2">
-              {(tab === "dms" ? dms : groupChats).map((g) => {
+              {listItems.map((g) => {
                 const title =
                   tab === "dms" ? dmDisplayName(g.members, userId) : g.name;
                 const last = g.messages[0];
@@ -380,18 +447,15 @@ export default async function ChatPage({
                           groupId={g.id}
                           isDirect={g.isDirect}
                           canDelete={canDeleteGroup(g)}
+                          listTab={tab}
                         />
                       </div>
                     </div>
                   </li>
                 );
               })}
-              {(tab === "dms" ? dms : groupChats).length === 0 ? (
-                <li className="text-sm text-[#0A3D45]/55">
-                  {tab === "dms"
-                    ? "No direct messages yet. Message someone from the sidebar."
-                    : "No groups yet."}
-                </li>
+              {listItems.length === 0 ? (
+                <li className="text-sm text-[#0A3D45]/55">{listEmpty}</li>
               ) : null}
             </ul>
           </>
@@ -403,7 +467,7 @@ export default async function ChatPage({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <Link
-                  href={listHref(active.isDirect ? "dms" : "groups")}
+                  href={listHref(listKindForGroup(active))}
                   className="text-sm text-[#0A3D45]/60 hover:underline"
                 >
                   ← Back
@@ -421,6 +485,7 @@ export default async function ChatPage({
                 groupId={active.id}
                 isDirect={active.isDirect}
                 canDelete={canDeleteGroup(active)}
+                listTab={listKindForGroup(active)}
               />
             </div>
             <div className="mt-4 flex-1 space-y-3 overflow-y-auto">
