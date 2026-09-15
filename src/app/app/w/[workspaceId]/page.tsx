@@ -247,88 +247,76 @@ export default async function WorkspacePage({
         <div className="mt-8 grid gap-6 lg:grid-cols-[240px_1fr]">
           <aside className="space-y-4">
             <div className="tide-panel p-4">
-              <h2 className="font-[family-name:var(--font-display)] text-lg text-[#0A3D45]">
-                Folders
-              </h2>
-              <ul className="mt-3 space-y-1 text-sm">
-                <li>
-                  <Link
-                    href={`/app/w/${workspaceId}`}
-                    className={`inline-flex items-center gap-1.5 ${
-                      !currentFolder
-                        ? "font-semibold text-[#0A3D45]"
-                        : "text-[#0A3D45]/70"
-                    }`}
-                  >
-                    All Tasks
-                    <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
-                      {allTasksCount}
-                    </span>
-                  </Link>
-                </li>
-                {folders
-                  .filter((f) => !f.parentId)
-                  .map((f) => (
-                    <li key={f.id}>
-                      <div className="group flex items-center justify-between gap-1">
-                        <Link
-                          href={`/app/w/${workspaceId}?folder=${f.id}`}
-                          className={`inline-flex min-w-0 items-center gap-1.5 ${
-                            currentFolder?.id === f.id
-                              ? "font-semibold text-[#0A3D45]"
-                              : "text-[#0A3D45]/70 hover:text-[#0A3D45]"
-                          }`}
-                        >
-                          <span className="truncate">{f.name}</span>
-                          <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
-                            {folderCounts.get(f.id) ?? 0}
-                          </span>
-                        </Link>
-                        {canEdit ? (
-                          <FolderActions
-                            workspaceId={workspaceId}
-                            folderId={f.id}
-                            folderName={f.name}
-                          />
-                        ) : null}
-                      </div>
-                    </li>
-                  ))}
-              </ul>
-
-              {canEdit ? (
-                <div className="mt-4">
-                  <ChatSidebarSection
-                    title="New folder"
-                    description={
-                      currentFolder
-                        ? `Create a subfolder inside “${currentFolder.name}”.`
-                        : "Create a folder at the workspace root."
-                    }
-                  >
-                    <InlineActionForm
-                      className="flex flex-col gap-2"
-                      action={createFolderAction}
-                      submitLabel="Create folder"
+              <ChatSidebarSection title="Folders">
+                <ul className="space-y-1 text-sm">
+                  <li>
+                    <Link
+                      href={`/app/w/${workspaceId}`}
+                      className={`inline-flex items-center gap-1.5 ${
+                        !currentFolder
+                          ? "font-semibold text-[#0A3D45]"
+                          : "text-[#0A3D45]/70"
+                      }`}
                     >
-                      <input type="hidden" name="workspaceId" value={workspaceId} />
-                      {currentFolder ? (
-                        <input
-                          type="hidden"
-                          name="parentId"
-                          value={currentFolder.id}
-                        />
-                      ) : null}
+                      All Tasks
+                      <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
+                        {allTasksCount}
+                      </span>
+                    </Link>
+                  </li>
+                  {folders
+                    .filter((f) => !f.parentId)
+                    .map((f) => (
+                      <li key={f.id}>
+                        <div className="group flex items-center justify-between gap-1">
+                          <Link
+                            href={`/app/w/${workspaceId}?folder=${f.id}`}
+                            className={`inline-flex min-w-0 items-center gap-1.5 ${
+                              currentFolder?.id === f.id
+                                ? "font-semibold text-[#0A3D45]"
+                                : "text-[#0A3D45]/70 hover:text-[#0A3D45]"
+                            }`}
+                          >
+                            <span className="truncate">{f.name}</span>
+                            <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
+                              {folderCounts.get(f.id) ?? 0}
+                            </span>
+                          </Link>
+                          {canEdit ? (
+                            <FolderActions
+                              workspaceId={workspaceId}
+                              folderId={f.id}
+                              folderName={f.name}
+                            />
+                          ) : null}
+                        </div>
+                      </li>
+                    ))}
+                </ul>
+
+                {canEdit ? (
+                  <InlineActionForm
+                    className="mt-4 flex flex-col gap-2"
+                    action={createFolderAction}
+                    submitLabel="New folder"
+                  >
+                    <input type="hidden" name="workspaceId" value={workspaceId} />
+                    {currentFolder ? (
                       <input
-                        name="name"
-                        required
-                        placeholder="Folder name"
-                        className="tide-input text-sm"
+                        type="hidden"
+                        name="parentId"
+                        value={currentFolder.id}
                       />
-                    </InlineActionForm>
-                  </ChatSidebarSection>
-                </div>
-              ) : null}
+                    ) : null}
+                    <input
+                      name="name"
+                      required
+                      placeholder="Folder name"
+                      className="tide-input text-sm"
+                    />
+                  </InlineActionForm>
+                ) : null}
+              </ChatSidebarSection>
             </div>
 
             {canInvite ? (
