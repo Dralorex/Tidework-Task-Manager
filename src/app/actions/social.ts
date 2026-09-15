@@ -410,7 +410,7 @@ export async function createGroupChatAction(
   const workspaceId = String(formData.get("workspaceId") ?? "");
   const membership = await requireMembership(workspaceId, user.id);
   if (!canCreateGroups(membership.role)) {
-    return { ok: false, error: "Only admins and owners can create group chats." };
+    return { ok: false, error: "Only admins and owners can create workspace group chats." };
   }
 
   const name = String(formData.get("name") ?? "").trim();
@@ -438,7 +438,7 @@ export async function createGroupChatAction(
     }
   }
 
-  await prisma.chatGroup.create({
+  const created = await prisma.chatGroup.create({
     data: {
       workspaceId,
       name,
@@ -452,7 +452,63 @@ export async function createGroupChatAction(
 
   revalidatePath("/app/chat");
   revalidatePath(`/app/w/${workspaceId}`);
-  return { ok: true };
+  redirect(`/app/chat?tab=workspace-groups&group=${created.id}`);
+}
+
+
+/** Friend-only group chat (no workspace). Members must be accepted friends. */
+export async function createFriendGroupChatAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return { ok: false, error: "Group needs a name." };
+
+  const memberUsernames = String(formData.get("members") ?? "")
+    .split(",")
+    .map((s) => normalizeUsername(s))
+    .filter(Boolean);
+
+  if (memberUsernames.length === 0) {
+    return { ok: false, error: "Pick at least one friend." };
+  }
+
+  const users = await prisma.user.findMany({
+    where: { username: { in: memberUsernames }, deletedAt: null },
+  });
+  if (users.length !== memberUsernames.length) {
+    return { ok: false, error: "One or more usernames weren’t found." };
+  }
+
+  for (const other of users) {
+    if (other.id === user.id) continue;
+    const friendship = await areAcceptedFriends(user.id, other.id);
+    if (!friendship) {
+      return {
+        ok: false,
+        error: `You’re not friends with @${other.username}.`,
+      };
+    }
+  }
+
+  const memberIds = new Set(users.map((u) => u.id));
+  memberIds.add(user.id);
+
+  const created = await prisma.chatGroup.create({
+    data: {
+      workspaceId: null,
+      name,
+      isDirect: false,
+      createdById: user.id,
+      members: {
+        create: [...memberIds].map((userId) => ({ userId })),
+      },
+    },
+  });
+
+  revalidatePath("/app/chat");
+  redirect(`/app/chat?tab=groups&group=${created.id}`);
 }
 
 export async function sendMessageAction(
@@ -580,7 +636,9 @@ export async function deleteChatGroupAction(
   if (!allowed) {
     return {
       ok: false,
-      error: "Only the creator or a workspace admin can delete this group.",
+      error: group.workspaceId
+        ? "Only the creator or a workspace admin can delete this group."
+        : "Only the group creator can delete this group.",
     };
   }
 
