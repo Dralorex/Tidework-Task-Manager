@@ -362,11 +362,17 @@ export function WorkspaceTaskRow({
   isRoot: boolean;
 }) {
   const isClaimed = Boolean(task.assigneeId);
-  const [expanded, setExpanded] = useState(!isClaimed);
+  const canClaim =
+    task.status === "OPEN" || (task.status === "CLAIMED" && !task.assigneeId);
+  const canReadyForReview =
+    task.assigneeId === userId &&
+    (task.status === "CLAIMED" || task.status === "OPEN");
+  const canAddPrivateTag = task.assigneeId === userId;
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    setExpanded(!isClaimed);
-  }, [isClaimed, task.id]);
+    setExpanded(false);
+  }, [task.id, isClaimed]);
 
   return (
     <li className="tide-panel relative overflow-hidden p-4 pl-5">
@@ -375,25 +381,26 @@ export function WorkspaceTaskRow({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            {isClaimed ? (
-              <button
-                type="button"
-                aria-expanded={expanded}
-                aria-label={expanded ? "Hide task details" : "Show task details"}
-                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[#0A3D45]/70 transition hover:bg-[#0A3D45]/8"
-                onClick={() => setExpanded((v) => !v)}
-              >
-                <span className="text-sm leading-none" aria-hidden>
-                  {expanded ? "▾" : "▸"}
-                </span>
-              </button>
-            ) : null}
+            <button
+              type="button"
+              aria-expanded={expanded}
+              aria-label={expanded ? "Hide task details" : "Show task details"}
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[#0A3D45]/70 transition hover:bg-[#0A3D45]/8"
+              onClick={() => setExpanded((v) => !v)}
+            >
+              <span className="text-sm leading-none" aria-hidden>
+                {expanded ? "▾" : "▸"}
+              </span>
+            </button>
             <h3 className="text-lg font-semibold text-[#0A3D45]">{task.name}</h3>
             <UrgencyTag priority={task.priority} dueDate={task.dueDate} />
-            {isClaimed && !expanded ? (
+            {!expanded ? (
               <span className="text-xs text-[#0A3D45]/60">
-                claimed by{" "}
-                {task.assignee ? personLabel(task.assignee) : "someone"}
+                {isClaimed
+                  ? `claimed by ${
+                      task.assignee ? personLabel(task.assignee) : "someone"
+                    }`
+                  : "unclaimed"}
               </span>
             ) : (
               <span className="text-xs uppercase tracking-wide text-[#0A3D45]/50">
@@ -448,8 +455,31 @@ export function WorkspaceTaskRow({
                   Review note: {task.completionComment}
                 </p>
               ) : null}
+            </>
+          ) : null}
+        </div>
+
+        <div className="flex max-w-full shrink-0 flex-col items-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {!expanded && canClaim ? (
+              <InlineActionForm
+                className="flex flex-row items-center gap-2"
+                action={claimTaskAction}
+                submitLabel="Claim Task"
+              >
+                <input type="hidden" name="workspaceId" value={workspaceId} />
+                <input type="hidden" name="taskId" value={task.id} />
+              </InlineActionForm>
+            ) : null}
+            {canEdit ? (
+              <TaskEditorMenu workspaceId={workspaceId} task={task} />
+            ) : null}
+          </div>
+
+          {expanded ? (
+            <div className="flex w-full max-w-xs flex-col items-stretch gap-2 sm:w-72">
               {task.tags.length > 0 ? (
-                <div className="mt-2 flex flex-wrap gap-1">
+                <div className="flex flex-wrap justify-end gap-1">
                   {task.tags.map((tt) => (
                     <TaskTagChip
                       key={tt.tagId}
@@ -466,106 +496,119 @@ export function WorkspaceTaskRow({
                   ))}
                 </div>
               ) : null}
-            </>
-          ) : null}
-        </div>
 
-        <div className="flex shrink-0 items-start gap-2">
-          {canEdit ? (
-            <TaskEditorMenu workspaceId={workspaceId} task={task} />
+              {canReadyForReview ? (
+                <InlineActionForm
+                  className="flex flex-col gap-2"
+                  action={completeTaskAction}
+                  submitLabel="Ready for review"
+                >
+                  <input type="hidden" name="workspaceId" value={workspaceId} />
+                  <input type="hidden" name="taskId" value={task.id} />
+                  <input
+                    name="comment"
+                    required
+                    placeholder="What did you complete?"
+                    className="tide-input text-sm"
+                  />
+                </InlineActionForm>
+              ) : null}
+
+              {canAddPrivateTag ? (
+                <InlineActionForm
+                  className="flex flex-col gap-2"
+                  action={addPrivateTagAction}
+                  submitLabel="Private tag"
+                >
+                  <input type="hidden" name="workspaceId" value={workspaceId} />
+                  <input type="hidden" name="taskId" value={task.id} />
+                  <input
+                    name="name"
+                    required
+                    placeholder="my-focus"
+                    className="tide-input text-sm"
+                  />
+                </InlineActionForm>
+              ) : null}
+
+              {canEdit ? (
+                <InlineActionForm
+                  className="flex flex-col gap-2"
+                  action={addPublicTagAction}
+                  submitLabel="Public tag"
+                >
+                  <input type="hidden" name="workspaceId" value={workspaceId} />
+                  <input type="hidden" name="taskId" value={task.id} />
+                  <input
+                    name="name"
+                    required
+                    placeholder="design"
+                    className="tide-input text-sm"
+                  />
+                </InlineActionForm>
+              ) : null}
+
+              {task.status === "IN_REVIEW" && canEdit ? (
+                <div className="flex flex-wrap justify-end gap-2">
+                  <InlineActionForm
+                    className="flex flex-row items-center gap-2"
+                    action={reviewTaskAction}
+                    submitLabel="Approve"
+                  >
+                    <input
+                      type="hidden"
+                      name="workspaceId"
+                      value={workspaceId}
+                    />
+                    <input type="hidden" name="taskId" value={task.id} />
+                    <input type="hidden" name="decision" value="approve" />
+                  </InlineActionForm>
+                  <InlineActionForm
+                    className="flex flex-row items-center gap-2"
+                    action={reviewTaskAction}
+                    submitLabel="Send back"
+                  >
+                    <input
+                      type="hidden"
+                      name="workspaceId"
+                      value={workspaceId}
+                    />
+                    <input type="hidden" name="taskId" value={task.id} />
+                    <input type="hidden" name="decision" value="reopen" />
+                  </InlineActionForm>
+                </div>
+              ) : null}
+
+              {canClaim ? (
+                <div className="flex justify-end">
+                  <InlineActionForm
+                    className="flex flex-row items-center gap-2"
+                    action={claimTaskAction}
+                    submitLabel="Claim Task"
+                  >
+                    <input
+                      type="hidden"
+                      name="workspaceId"
+                      value={workspaceId}
+                    />
+                    <input type="hidden" name="taskId" value={task.id} />
+                  </InlineActionForm>
+                </div>
+              ) : null}
+
+              {task.assigneeId === userId &&
+              (task.status === "CLAIMED" || task.status === "OPEN") ? (
+                <div className="flex justify-end">
+                  <UnclaimTaskControl
+                    workspaceId={workspaceId}
+                    taskId={task.id}
+                  />
+                </div>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </div>
-
-      {expanded ? (
-        <>
-          <div className="mt-3 flex flex-col items-stretch gap-2 sm:items-end">
-            {task.assigneeId === userId &&
-            (task.status === "CLAIMED" || task.status === "OPEN") ? (
-              <InlineActionForm
-                action={completeTaskAction}
-                submitLabel="Ready for review"
-              >
-                <input type="hidden" name="workspaceId" value={workspaceId} />
-                <input type="hidden" name="taskId" value={task.id} />
-                <input
-                  name="comment"
-                  required
-                  placeholder="What did you complete?"
-                  className="tide-input text-sm"
-                />
-              </InlineActionForm>
-            ) : null}
-
-            {task.status === "IN_REVIEW" && canEdit ? (
-              <div className="flex gap-2">
-                <InlineActionForm
-                  action={reviewTaskAction}
-                  submitLabel="Approve"
-                >
-                  <input type="hidden" name="workspaceId" value={workspaceId} />
-                  <input type="hidden" name="taskId" value={task.id} />
-                  <input type="hidden" name="decision" value="approve" />
-                </InlineActionForm>
-                <InlineActionForm
-                  action={reviewTaskAction}
-                  submitLabel="Send back"
-                >
-                  <input type="hidden" name="workspaceId" value={workspaceId} />
-                  <input type="hidden" name="taskId" value={task.id} />
-                  <input type="hidden" name="decision" value="reopen" />
-                </InlineActionForm>
-              </div>
-            ) : null}
-
-            {task.assigneeId === userId ? (
-              <InlineActionForm
-                action={addPrivateTagAction}
-                submitLabel="Private tag"
-              >
-                <input type="hidden" name="workspaceId" value={workspaceId} />
-                <input type="hidden" name="taskId" value={task.id} />
-                <input
-                  name="name"
-                  required
-                  placeholder="my-focus"
-                  className="tide-input text-sm"
-                />
-              </InlineActionForm>
-            ) : null}
-
-            {canEdit ? (
-              <InlineActionForm
-                action={addPublicTagAction}
-                submitLabel="Public tag"
-              >
-                <input type="hidden" name="workspaceId" value={workspaceId} />
-                <input type="hidden" name="taskId" value={task.id} />
-                <input
-                  name="name"
-                  required
-                  placeholder="design"
-                  className="tide-input text-sm"
-                />
-              </InlineActionForm>
-            ) : null}
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center justify-start gap-2">
-            {task.status === "OPEN" ||
-            (task.status === "CLAIMED" && !task.assigneeId) ? (
-              <InlineActionForm action={claimTaskAction} submitLabel="Claim Task">
-                <input type="hidden" name="workspaceId" value={workspaceId} />
-                <input type="hidden" name="taskId" value={task.id} />
-              </InlineActionForm>
-            ) : null}
-            {task.assigneeId === userId &&
-            (task.status === "CLAIMED" || task.status === "OPEN") ? (
-              <UnclaimTaskControl workspaceId={workspaceId} taskId={task.id} />
-            ) : null}
-          </div>
-        </>
-      ) : null}
     </li>
   );
 }
