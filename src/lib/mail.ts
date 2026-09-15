@@ -21,6 +21,7 @@ export type SendEmailInput = {
   subject: string;
   html: string;
   text: string;
+  replyTo?: string;
 };
 
 /** Turn Resend/API failures into actionable copy for the UI. */
@@ -84,12 +85,25 @@ export async function sendEmail(
 
   try {
     const resend = new Resend(apiKey);
+    const from = getEmailFrom();
+    const appUrl = getAppBaseUrl();
+    const replyTo =
+      input.replyTo?.trim() ||
+      process.env.EMAIL_REPLY_TO?.trim() ||
+      undefined;
+    // Align From domain, Reply-To, and List-Unsubscribe to improve inbox placement.
     const result = await resend.emails.send({
-      from: getEmailFrom(),
+      from,
       to: input.to,
       subject: input.subject,
       html: input.html,
       text: input.text,
+      ...(replyTo ? { replyTo } : {}),
+      headers: {
+        "List-Unsubscribe": `<${appUrl}/app/profile>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        "X-Entity-Ref-ID": `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+      },
     });
     if (result.error) {
       console.error("[tidework:mail]", result.error);

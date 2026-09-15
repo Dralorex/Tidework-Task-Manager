@@ -21,6 +21,7 @@ export default async function CalendarPage({
   searchParams: Promise<{
     scope?: string;
     workspaceId?: string;
+    workspaceIds?: string;
     view?: string;
   }>;
 }) {
@@ -29,7 +30,7 @@ export default async function CalendarPage({
 
   const sp = await searchParams;
   const requestedScope = sp.scope === "workspace" ? "workspace" : "personal";
-  const view = sp.view === "month" ? "month" : "list";
+  const view = sp.view === "list" ? "list" : "month";
 
   const [memberships, filters] = await Promise.all([
     prisma.membership.findMany({
@@ -42,13 +43,25 @@ export default async function CalendarPage({
     }),
   ]);
 
-  const selectedMembership =
-    memberships.find((membership) => membership.workspaceId === sp.workspaceId) ??
-    memberships[0] ??
-    null;
+  const membershipIds = new Set(memberships.map((m) => m.workspaceId));
+  const fromCsv = String(sp.workspaceIds ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  const requestedIds = [...fromCsv, ...(sp.workspaceId ? [sp.workspaceId] : [])].filter(
+    (id, index, arr) => membershipIds.has(id) && arr.indexOf(id) === index,
+  );
+  const selectedWorkspaceIds =
+    requestedIds.length > 0
+      ? requestedIds
+      : memberships[0]
+        ? [memberships[0].workspaceId]
+        : [];
   const scope =
-    requestedScope === "workspace" && selectedMembership ? "workspace" : "personal";
-  const workspaceId = scope === "workspace" ? selectedMembership?.workspaceId : null;
+    requestedScope === "workspace" && selectedWorkspaceIds.length > 0
+      ? "workspace"
+      : "personal";
+  const workspaceId = scope === "workspace" ? selectedWorkspaceIds[0] ?? null : null;
   const filterByWorkspace = new Map(
     filters.map((filter) => [filter.workspaceId, filter.enabled]),
   );
@@ -57,7 +70,9 @@ export default async function CalendarPage({
     .map((membership) => membership.workspaceId);
 
   const birthdayWorkspaceIds =
-    scope === "workspace" && workspaceId ? [workspaceId] : enabledWorkspaceIds;
+    scope === "workspace" && selectedWorkspaceIds.length > 0
+      ? selectedWorkspaceIds
+      : enabledWorkspaceIds;
 
   const [
     personalEvents,
@@ -79,10 +94,10 @@ export default async function CalendarPage({
           orderBy: { date: "asc" },
         })
       : [],
-    scope === "workspace" && workspaceId
+    scope === "workspace" && selectedWorkspaceIds.length > 0
       ? prisma.workspaceCalendarEvent.findMany({
-          where: { workspaceId },
-          include: { createdBy: true },
+          where: { workspaceId: { in: selectedWorkspaceIds } },
+          include: { createdBy: true, workspace: true },
           orderBy: { date: "asc" },
         })
       : [],
@@ -150,7 +165,7 @@ export default async function CalendarPage({
       allDay: event.allDay,
       startAt: event.startAt?.toISOString() ?? null,
       endAt: event.endAt?.toISOString() ?? null,
-      sourceLabel: `Added by ${personLabel(event.createdBy)}`,
+      sourceLabel: `${event.workspace?.name ?? "Workspace"} · added by ${personLabel(event.createdBy)}`,
     })),
     ...taskEvents.map((event) => ({
       id: `task:${event.id}`,
@@ -206,12 +221,13 @@ export default async function CalendarPage({
 
   return (
     <CalendarBoard
-      key={`${scope}:${workspaceId ?? "personal"}`}
+      key={`${scope}:${selectedWorkspaceIds.join(",") || "personal"}:${view}`}
       events={events}
       hiddenEvents={hiddenPersonalEvents.map(mapPersonalEvent)}
       initialScope={scope}
       initialView={view}
       selectedWorkspaceId={workspaceId}
+      selectedWorkspaceIds={selectedWorkspaceIds}
       showBirthdays={user.showBirthdaysOnCalendar}
       workspaces={memberships.map((membership) => ({
         id: membership.workspaceId,

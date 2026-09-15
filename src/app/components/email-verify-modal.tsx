@@ -10,12 +10,15 @@ export function EmailVerifyModal({
   email,
   next,
   redirectAfter = false,
+  pendingSignupId,
   onVerified,
   onClose,
 }: {
   email: string;
   next?: string;
   redirectAfter?: boolean;
+  /** When set, verification completes a pending signup (no session yet). */
+  pendingSignupId?: string;
   onVerified?: () => void;
   onClose?: () => void;
 }) {
@@ -40,6 +43,7 @@ export function EmailVerifyModal({
       fd.set("code", code.trim());
       if (next) fd.set("next", next);
       if (redirectAfter) fd.set("redirectAfter", "true");
+      if (pendingSignupId) fd.set("pendingSignupId", pendingSignupId);
       const result = await verifyEmailCodeAction(null, fd);
       if (result && !result.ok) {
         setError(result.error);
@@ -54,7 +58,9 @@ export function EmailVerifyModal({
     setError(null);
     setInfo(null);
     startTransition(async () => {
-      const result = await resendEmailCodeAction(null, new FormData());
+      const fd = new FormData();
+      if (pendingSignupId) fd.set("pendingSignupId", pendingSignupId);
+      const result = await resendEmailCodeAction(null, fd);
       if (result && !result.ok) {
         setError(result.error);
         if (result.retryAfterSec) setSecondsLeft(result.retryAfterSec);
@@ -81,7 +87,7 @@ export function EmailVerifyModal({
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-[#0A3D45]/80">
           We sent a 4-digit code to <strong>{email}</strong>. Enter it below to
-          confirm this address.
+          {pendingSignupId ? " finish creating your account." : " confirm this address."}
         </p>
 
         <form className="mt-5 flex flex-col gap-3" onSubmit={submitCode}>
@@ -102,19 +108,19 @@ export function EmailVerifyModal({
             />
           </label>
 
-          {error ? (
-            <p className="text-sm text-[#9b2f22]">{error}</p>
-          ) : null}
-          {info ? (
-            <p className="text-sm text-[#0A3D45]/75">{info}</p>
-          ) : null}
+          {error ? <p className="text-sm text-[#9b2f22]">{error}</p> : null}
+          {info ? <p className="text-sm text-[#0A3D45]/75">{info}</p> : null}
 
           <button
             type="submit"
             disabled={pending || code.length !== 4}
             className="tide-btn-primary disabled:opacity-50"
           >
-            {pending ? "Checking…" : "Verify email"}
+            {pending
+              ? "Checking…"
+              : pendingSignupId
+                ? "Verify & create account"
+                : "Verify email"}
           </button>
         </form>
 
@@ -129,7 +135,7 @@ export function EmailVerifyModal({
               ? `Resend email in ${secondsLeft}s`
               : "Resend email"}
           </button>
-          {onClose ? (
+          {onClose && !pendingSignupId ? (
             <button
               type="button"
               className="text-[#0A3D45]/60 underline-offset-2 hover:underline"

@@ -12,7 +12,10 @@ import { prisma } from "@/lib/db";
 import {
   passwordResetEmail,
 } from "@/lib/email-templates";
-import { issueEmailVerification } from "@/lib/email-verification";
+import {
+  issueEmailVerification,
+  issuePendingSignup,
+} from "@/lib/email-verification";
 import { sendEmail } from "@/lib/mail";
 import { isValidEmail, isValidUsername, normalizeUsername } from "@/lib/utils";
 
@@ -26,6 +29,8 @@ export type ActionResult =
       emailVerified?: boolean;
       resent?: boolean;
       retryAfterSec?: number;
+      /** Set while signup waits on email verification (no User yet). */
+      pendingSignupId?: string;
     }
   | { ok: false; error: string; retryAfterSec?: number };
 
@@ -69,29 +74,28 @@ export async function signUpAction(
   if (await prisma.user.findUnique({ where: { username } })) {
     return { ok: false, error: "That username is already taken." };
   }
+  if (await prisma.pendingSignup.findUnique({ where: { username } })) {
+    return {
+      ok: false,
+      error: "That username has a signup in progress — check your email for the code.",
+    };
+  }
   if (emailRaw) {
-    if (await prisma.user.findUnique({ where: { email: emailRaw.toLowerCase() } })) {
+    const emailLower = emailRaw.toLowerCase();
+    if (await prisma.user.findUnique({ where: { email: emailLower } })) {
       return { ok: false, error: "That email is already in use." };
     }
   }
 
   const email = emailRaw ? emailRaw.toLowerCase() : null;
-  // Don't attach email until the 4-digit code is verified.
-  const user = await prisma.user.create({
-    data: {
-      username,
-      passwordHash: await hashPassword(password),
-      email: null,
-    },
-  });
+  const passwordHash = await hashPassword(password);
 
-  await createSession(user.id);
-
+  // With email: hold the signup until the code is verified — don't create the User yet.
   if (email) {
-    const issued = await issueEmailVerification({
-      userId: user.id,
+    const issued = await issuePendingSignup({
+      username,
+      passwordHash,
       email,
-      username: user.username,
     });
     if (!issued.ok) {
       return { ok: false, error: issued.error };
@@ -101,9 +105,19 @@ export async function signUpAction(
       needsEmailVerification: true,
       email: issued.email,
       emailed: !issued.mocked,
+      pendingSignupId: issued.pendingId,
     };
   }
 
+  const user = await prisma.user.create({
+    data: {
+      username,
+      passwordHash,
+      email: null,
+    },
+  });
+
+  await createSession(user.id);
   redirect(next ?? "/app");
 }
 

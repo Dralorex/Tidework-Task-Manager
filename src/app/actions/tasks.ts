@@ -594,3 +594,37 @@ export async function addPublicTagAction(
   revalidatePath(`/app/w/${workspaceId}`);
   return { ok: true };
 }
+
+export async function removeTaskTagAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const taskId = String(formData.get("taskId") ?? "");
+  const tagId = String(formData.get("tagId") ?? "");
+  const membership = await requireMembership(workspaceId, user.id);
+
+  const link = await prisma.taskTag.findUnique({
+    where: { taskId_tagId: { taskId, tagId } },
+    include: { tag: true, task: true },
+  });
+  if (!link || link.task.workspaceId !== workspaceId) {
+    return { ok: false, error: "Tag not found on this task." };
+  }
+
+  if (link.tag.isPublic) {
+    if (!canEditContent(membership.role)) {
+      return { ok: false, error: "Only editors and above can remove public tags." };
+    }
+  } else if (link.task.assigneeId !== user.id && link.tag.creatorId !== user.id) {
+    return { ok: false, error: "You can only remove your own private tags." };
+  }
+
+  await prisma.taskTag.delete({
+    where: { taskId_tagId: { taskId, tagId } },
+  });
+
+  revalidatePath(`/app/w/${workspaceId}`);
+  return { ok: true };
+}

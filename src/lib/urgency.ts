@@ -22,11 +22,20 @@ export function duePressure(dueDate: Date | null | undefined, now = new Date()):
   return 0;
 }
 
+/** When no due date is set, urgency mirrors the chosen priority level. */
+const PRIORITY_AS_URGENCY: Record<TaskPriority, number> = {
+  CRITICAL: 7,
+  HIGH: 5,
+  MEDIUM: 3,
+  LOW: 1,
+};
+
 export function urgencyScore(
   priority: TaskPriority,
   dueDate: Date | null | undefined,
   now = new Date(),
 ): number {
+  if (!dueDate) return PRIORITY_AS_URGENCY[priority];
   return PRIORITY_WEIGHT[priority] + duePressure(dueDate, now);
 }
 

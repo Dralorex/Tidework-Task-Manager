@@ -8,12 +8,13 @@ import {
   createTaskAction,
 } from "@/app/actions/tasks";
 import { inviteMemberAction } from "@/app/actions/workspaces";
+import { FriendInvitePicker } from "@/app/components/friend-invite-picker";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { computeFolderTaskCounts } from "@/lib/folder-counts";
 import { canEditContent, canManagePeople } from "@/lib/permissions";
 import { compareTasksByUrgency } from "@/lib/urgency";
-import { searchRelevance } from "@/lib/utils";
+import { personLabel, searchRelevance } from "@/lib/utils";
 
 export default async function WorkspacePage({
   params,
@@ -150,6 +151,24 @@ export default async function WorkspacePage({
       })
     : [];
 
+  const friendRows = canInvite
+    ? await prisma.friendship.findMany({
+        where: {
+          status: "ACCEPTED",
+          OR: [{ requesterId: user.id }, { addresseeId: user.id }],
+        },
+        include: { requester: true, addressee: true },
+      })
+    : [];
+  const inviteFriends = friendRows.map((row) => {
+    const friend = row.requesterId === user.id ? row.addressee : row.requester;
+    return {
+      id: friend.id,
+      username: friend.username,
+      label: personLabel(friend),
+    };
+  });
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -270,12 +289,7 @@ export default async function WorkspacePage({
                   submitLabel="Send invite"
                 >
                   <input type="hidden" name="workspaceId" value={workspaceId} />
-                  <input
-                    name="target"
-                    required
-                    placeholder="Username or email"
-                    className="tide-input text-sm"
-                  />
+                  <FriendInvitePicker friends={inviteFriends} targetName="target" />
                   <select name="role" className="tide-input text-sm" defaultValue="MEMBER">
                     <option value="ADMIN">Admin</option>
                     <option value="EDITOR">Editor</option>

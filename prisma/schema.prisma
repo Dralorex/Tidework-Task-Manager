@@ -130,6 +130,20 @@ model EmailVerification {
   @@index([email])
 }
 
+/** Signup with email: account is created only after the code is verified. */
+model PendingSignup {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  email        String
+  code         String
+  expiresAt    DateTime
+  lastSentAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@index([email])
+}
+
 model Workspace {
   id        String   @id @default(cuid())
   name      String
@@ -417,10 +431,12 @@ model ChatGroup {
 }
 
 model ChatMember {
-  id       String   @id @default(cuid())
-  groupId  String
-  userId   String
-  joinedAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  groupId      String
+  userId       String
+  joinedAt     DateTime @default(now())
+  /** Heartbeat while the member has this chat open — used to skip noisy notifications. */
+  lastActiveAt DateTime?
 
   group ChatGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)

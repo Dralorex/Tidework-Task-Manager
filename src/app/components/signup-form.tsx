@@ -37,11 +37,13 @@ export function SignUpForm({
   const [acked, setAcked] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const [verifyEmail, setVerifyEmail] = useState<string | null>(null);
+  const [pendingSignupId, setPendingSignupId] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (state && state.ok && state.needsEmailVerification && state.email) {
       setVerifyEmail(state.email);
+      setPendingSignupId(state.pendingSignupId ?? null);
     }
   }, [state]);
 
@@ -181,6 +183,7 @@ export function SignUpForm({
           email={verifyEmail}
           next={next ?? "/app"}
           redirectAfter
+          pendingSignupId={pendingSignupId ?? undefined}
           onVerified={() => router.push(next ?? "/app")}
         />
       ) : null}
