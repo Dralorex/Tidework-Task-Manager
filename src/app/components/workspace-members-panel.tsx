@@ -14,6 +14,20 @@ export type WorkspaceMemberRow = {
   requestPending: boolean;
 };
 
+const ROLE_ORDER = ["OWNER", "ADMIN", "EDITOR", "MEMBER"] as const;
+
+const ROLE_TITLES: Record<string, string> = {
+  OWNER: "Owner",
+  ADMIN: "Admin",
+  EDITOR: "Editor",
+  MEMBER: "Member",
+};
+
+function roleRank(role: string) {
+  const idx = ROLE_ORDER.indexOf(role.toUpperCase() as (typeof ROLE_ORDER)[number]);
+  return idx === -1 ? ROLE_ORDER.length : idx;
+}
+
 /** Everyone in the workspace can browse members and friend non-friends. */
 export function WorkspaceMembersPanel({
   workspaceId,
@@ -28,14 +42,24 @@ export function WorkspaceMembersPanel({
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
-  const sorted = useMemo(
-    () =>
-      [...members].sort((a, b) => {
-        if (a.isSelf !== b.isSelf) return a.isSelf ? -1 : 1;
-        return a.label.localeCompare(b.label);
-      }),
-    [members],
-  );
+  const grouped = useMemo(() => {
+    const byRole = new Map<string, WorkspaceMemberRow[]>();
+    for (const member of members) {
+      const key = member.role.toUpperCase();
+      const list = byRole.get(key) ?? [];
+      list.push(member);
+      byRole.set(key, list);
+    }
+    for (const list of byRole.values()) {
+      list.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }));
+    }
+    const roles = [...byRole.keys()].sort((a, b) => roleRank(a) - roleRank(b));
+    return roles.map((role) => ({
+      role,
+      title: ROLE_TITLES[role] ?? role.charAt(0) + role.slice(1).toLowerCase(),
+      members: byRole.get(role)!,
+    }));
+  }, [members]);
 
   function addFriend(username: string, userId: string) {
     setError(null);
@@ -69,39 +93,48 @@ export function WorkspaceMembersPanel({
         </span>
       </button>
       {open ? (
-        <ul className="mt-3 max-h-64 space-y-2 overflow-y-auto">
-          {sorted.map((member) => (
-            <li
-              key={member.userId}
-              className="flex items-center justify-between gap-2 text-sm text-[#0A3D45]"
-            >
-              <span className="min-w-0 truncate">
-                <span className="font-medium">{member.label}</span>
-                <span className="ml-1 text-xs capitalize text-[#0A3D45]/55">
-                  · {member.role.toLowerCase()}
-                  {member.isSelf ? " · you" : ""}
-                </span>
-              </span>
-              {!member.isSelf && !member.isFriend ? (
-                <button
-                  type="button"
-                  disabled={pending || member.requestPending}
-                  className="shrink-0 text-xs font-semibold text-[#0A3D45] underline-offset-2 hover:underline disabled:opacity-50"
-                  onClick={() => addFriend(member.username, member.userId)}
-                >
-                  {member.requestPending
-                    ? "Pending"
-                    : pendingId === member.userId
-                      ? "Sending…"
-                      : "Add friend"}
-                </button>
-              ) : null}
-            </li>
+        <div className="mt-3 max-h-72 space-y-4 overflow-y-auto">
+          {grouped.map((group) => (
+            <section key={group.role}>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-[#0A3D45]/55">
+                {group.title}
+              </h3>
+              <ul className="mt-1.5 space-y-1.5">
+                {group.members.map((member) => (
+                  <li
+                    key={member.userId}
+                    className="flex items-center justify-between gap-2 text-sm text-[#0A3D45]"
+                  >
+                    <span className="min-w-0 truncate font-medium">
+                      {member.label}
+                      {member.isSelf ? (
+                        <span className="ml-1 text-xs font-normal text-[#0A3D45]/55">
+                          · you
+                        </span>
+                      ) : null}
+                    </span>
+                    {!member.isSelf && !member.isFriend ? (
+                      <button
+                        type="button"
+                        disabled={pending || member.requestPending}
+                        className="shrink-0 text-xs font-semibold text-[#0A3D45] underline-offset-2 hover:underline disabled:opacity-50"
+                        onClick={() => addFriend(member.username, member.userId)}
+                      >
+                        {member.requestPending
+                          ? "Pending"
+                          : pendingId === member.userId
+                            ? "Sending…"
+                            : "Add friend"}
+                      </button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       ) : null}
       {error ? <p className="mt-2 text-xs text-[#9b2f22]">{error}</p> : null}
-      {/* Keep workspaceId referenced for future role actions */}
       <input type="hidden" value={workspaceId} readOnly aria-hidden className="hidden" />
     </div>
   );

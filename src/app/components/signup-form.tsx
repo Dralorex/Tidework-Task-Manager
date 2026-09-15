@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { ActionResult } from "@/app/actions/auth";
 import { EmailVerifyModal } from "@/app/components/email-verify-modal";
+import { PasswordFields } from "@/app/components/password-fields";
 
 type FormAction = (
   prev: ActionResult | null,
@@ -82,18 +83,7 @@ export function SignUpForm({
             placeholder="tide_rider"
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">
-          Password
-          <input
-            name="password"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            className="tide-input"
-            placeholder="At least 8 characters"
-          />
-        </label>
+        <PasswordFields />
         <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">
           Email{" "}
           <span className="font-normal text-[#0A3D45]/55">(optional)</span>
