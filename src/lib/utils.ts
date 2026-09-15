@@ -13,18 +13,28 @@ export function isValidEmail(email: string) {
 export type UserLabel = {
   username: string;
   nickname?: string | null;
+  deletedAt?: Date | string | null;
+  deletedUsername?: string | null;
 };
 
 /** Prefer nickname when set; otherwise the login username. */
 export function displayName(user: UserLabel): string {
+  if (user.deletedAt) {
+    return user.deletedUsername?.trim() || "deleted";
+  }
   const nick = user.nickname?.trim();
   return nick ? nick : user.username;
 }
 
 /**
  * UI label for a person: nickname as entered, or @username when no nickname.
+ * Soft-deleted accounts keep their prior username with a deleted marker.
  */
 export function personLabel(user: UserLabel): string {
+  if (user.deletedAt) {
+    const prior = user.deletedUsername?.trim() || "deleted";
+    return `@${prior} *deleted account*`;
+  }
   const nick = user.nickname?.trim();
   if (nick) return nick;
   return `@${user.username}`;

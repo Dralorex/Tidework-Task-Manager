@@ -95,7 +95,8 @@ export function ProfileSettingsForm({
         <p className="mt-1 text-xs text-[#0A3D45]/60">
           {email
             ? "Change your email anytime. We’ll send a 4-digit code to confirm the new address."
-            : "Add an email, then enter the 4-digit code we send to verify it."}
+            : "Add an email, then enter the 4-digit code we send to verify it."}{" "}
+          Check your spam folder if the code doesn’t arrive.
         </p>
         {email ? (
           <p className="mt-2 text-sm text-[#0A3D45]/75">

@@ -63,20 +63,27 @@ export default async function ChatPage({
   });
 
   const groups = memberships.map((m) => m.group);
+
+  function latestMessageAt(g: (typeof groups)[number]) {
+    return g.messages[0]?.createdAt?.getTime() ?? 0;
+  }
+
+  function dmOtherIsDeleted(g: (typeof groups)[number]) {
+    const other = g.members.find((m) => m.user.id !== userId)?.user;
+    return Boolean(other?.deletedAt);
+  }
+
   const dms = groups
     .filter((g) => g.isDirect)
     .sort((a, b) => {
-      const aAt = a.messages[0]?.createdAt?.getTime() ?? 0;
-      const bAt = b.messages[0]?.createdAt?.getTime() ?? 0;
-      return bAt - aAt;
+      const aDel = dmOtherIsDeleted(a) ? 1 : 0;
+      const bDel = dmOtherIsDeleted(b) ? 1 : 0;
+      if (aDel !== bDel) return aDel - bDel;
+      return latestMessageAt(b) - latestMessageAt(a);
     });
   const groupChats = groups
     .filter((g) => !g.isDirect)
-    .sort((a, b) => {
-      const aAt = a.messages[0]?.createdAt?.getTime() ?? 0;
-      const bAt = b.messages[0]?.createdAt?.getTime() ?? 0;
-      return bAt - aAt;
-    });
+    .sort((a, b) => latestMessageAt(b) - latestMessageAt(a));
 
   // Infer tab from opened group when not specified
   if (groupId && !tabParam) {

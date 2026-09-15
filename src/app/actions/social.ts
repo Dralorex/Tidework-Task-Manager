@@ -20,7 +20,7 @@ export async function sendFriendRequestAction(
   }
 
   const other = await prisma.user.findUnique({ where: { username } });
-  if (!other) return { ok: false, error: "User not found." };
+  if (!other || other.deletedAt) return { ok: false, error: "User not found." };
 
   const existing = await prisma.friendship.findFirst({
     where: {
@@ -97,6 +97,18 @@ export async function respondFriendRequestAction(
   });
 
   if (accept) {
+    await prisma.notification.create({
+      data: {
+        userId: friendship.requesterId,
+        type: "FRIEND_ACCEPTED",
+        title: "Friend request accepted",
+        body: `${personLabel(user)} accepted your friend request.`,
+        meta: JSON.stringify({
+          friendshipId,
+          friendUserId: user.id,
+        }),
+      },
+    });
     await handleBirthdayOnFriendship(
       friendship.requesterId,
       friendship.addresseeId,
@@ -467,8 +479,8 @@ export async function sendMessageAction(
     data: { groupId, senderId: user.id, body },
   });
 
-  // Skip notifications for members actively viewing this chat (recent heartbeat).
-  const activeCutoff = new Date(Date.now() - 45_000);
+  // Only skip notifications for members with this exact thread open right now.
+  const activeCutoff = new Date(Date.now() - 25_000);
   const recipients = group.members
     .filter(
       (m) =>
@@ -620,4 +632,52 @@ export async function pulseChatPresenceAction(groupId: string): Promise<void> {
     data: { lastActiveAt: new Date() },
   });
 }
+
+/** Clear presence when leaving a thread so list/hub tabs still get notifications. */
+export async function clearChatPresenceAction(groupId: string): Promise<void> {
+  const user = await requireUser();
+  if (!groupId) return;
+  await prisma.chatMember.updateMany({
+    where: { groupId, userId: user.id },
+    data: { lastActiveAt: null },
+  });
+}
+
+export async function updateFriendProfileAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const friendUserId = String(formData.get("friendUserId") ?? "");
+  const personalNickname = String(formData.get("personalNickname") ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 40);
+  const personalNotes = String(formData.get("personalNotes") ?? "")
+    .trim()
+    .slice(0, 2000);
+
+  const friendship = await areAcceptedFriends(user.id, friendUserId);
+  if (!friendship) return { ok: false, error: "You’re not friends with that user." };
+
+  await prisma.friendProfile.upsert({
+    where: {
+      ownerId_friendId: { ownerId: user.id, friendId: friendUserId },
+    },
+    create: {
+      ownerId: user.id,
+      friendId: friendUserId,
+      personalNickname: personalNickname || null,
+      personalNotes: personalNotes || null,
+    },
+    update: {
+      personalNickname: personalNickname || null,
+      personalNotes: personalNotes || null,
+    },
+  });
+
+  revalidatePath("/app/social");
+  return { ok: true };
+}
+
 

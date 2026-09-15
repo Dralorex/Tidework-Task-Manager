@@ -89,6 +89,9 @@ export function EmailVerifyModal({
           We sent a 4-digit code to <strong>{email}</strong>. Enter it below to
           {pendingSignupId ? " finish creating your account." : " confirm this address."}
         </p>
+        <p className="mt-2 text-xs text-[#0A3D45]/60">
+          Check your spam folder if the code doesn’t arrive.
+        </p>
 
         <form className="mt-5 flex flex-col gap-3" onSubmit={submitCode}>
           <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">

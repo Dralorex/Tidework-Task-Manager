@@ -6,6 +6,7 @@ import {
   respondFriendRequestAction,
   sendFriendRequestAction,
 } from "@/app/actions/social";
+import { shareBirthdayWithFriendsAction } from "@/app/actions/birthday";
 import { toggleFriendBirthdayVisibilityAction } from "@/app/actions/calendar";
 import { getCurrentUser } from "@/lib/auth";
 import { formatBirthday } from "@/lib/birthday-format";
@@ -33,12 +34,14 @@ export default async function SocialPage() {
     friendshipId: f.id,
     user: f.requesterId === user.id ? f.addressee : f.requester,
   }));
+  const friendIds = friends.map((friend) => friend.user.id);
+
   const birthdayShares =
-    friends.length > 0
+    friendIds.length > 0
       ? await prisma.birthdayShare.findMany({
           where: {
             viewerId: user.id,
-            ownerId: { in: friends.map((friend) => friend.user.id) },
+            ownerId: { in: friendIds },
             status: { in: ["ACTIVE", "HIDDEN"] },
           },
           include: { owner: true },
@@ -46,6 +49,31 @@ export default async function SocialPage() {
       : [];
   const birthdayByFriend = new Map(
     birthdayShares.map((share) => [share.ownerId, share]),
+  );
+
+  const sharesGiven =
+    friendIds.length > 0
+      ? await prisma.birthdayShare.findMany({
+          where: {
+            ownerId: user.id,
+            viewerId: { in: friendIds },
+            status: "ACTIVE",
+          },
+        })
+      : [];
+  const activeShareToFriend = new Set(sharesGiven.map((s) => s.viewerId));
+
+  const friendProfiles =
+    friendIds.length > 0
+      ? await prisma.friendProfile.findMany({
+          where: {
+            ownerId: user.id,
+            friendId: { in: friendIds },
+          },
+        })
+      : [];
+  const profileByFriend = new Map(
+    friendProfiles.map((p) => [p.friendId, p]),
   );
 
   return (
@@ -120,13 +148,18 @@ export default async function SocialPage() {
           ) : (
             friends.map(({ friendshipId, user: friend }) => {
               const birthdayShare = birthdayByFriend.get(friend.id);
+              const profile = profileByFriend.get(friend.id);
+              const nick = profile?.personalNickname?.trim();
+              const display = nick
+                ? `${nick} (@${friend.username})`
+                : personLabel(friend);
               return (
                 <li
                   key={friendshipId}
                   className="group tide-panel flex flex-wrap items-center justify-between gap-3 px-4 py-3"
                 >
                   <span className="min-w-0 font-medium text-[#0A3D45]">
-                    {personLabel(friend)}
+                    {display}
                     {birthdayShare?.owner.birthday ? (
                       <span className="ml-2 text-sm font-normal text-[#0A3D45]/60">
                         · {formatBirthday(birthdayShare.owner.birthday)}
@@ -134,6 +167,15 @@ export default async function SocialPage() {
                     ) : null}
                   </span>
                   <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    {user.birthday && !activeShareToFriend.has(friend.id) ? (
+                      <InlineActionForm
+                        action={shareBirthdayWithFriendsAction}
+                        submitLabel="Share birthday"
+                      >
+                        <input type="hidden" name="mode" value="one" />
+                        <input type="hidden" name="friendId" value={friend.id} />
+                      </InlineActionForm>
+                    ) : null}
                     {birthdayShare?.owner.birthday ? (
                       <InlineActionForm
                         action={toggleFriendBirthdayVisibilityAction}
@@ -163,7 +205,10 @@ export default async function SocialPage() {
                     </InlineActionForm>
                     <FriendRowMenu
                       friendshipId={friendshipId}
-                      friendLabel={personLabel(friend)}
+                      friendUserId={friend.id}
+                      friendLabel={display}
+                      personalNickname={profile?.personalNickname}
+                      personalNotes={profile?.personalNotes}
                     />
                   </div>
                 </li>

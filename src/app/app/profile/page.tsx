@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { BirthdaySettingsForm } from "@/app/components/birthday-settings-form";
+import { DeleteAccountPanel } from "@/app/components/delete-account-panel";
 import { ProfileSettingsForm } from "@/app/components/profile-settings-form";
 import { getCurrentUser } from "@/lib/auth";
 import { personLabel } from "@/lib/utils";
@@ -33,6 +34,10 @@ export default async function ProfilePage() {
             askBeforeShareBirthday={user.askBeforeShareBirthday}
           />
         </div>
+      </div>
+
+      <div className="mt-8">
+        <DeleteAccountPanel />
       </div>
     </main>
   );
