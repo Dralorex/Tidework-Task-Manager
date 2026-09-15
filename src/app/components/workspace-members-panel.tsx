@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { sendFriendRequestAction } from "@/app/actions/social";
+import { WorkspaceMemberMenu } from "@/app/components/workspace-member-menu";
 
 export type WorkspaceMemberRow = {
   userId: string;
@@ -32,9 +33,12 @@ function roleRank(role: string) {
 export function WorkspaceMembersPanel({
   workspaceId,
   members,
+  viewerRole,
 }: {
   workspaceId: string;
   members: WorkspaceMemberRow[];
+  /** Current user's role — Admin+ get per-member edit menus. */
+  viewerRole: string;
 }) {
   const [open, setOpen] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -113,20 +117,31 @@ export function WorkspaceMembersPanel({
                         </span>
                       ) : null}
                     </span>
-                    {!member.isSelf && !member.isFriend ? (
-                      <button
-                        type="button"
-                        disabled={pending || member.requestPending}
-                        className="shrink-0 text-xs font-semibold text-[#0A3D45] underline-offset-2 hover:underline disabled:opacity-50"
-                        onClick={() => addFriend(member.username, member.userId)}
-                      >
-                        {member.requestPending
-                          ? "Pending"
-                          : pendingId === member.userId
-                            ? "Sending…"
-                            : "Add friend"}
-                      </button>
-                    ) : null}
+                    <div className="flex shrink-0 items-center gap-1">
+                      {!member.isSelf && !member.isFriend ? (
+                        <button
+                          type="button"
+                          disabled={pending || member.requestPending}
+                          className="text-xs font-semibold text-[#0A3D45] underline-offset-2 hover:underline disabled:opacity-50"
+                          onClick={() => addFriend(member.username, member.userId)}
+                        >
+                          {member.requestPending
+                            ? "Pending"
+                            : pendingId === member.userId
+                              ? "Sending…"
+                              : "Add friend"}
+                        </button>
+                      ) : null}
+                      {!member.isSelf ? (
+                        <WorkspaceMemberMenu
+                          workspaceId={workspaceId}
+                          memberUserId={member.userId}
+                          memberLabel={member.label}
+                          memberRole={member.role}
+                          viewerRole={viewerRole}
+                        />
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -135,7 +150,6 @@ export function WorkspaceMembersPanel({
         </div>
       ) : null}
       {error ? <p className="mt-2 text-xs text-[#9b2f22]">{error}</p> : null}
-      <input type="hidden" value={workspaceId} readOnly aria-hidden className="hidden" />
     </div>
   );
 }

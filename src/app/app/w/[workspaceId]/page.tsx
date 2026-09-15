@@ -347,6 +347,7 @@ export default async function WorkspacePage({
             <WorkspaceMembersPanel
               workspaceId={workspaceId}
               members={memberRows}
+              viewerRole={membership.role}
             />
           </aside>
 
