@@ -11,6 +11,7 @@ import { UnclaimTaskControl } from "@/app/components/unclaim-task-control";
 import {
   addPrivateTagAction,
   addPublicTagAction,
+  removeTaskTagAction,
   claimTaskAction,
   completeTaskAction,
   forceUnclaimTaskAction,
@@ -271,6 +272,82 @@ function TaskEditorMenu({
   );
 }
 
+
+function TaskTagChip({
+  workspaceId,
+  taskId,
+  tagId,
+  name,
+  isPublic,
+  canRemove,
+}: {
+  workspaceId: string;
+  taskId: string;
+  tagId: string;
+  name: string;
+  isPublic: boolean;
+  canRemove: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+
+  if (!canRemove) {
+    return (
+      <span className="rounded-md bg-[#1a7a82]/10 px-2 py-0.5 text-xs text-[#0A3D45]">
+        #{name}
+        {!isPublic ? " (private)" : ""}
+      </span>
+    );
+  }
+
+  return (
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        className="rounded-md bg-[#1a7a82]/10 px-2 py-0.5 text-xs text-[#0A3D45] transition hover:bg-[#1a7a82]/18"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        #{name}
+        {!isPublic ? " (private)" : ""}
+      </button>
+      {open ? (
+        <span className="absolute left-0 top-full z-20 mt-1 w-40 rounded-md border border-[#0A3D45]/12 bg-white p-2 shadow-md">
+          <p className="text-[11px] text-[#0A3D45]/70">Remove this tag?</p>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              disabled={pending}
+              className="text-xs font-semibold text-[#9b2f22] disabled:opacity-50"
+              onClick={() => {
+                startTransition(async () => {
+                  const fd = new FormData();
+                  fd.set("workspaceId", workspaceId);
+                  fd.set("taskId", taskId);
+                  fd.set("tagId", tagId);
+                  await removeTaskTagAction(null, fd);
+                  setOpen(false);
+                  router.refresh();
+                });
+              }}
+            >
+              Remove
+            </button>
+            <button
+              type="button"
+              className="text-xs text-[#0A3D45]/60"
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 export function WorkspaceTaskRow({
   workspaceId,
   task,
@@ -374,13 +451,18 @@ export function WorkspaceTaskRow({
               {task.tags.length > 0 ? (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {task.tags.map((tt) => (
-                    <span
+                    <TaskTagChip
                       key={tt.tagId}
-                      className="rounded-md bg-[#1a7a82]/10 px-2 py-0.5 text-xs text-[#0A3D45]"
-                    >
-                      #{tt.tag.name}
-                      {!tt.tag.isPublic ? " (private)" : ""}
-                    </span>
+                      workspaceId={workspaceId}
+                      taskId={task.id}
+                      tagId={tt.tagId}
+                      name={tt.tag.name}
+                      isPublic={tt.tag.isPublic}
+                      canRemove={
+                        canEdit ||
+                        (!tt.tag.isPublic && task.assigneeId === userId)
+                      }
+                    />
                   ))}
                 </div>
               ) : null}
@@ -398,14 +480,6 @@ export function WorkspaceTaskRow({
       {expanded ? (
         <>
           <div className="mt-3 flex flex-col items-stretch gap-2 sm:items-end">
-            {task.status === "OPEN" ||
-            (task.status === "CLAIMED" && !task.assigneeId) ? (
-              <InlineActionForm action={claimTaskAction} submitLabel="Pick up">
-                <input type="hidden" name="workspaceId" value={workspaceId} />
-                <input type="hidden" name="taskId" value={task.id} />
-              </InlineActionForm>
-            ) : null}
-
             {task.assigneeId === userId &&
             (task.status === "CLAIMED" || task.status === "OPEN") ? (
               <InlineActionForm
@@ -477,12 +551,19 @@ export function WorkspaceTaskRow({
             ) : null}
           </div>
 
-          {task.assigneeId === userId &&
-          (task.status === "CLAIMED" || task.status === "OPEN") ? (
-            <div className="mt-3 flex justify-start">
+          <div className="mt-3 flex flex-wrap items-center justify-start gap-2">
+            {task.status === "OPEN" ||
+            (task.status === "CLAIMED" && !task.assigneeId) ? (
+              <InlineActionForm action={claimTaskAction} submitLabel="Claim Task">
+                <input type="hidden" name="workspaceId" value={workspaceId} />
+                <input type="hidden" name="taskId" value={task.id} />
+              </InlineActionForm>
+            ) : null}
+            {task.assigneeId === userId &&
+            (task.status === "CLAIMED" || task.status === "OPEN") ? (
               <UnclaimTaskControl workspaceId={workspaceId} taskId={task.id} />
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </>
       ) : null}
     </li>

@@ -16,7 +16,7 @@ function shell(title: string, bodyHtml: string, bodyText: string) {
                 <h1 style="margin:0 0 16px;font-size:24px;line-height:1.3;">${title}</h1>
                 ${bodyHtml}
                 <p style="margin:24px 0 0;font-size:12px;color:rgba(10,61,69,0.55);">
-                  You’re receiving this because of activity on your Tidework account.
+                  Sent by Tidework regarding your account. Manage email settings in Profile.
                 </p>
               </td>
             </tr>
@@ -26,7 +26,7 @@ function shell(title: string, bodyHtml: string, bodyText: string) {
     </table>
   </body>
 </html>`,
-    text: `${brand}\n\n${title}\n\n${bodyText}\n\nYou’re receiving this because of activity on your Tidework account.\n`,
+    text: `${brand}\n\n${title}\n\n${bodyText}\n\nSent by Tidework regarding your account. Manage email settings in Profile.\n`,
   };
 }
 

@@ -80,3 +80,80 @@ export async function issueEmailVerification(opts: {
 
   return { ok: true, email, mocked: sent.mocked };
 }
+
+/** Hold signup details until the email code is confirmed — no User row yet. */
+export async function issuePendingSignup(opts: {
+  username: string;
+  passwordHash: string;
+  email: string;
+  forceResend?: boolean;
+  pendingId?: string;
+}): Promise<
+  | { ok: true; email: string; pendingId: string; mocked: boolean; retryAfterSec?: number }
+  | { ok: false; error: string; retryAfterSec?: number }
+> {
+  const email = opts.email.toLowerCase();
+  const existing = opts.pendingId
+    ? await prisma.pendingSignup.findUnique({ where: { id: opts.pendingId } })
+    : await prisma.pendingSignup.findUnique({ where: { username: opts.username } });
+
+  if (existing && opts.forceResend) {
+    const waitMs =
+      EMAIL_RESEND_COOLDOWN_MS - (Date.now() - existing.lastSentAt.getTime());
+    if (waitMs > 0) {
+      return {
+        ok: false,
+        error: `Wait ${Math.ceil(waitMs / 1000)}s before resending.`,
+        retryAfterSec: Math.ceil(waitMs / 1000),
+      };
+    }
+  }
+
+  const code = generateEmailCode();
+  const expiresAt = new Date(Date.now() + EMAIL_CODE_TTL_MS);
+  const now = new Date();
+
+  const pending = existing
+    ? await prisma.pendingSignup.update({
+        where: { id: existing.id },
+        data: {
+          passwordHash: opts.passwordHash || existing.passwordHash,
+          email,
+          code,
+          expiresAt,
+        },
+      })
+    : await prisma.pendingSignup.create({
+        data: {
+          username: opts.username,
+          passwordHash: opts.passwordHash,
+          email,
+          code,
+          expiresAt,
+          lastSentAt: new Date(0),
+        },
+      });
+
+  const content = emailVerificationCodeEmail({
+    username: opts.username,
+    code,
+    email,
+  });
+  const sent = await sendEmail({
+    to: email,
+    subject: content.subject,
+    html: content.html,
+    text: content.text,
+  });
+
+  if (!sent.ok) {
+    return { ok: false, error: sent.error };
+  }
+
+  await prisma.pendingSignup.update({
+    where: { id: pending.id },
+    data: { lastSentAt: now },
+  });
+
+  return { ok: true, email, pendingId: pending.id, mocked: sent.mocked };
+}

@@ -504,12 +504,41 @@ function EventRow({
   );
 }
 
+const CALENDAR_PREFS_KEY = "tidework.calendar.prefs";
+
+type CalendarPrefs = {
+  scope?: Scope;
+  view?: View;
+  workspaceIds?: string[];
+};
+
+function readCalendarPrefs(): CalendarPrefs {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(CALENDAR_PREFS_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as CalendarPrefs;
+  } catch {
+    return {};
+  }
+}
+
+function writeCalendarPrefs(prefs: CalendarPrefs) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CALENDAR_PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
 export function CalendarBoard({
   events,
   hiddenEvents = [],
   initialScope,
   initialView,
   selectedWorkspaceId,
+  selectedWorkspaceIds,
   showBirthdays,
   workspaces,
 }: {
@@ -518,6 +547,7 @@ export function CalendarBoard({
   initialScope: Scope;
   initialView: View;
   selectedWorkspaceId: string | null;
+  selectedWorkspaceIds?: string[];
   showBirthdays: boolean;
   workspaces: CalendarWorkspace[];
 }) {
@@ -525,7 +555,11 @@ export function CalendarBoard({
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeView: View =
-    searchParams.get("view") === "month" ? "month" : initialView;
+    searchParams.get("view") === "list"
+      ? "list"
+      : searchParams.get("view") === "month"
+        ? "month"
+        : initialView;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [focusedDate, setFocusedDate] = useState<string | null>(null);
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
@@ -561,22 +595,109 @@ export function CalendarBoard({
     [month],
   );
 
-  function updateUrl(values: Partial<{ scope: Scope; view: View; workspaceId: string }>) {
+  const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
+  const initialIds =
+    selectedWorkspaceIds && selectedWorkspaceIds.length > 0
+      ? selectedWorkspaceIds
+      : selectedWorkspaceId
+        ? [selectedWorkspaceId]
+        : workspaces[0]
+          ? [workspaces[0].id]
+          : [];
+  const [checkedWorkspaceIds, setCheckedWorkspaceIds] = useState<string[]>(initialIds);
+  const prefsRestored = useRef(false);
+
+  useEffect(() => {
+    if (prefsRestored.current) return;
+    prefsRestored.current = true;
+    const prefs = readCalendarPrefs();
+    const hasView = searchParams.has("view");
+    const hasScope = searchParams.has("scope");
+    const hasIds =
+      searchParams.has("workspaceIds") || searchParams.has("workspaceId");
+    const next = new URLSearchParams(searchParams.toString());
+    let changed = false;
+    if (!hasView) {
+      next.set("view", prefs.view === "list" ? "list" : "month");
+      changed = true;
+    }
+    if (!hasScope && prefs.scope) {
+      next.set("scope", prefs.scope);
+      changed = true;
+    }
+    if (!hasIds && prefs.workspaceIds && prefs.workspaceIds.length > 0) {
+      const allowed = prefs.workspaceIds.filter((id) =>
+        workspaces.some((workspace) => workspace.id === id),
+      );
+      if (allowed.length > 0) {
+        next.set("workspaceIds", allowed.join(","));
+        next.delete("workspaceId");
+        changed = true;
+      }
+    }
+    if (changed) {
+      router.replace(`${pathname}?${next.toString()}`);
+    }
+  }, [pathname, router, searchParams, workspaces]);
+
+  useEffect(() => {
+    setCheckedWorkspaceIds(initialIds);
+  }, [initialIds.join(",")]);
+
+  function persistPrefs(partial: CalendarPrefs) {
+    const current = readCalendarPrefs();
+    writeCalendarPrefs({ ...current, ...partial });
+  }
+
+  function updateUrl(
+    values: Partial<{
+      scope: Scope;
+      view: View;
+      workspaceId: string;
+      workspaceIds: string[];
+    }>,
+  ) {
     const next = new URLSearchParams(searchParams.toString());
     if (values.scope) {
       next.set("scope", values.scope);
-      if (values.scope === "personal") next.delete("workspaceId");
+      if (values.scope === "personal") {
+        next.delete("workspaceId");
+        next.delete("workspaceIds");
+      }
     }
     if (values.view) next.set("view", values.view);
-    if (values.workspaceId) {
+    if (values.workspaceIds) {
       next.set("scope", "workspace");
-      next.set("workspaceId", values.workspaceId);
+      next.delete("workspaceId");
+      if (values.workspaceIds.length > 0) {
+        next.set("workspaceIds", values.workspaceIds.join(","));
+      } else {
+        next.delete("workspaceIds");
+      }
+    } else if (values.workspaceId) {
+      next.set("scope", "workspace");
+      next.set("workspaceIds", values.workspaceId);
+      next.delete("workspaceId");
     }
+    persistPrefs({
+      scope: (values.scope as Scope | undefined) ?? (next.get("scope") as Scope | null) ?? initialScope,
+      view: (values.view as View | undefined) ?? (next.get("view") as View | null) ?? initialView,
+      workspaceIds: values.workspaceIds
+        ?? (next.get("workspaceIds")?.split(",").filter(Boolean) ?? undefined),
+    });
     router.push(`${pathname}?${next.toString()}`);
   }
 
   function chooseView(view: View) {
     updateUrl({ view });
+  }
+
+  function applyWorkspaceSelection(ids: string[]) {
+    const unique = [...new Set(ids)].filter((id) =>
+      workspaces.some((workspace) => workspace.id === id),
+    );
+    setCheckedWorkspaceIds(unique);
+    updateUrl({ workspaceIds: unique });
   }
 
   function focusDay(dayKey: string, dayEvents: CalendarBoardEvent[]) {
@@ -645,8 +766,13 @@ export function CalendarBoard({
             type="button"
             disabled={workspaces.length === 0}
             onClick={() => {
-              const workspaceId = selectedWorkspaceId ?? workspaces[0]?.id;
-              if (workspaceId) updateUrl({ workspaceId });
+              const ids =
+                checkedWorkspaceIds.length > 0
+                  ? checkedWorkspaceIds
+                  : workspaces[0]
+                    ? [workspaces[0].id]
+                    : [];
+              if (ids.length > 0) updateUrl({ workspaceIds: ids });
             }}
             className={`rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-40 ${
               initialScope === "workspace"
@@ -658,18 +784,64 @@ export function CalendarBoard({
           </button>
         </div>
         {initialScope === "workspace" && workspaces.length > 0 ? (
-          <select
-            aria-label="Workspace calendar"
-            value={selectedWorkspaceId ?? workspaces[0].id}
-            onChange={(e) => updateUrl({ workspaceId: e.target.value })}
-            className="tide-input max-w-xs text-sm"
-          >
-            {workspaces.map((workspace) => (
-              <option key={workspace.id} value={workspace.id}>
-                {workspace.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <button
+              type="button"
+              className="tide-input max-w-xs text-left text-sm"
+              aria-expanded={workspaceMenuOpen}
+              onClick={() => setWorkspaceMenuOpen((open) => !open)}
+            >
+              {checkedWorkspaceIds.length === workspaces.length
+                ? "All workspaces"
+                : checkedWorkspaceIds.length === 0
+                  ? "Select workspaces"
+                  : `${checkedWorkspaceIds.length} workspace${checkedWorkspaceIds.length === 1 ? "" : "s"}`}
+            </button>
+            {workspaceMenuOpen ? (
+              <div className="tide-panel absolute left-0 z-30 mt-2 w-72 space-y-2 p-3 shadow-lg">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-[#0A3D45] underline-offset-2 hover:underline"
+                    onClick={() =>
+                      applyWorkspaceSelection(workspaces.map((workspace) => workspace.id))
+                    }
+                  >
+                    Select all
+                  </button>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-[#0A3D45]/70 underline-offset-2 hover:underline"
+                    onClick={() => applyWorkspaceSelection([])}
+                  >
+                    Unselect all
+                  </button>
+                </div>
+                <ul className="max-h-64 space-y-1 overflow-y-auto">
+                  {workspaces.map((workspace) => {
+                    const checked = checkedWorkspaceIds.includes(workspace.id);
+                    return (
+                      <li key={workspace.id}>
+                        <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-sm text-[#0A3D45] hover:bg-[#0A3D45]/5">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              const next = e.target.checked
+                                ? [...checkedWorkspaceIds, workspace.id]
+                                : checkedWorkspaceIds.filter((id) => id !== workspace.id);
+                              applyWorkspaceSelection(next);
+                            }}
+                          />
+                          <span className="truncate">{workspace.name}</span>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ) : null}
+          </div>
         ) : null}
       </div>
 

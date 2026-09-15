@@ -467,9 +467,15 @@ export async function sendMessageAction(
     data: { groupId, senderId: user.id, body },
   });
 
+  // Skip notifications for members actively viewing this chat (recent heartbeat).
+  const activeCutoff = new Date(Date.now() - 45_000);
   const recipients = group.members
-    .map((m) => m.userId)
-    .filter((id) => id !== user.id);
+    .filter(
+      (m) =>
+        m.userId !== user.id &&
+        !(m.lastActiveAt && m.lastActiveAt >= activeCutoff),
+    )
+    .map((m) => m.userId);
 
   if (recipients.length > 0) {
     const preview = body.slice(0, 140);
@@ -585,6 +591,11 @@ export async function markChatNotificationsReadAction(
   });
   if (!member) return;
 
+  await prisma.chatMember.update({
+    where: { id: member.id },
+    data: { lastActiveAt: new Date() },
+  });
+
   await prisma.notification.updateMany({
     where: {
       userId: user.id,
@@ -598,5 +609,15 @@ export async function markChatNotificationsReadAction(
   revalidatePath("/app/chat");
   revalidatePath("/app/notifications");
   revalidatePath("/app", "layout");
+}
+
+/** Heartbeat while a chat thread is open — used to suppress noisy notifications. */
+export async function pulseChatPresenceAction(groupId: string): Promise<void> {
+  const user = await requireUser();
+  if (!groupId) return;
+  await prisma.chatMember.updateMany({
+    where: { groupId, userId: user.id },
+    data: { lastActiveAt: new Date() },
+  });
 }
 
