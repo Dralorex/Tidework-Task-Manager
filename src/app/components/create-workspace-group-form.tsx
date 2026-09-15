@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { InlineActionForm } from "@/app/components/forms";
+import { ChatSidebarSection } from "@/app/components/chat-sidebar-section";
 import {
   FriendInvitePicker,
   type InviteFriendOption,
@@ -28,13 +29,12 @@ export function CreateWorkspaceGroupForm({
   if (workspaces.length === 0) return null;
 
   return (
-    <div className="border-t border-[#0A3D45]/10 pt-5">
-      <h3 className="font-semibold text-[#0A3D45]">New workspace group (Admin+)</h3>
-      <p className="mt-1 text-xs text-[#0A3D45]/60">
-        Pick a workspace, then choose members from that workspace.
-      </p>
+    <ChatSidebarSection
+      title="New workspace group (Admin+)"
+      description="Pick a workspace, then choose members from that workspace."
+    >
       <InlineActionForm
-        className="mt-3 flex flex-col gap-2"
+        className="flex flex-col gap-2"
         action={createGroupChatAction}
         submitLabel="Create workspace group"
       >
@@ -68,6 +68,6 @@ export function CreateWorkspaceGroupForm({
           emptyMessage="No other members in this workspace yet."
         />
       </InlineActionForm>
-    </div>
+    </ChatSidebarSection>
   );
 }

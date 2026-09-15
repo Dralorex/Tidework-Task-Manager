@@ -1,6 +1,7 @@
 "use client";
 
 import { InlineActionForm } from "@/app/components/forms";
+import { ChatSidebarSection } from "@/app/components/chat-sidebar-section";
 import {
   FriendInvitePicker,
   type InviteFriendOption,
@@ -14,13 +15,12 @@ export function CreateFriendGroupForm({
   friends: InviteFriendOption[];
 }) {
   return (
-    <div className="border-t border-[#0A3D45]/10 pt-5">
-      <h3 className="font-semibold text-[#0A3D45]">New group</h3>
-      <p className="mt-1 text-xs text-[#0A3D45]/60">
-        Chat with one or more friends outside a workspace.
-      </p>
+    <ChatSidebarSection
+      title="New group"
+      description="Chat with one or more friends outside a workspace."
+    >
       <InlineActionForm
-        className="mt-3 flex flex-col gap-2"
+        className="flex flex-col gap-2"
         action={createFriendGroupChatAction}
         submitLabel="Create group"
       >
@@ -38,6 +38,6 @@ export function CreateFriendGroupForm({
           emptyMessage="Add friends first, then you can start a group."
         />
       </InlineActionForm>
-    </div>
+    </ChatSidebarSection>
   );
 }

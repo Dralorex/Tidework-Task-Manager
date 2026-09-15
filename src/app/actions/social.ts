@@ -602,6 +602,173 @@ export async function leaveChatAction(
   return { ok: true };
 }
 
+async function canManageGroupChat(
+  group: {
+    isDirect: boolean;
+    createdById: string;
+    workspaceId: string | null;
+  },
+  userId: string,
+) {
+  if (group.isDirect) return false;
+  if (group.createdById === userId) return true;
+  if (!group.workspaceId) return false;
+  const membership = await prisma.membership.findUnique({
+    where: {
+      workspaceId_userId: {
+        workspaceId: group.workspaceId,
+        userId,
+      },
+    },
+  });
+  return Boolean(membership && canCreateGroups(membership.role));
+}
+
+export async function addGroupMembersAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const groupId = String(formData.get("groupId") ?? "");
+  const memberUsernames = String(formData.get("members") ?? "")
+    .split(",")
+    .map((s) => normalizeUsername(s))
+    .filter(Boolean);
+
+  if (memberUsernames.length === 0) {
+    return { ok: false, error: "Pick at least one person to add." };
+  }
+
+  const group = await prisma.chatGroup.findUnique({
+    where: { id: groupId },
+    include: { members: true },
+  });
+  if (!group || group.isDirect) {
+    return { ok: false, error: "Group not found." };
+  }
+
+  const isMember = group.members.some((m) => m.userId === user.id);
+  if (!isMember) return { ok: false, error: "You’re not in this chat." };
+  if (!(await canManageGroupChat(group, user.id))) {
+    return {
+      ok: false,
+      error: group.workspaceId
+        ? "Only the creator or a workspace admin can edit members."
+        : "Only the group creator can edit members.",
+    };
+  }
+
+  const users = await prisma.user.findMany({
+    where: { username: { in: memberUsernames }, deletedAt: null },
+  });
+  if (users.length !== memberUsernames.length) {
+    return { ok: false, error: "One or more usernames weren’t found." };
+  }
+
+  const existingIds = new Set(group.members.map((m) => m.userId));
+  const toAdd: string[] = [];
+
+  for (const other of users) {
+    if (existingIds.has(other.id)) continue;
+    if (group.workspaceId) {
+      const wsMember = await prisma.membership.findUnique({
+        where: {
+          workspaceId_userId: {
+            workspaceId: group.workspaceId,
+            userId: other.id,
+          },
+        },
+      });
+      if (!wsMember) {
+        return {
+          ok: false,
+          error: `@${other.username} isn’t in this workspace.`,
+        };
+      }
+    } else {
+      const friendship = await areAcceptedFriends(user.id, other.id);
+      if (!friendship) {
+        return {
+          ok: false,
+          error: `You’re not friends with @${other.username}.`,
+        };
+      }
+    }
+    toAdd.push(other.id);
+  }
+
+  if (toAdd.length === 0) {
+    return { ok: false, error: "Everyone selected is already in the group." };
+  }
+
+  await prisma.chatMember.createMany({
+    data: toAdd.map((userId) => ({ groupId, userId })),
+    skipDuplicates: true,
+  });
+
+  revalidatePath("/app/chat");
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
+  return { ok: true };
+}
+
+export async function removeGroupMemberAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const groupId = String(formData.get("groupId") ?? "");
+  const memberUserId = String(formData.get("memberUserId") ?? "");
+
+  if (!memberUserId) return { ok: false, error: "Missing member." };
+  if (memberUserId === user.id) {
+    return { ok: false, error: "Use Leave group to remove yourself." };
+  }
+
+  const group = await prisma.chatGroup.findUnique({
+    where: { id: groupId },
+    include: { members: true },
+  });
+  if (!group || group.isDirect) {
+    return { ok: false, error: "Group not found." };
+  }
+
+  const isMember = group.members.some((m) => m.userId === user.id);
+  if (!isMember) return { ok: false, error: "You’re not in this chat." };
+  if (!(await canManageGroupChat(group, user.id))) {
+    return {
+      ok: false,
+      error: group.workspaceId
+        ? "Only the creator or a workspace admin can edit members."
+        : "Only the group creator can edit members.",
+    };
+  }
+
+  const target = group.members.find((m) => m.userId === memberUserId);
+  if (!target) return { ok: false, error: "They’re not in this group." };
+
+  await prisma.chatMember.delete({ where: { id: target.id } });
+
+  await prisma.notification.updateMany({
+    where: {
+      userId: memberUserId,
+      type: "CHAT_MESSAGE",
+      meta: { contains: groupId },
+    },
+    data: { read: true },
+  });
+
+  const remaining = await prisma.chatMember.count({ where: { groupId } });
+  if (remaining === 0) {
+    await prisma.chatGroup.delete({ where: { id: groupId } }).catch(() => null);
+  }
+
+  revalidatePath("/app/chat");
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
+  return { ok: true };
+}
+
 export async function deleteChatGroupAction(
   _prev: ActionResult | null,
   formData: FormData,
@@ -621,19 +788,7 @@ export async function deleteChatGroupAction(
   const isMember = group.members.some((m) => m.userId === user.id);
   if (!isMember) return { ok: false, error: "You’re not in this chat." };
 
-  let allowed = group.createdById === user.id;
-  if (!allowed && group.workspaceId) {
-    const membership = await prisma.membership.findUnique({
-      where: {
-        workspaceId_userId: {
-          workspaceId: group.workspaceId,
-          userId: user.id,
-        },
-      },
-    });
-    allowed = Boolean(membership && canCreateGroups(membership.role));
-  }
-  if (!allowed) {
+  if (!(await canManageGroupChat(group, user.id))) {
     return {
       ok: false,
       error: group.workspaceId

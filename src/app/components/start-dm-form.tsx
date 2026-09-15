@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { InlineActionForm } from "@/app/components/forms";
+import { ChatSidebarSection } from "@/app/components/chat-sidebar-section";
 import {
   FriendInvitePicker,
   type InviteFriendOption,
@@ -24,15 +25,12 @@ export function StartDmForm({
   const friendsMode = scope === "__friends__";
 
   return (
-    <div>
-      <h3 className="font-semibold text-[#0A3D45]">Message someone</h3>
-      <p className="mt-1 text-xs text-[#0A3D45]/60">
-        Pick Friends to message freely, or a workspace for members (non-friends
-        need to accept the first message). Friends who already have a DM with you
-        stay hidden under Friends.
-      </p>
+    <ChatSidebarSection
+      title="Message someone"
+      description="Pick Friends to message freely, or a workspace for members (non-friends need to accept the first message). Friends who already have a DM with you stay hidden under Friends."
+    >
       <InlineActionForm
-        className="mt-3 flex flex-col gap-2"
+        className="flex flex-col gap-2"
         action={requestWorkspaceDmAction}
         submitLabel="Send"
       >
@@ -73,6 +71,6 @@ export function StartDmForm({
           className="tide-input text-sm"
         />
       </InlineActionForm>
-    </div>
+    </ChatSidebarSection>
   );
 }
