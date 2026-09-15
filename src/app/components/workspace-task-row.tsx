@@ -6,11 +6,7 @@ import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { InlineActionForm } from "@/app/components/forms";
 import { MenuSurface, menuItemClass } from "@/app/components/menu-surface";
-import {
-  PriorityBadge,
-  TaskUrgencyEdge,
-  UrgencyTag,
-} from "@/app/components/task-ui";
+import { TaskUrgencyEdge, UrgencyTag } from "@/app/components/task-ui";
 import { UnclaimTaskControl } from "@/app/components/unclaim-task-control";
 import {
   addPrivateTagAction,
@@ -316,22 +312,16 @@ export function WorkspaceTaskRow({
               </button>
             ) : null}
             <h3 className="text-lg font-semibold text-[#0A3D45]">{task.name}</h3>
+            <UrgencyTag priority={task.priority} dueDate={task.dueDate} />
             {isClaimed && !expanded ? (
-              <>
-                <UrgencyTag priority={task.priority} dueDate={task.dueDate} />
-                <span className="text-xs text-[#0A3D45]/60">
-                  claimed by{" "}
-                  {task.assignee ? personLabel(task.assignee) : "someone"}
-                </span>
-              </>
+              <span className="text-xs text-[#0A3D45]/60">
+                claimed by{" "}
+                {task.assignee ? personLabel(task.assignee) : "someone"}
+              </span>
             ) : (
-              <>
-                <UrgencyTag priority={task.priority} dueDate={task.dueDate} />
-                <PriorityBadge priority={task.priority} />
-                <span className="text-xs uppercase tracking-wide text-[#0A3D45]/50">
-                  {task.status.replace("_", " ")}
-                </span>
-              </>
+              <span className="text-xs uppercase tracking-wide text-[#0A3D45]/50">
+                {task.status.replace("_", " ")}
+              </span>
             )}
           </div>
 
