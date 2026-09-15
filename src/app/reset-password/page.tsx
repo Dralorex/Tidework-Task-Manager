@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AuthForm } from "@/app/components/forms";
+import { PasswordFields } from "@/app/components/password-fields";
 import { resetPasswordAction } from "@/app/actions/auth";
 
 export default async function ResetPasswordPage({
@@ -46,16 +47,7 @@ export default async function ResetPasswordPage({
         <div className="mt-6">
           <AuthForm action={action} submitLabel="Update password">
             <input type="hidden" name="token" value={token} />
-            <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">
-              New password
-              <input
-                name="password"
-                type="password"
-                required
-                minLength={8}
-                className="tide-input"
-              />
-            </label>
+            <PasswordFields passwordLabel="New password" confirmLabel="Confirm new password" />
           </AuthForm>
         </div>
       </div>

@@ -46,6 +46,7 @@ export async function signUpAction(
 ): Promise<ActionResult> {
   const usernameRaw = String(formData.get("username") ?? "");
   const password = String(formData.get("password") ?? "");
+  const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
   const emailRaw = String(formData.get("email") ?? "").trim();
   const noEmailAck = String(formData.get("noEmailAck") ?? "") === "true";
   const next = safeNextPath(formData.get("next"));
@@ -59,6 +60,9 @@ export async function signUpAction(
   }
   if (password.length < 8) {
     return { ok: false, error: "Password must be at least 8 characters." };
+  }
+  if (password !== passwordConfirm) {
+    return { ok: false, error: "Passwords don’t match." };
   }
   if (emailRaw && !isValidEmail(emailRaw)) {
     return { ok: false, error: "That email doesn’t look valid." };
@@ -220,8 +224,12 @@ export async function resetPasswordAction(
 ): Promise<ActionResult> {
   const token = String(formData.get("token") ?? "");
   const password = String(formData.get("password") ?? "");
+  const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
   if (password.length < 8) {
     return { ok: false, error: "Password must be at least 8 characters." };
+  }
+  if (password !== passwordConfirm) {
+    return { ok: false, error: "Passwords don’t match." };
   }
 
   const record = await prisma.passwordResetToken.findUnique({ where: { token } });
