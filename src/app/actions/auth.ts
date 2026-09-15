@@ -71,7 +71,11 @@ export async function signUpAction(
     };
   }
 
-  if (await prisma.user.findUnique({ where: { username } })) {
+  if (
+    await prisma.user.findFirst({
+      where: { username, deletedAt: null },
+    })
+  ) {
     return { ok: false, error: "That username is already taken." };
   }
   if (await prisma.pendingSignup.findUnique({ where: { username } })) {
@@ -82,7 +86,11 @@ export async function signUpAction(
   }
   if (emailRaw) {
     const emailLower = emailRaw.toLowerCase();
-    if (await prisma.user.findUnique({ where: { email: emailLower } })) {
+    if (
+      await prisma.user.findFirst({
+        where: { email: emailLower, deletedAt: null },
+      })
+    ) {
       return { ok: false, error: "That email is already in use." };
     }
   }
@@ -129,7 +137,11 @@ export async function signInAction(
   const password = String(formData.get("password") ?? "");
   const next = safeNextPath(formData.get("next"));
   const user = await prisma.user.findUnique({ where: { username } });
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+  if (
+    !user ||
+    user.deletedAt ||
+    !(await verifyPassword(password, user.passwordHash))
+  ) {
     return { ok: false, error: "Incorrect username or password." };
   }
   await createSession(user.id);
@@ -149,9 +161,14 @@ export async function requestPasswordResetAction(
   if (!identifier) return { ok: false, error: "Enter your username or email." };
 
   const user = identifier.includes("@")
-    ? await prisma.user.findUnique({ where: { email: identifier.toLowerCase() } })
-    : await prisma.user.findUnique({
-        where: { username: normalizeUsername(identifier) },
+    ? await prisma.user.findFirst({
+        where: { email: identifier.toLowerCase(), deletedAt: null },
+      })
+    : await prisma.user.findFirst({
+        where: {
+          username: normalizeUsername(identifier),
+          deletedAt: null,
+        },
       });
 
   // Always look successful for unknown users (no account enumeration).

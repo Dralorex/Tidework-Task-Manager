@@ -57,6 +57,42 @@ export async function inviteMemberAction(
 
   const targetUsername = isEmail ? null : normalizeUsername(target);
   const targetEmail = isEmail ? target.toLowerCase() : null;
+
+  const invitee = await prisma.user.findFirst({
+    where: targetUsername
+      ? { username: targetUsername, deletedAt: null }
+      : { email: targetEmail ?? undefined, deletedAt: null },
+  });
+
+  if (invitee) {
+    const alreadyMember = await prisma.membership.findUnique({
+      where: {
+        workspaceId_userId: { workspaceId, userId: invitee.id },
+      },
+    });
+    if (alreadyMember) {
+      return {
+        ok: false,
+        error: `${personLabel(invitee)} is already in this workspace.`,
+      };
+    }
+  }
+
+  const pendingExists = await prisma.invite.findFirst({
+    where: {
+      workspaceId,
+      status: "PENDING",
+      expiresAt: { gt: new Date() },
+      OR: [
+        ...(targetUsername ? [{ targetUsername }] : []),
+        ...(targetEmail ? [{ targetEmail }] : []),
+      ],
+    },
+  });
+  if (pendingExists) {
+    return { ok: false, error: "An invite is already pending for that person." };
+  }
+
   const token = nanoid(32);
 
   const workspace = await prisma.workspace.findUniqueOrThrow({
@@ -73,12 +109,6 @@ export async function inviteMemberAction(
       token,
       expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14),
     },
-  });
-
-  const invitee = await prisma.user.findFirst({
-    where: targetUsername
-      ? { username: targetUsername }
-      : { email: targetEmail ?? undefined },
   });
 
   if (invitee) {

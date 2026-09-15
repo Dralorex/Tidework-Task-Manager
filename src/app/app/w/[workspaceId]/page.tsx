@@ -9,6 +9,8 @@ import {
 } from "@/app/actions/tasks";
 import { inviteMemberAction } from "@/app/actions/workspaces";
 import { FriendInvitePicker } from "@/app/components/friend-invite-picker";
+import { PendingInvitesDropdown } from "@/app/components/pending-invites-dropdown";
+import { WorkspaceMembersPanel } from "@/app/components/workspace-members-panel";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { computeFolderTaskCounts } from "@/lib/folder-counts";
@@ -151,23 +153,58 @@ export default async function WorkspacePage({
       })
     : [];
 
-  const friendRows = canInvite
-    ? await prisma.friendship.findMany({
-        where: {
-          status: "ACCEPTED",
-          OR: [{ requesterId: user.id }, { addresseeId: user.id }],
-        },
-        include: { requester: true, addressee: true },
+  const workspaceMembers = await prisma.membership.findMany({
+    where: { workspaceId },
+    include: { user: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const [acceptedFriendships, pendingFriendships] = await Promise.all([
+    prisma.friendship.findMany({
+      where: {
+        status: "ACCEPTED",
+        OR: [{ requesterId: user.id }, { addresseeId: user.id }],
+      },
+      include: { requester: true, addressee: true },
+    }),
+    prisma.friendship.findMany({
+      where: {
+        status: "PENDING",
+        OR: [{ requesterId: user.id }, { addresseeId: user.id }],
+      },
+    }),
+  ]);
+
+  const friendIds = new Set(
+    acceptedFriendships.map((row) =>
+      row.requesterId === user.id ? row.addresseeId : row.requesterId,
+    ),
+  );
+  const pendingFriendIds = new Set(
+    pendingFriendships.flatMap((row) => [row.requesterId, row.addresseeId]),
+  );
+
+  const inviteFriends = canInvite
+    ? acceptedFriendships.map((row) => {
+        const friend =
+          row.requesterId === user.id ? row.addressee : row.requester;
+        return {
+          id: friend.id,
+          username: friend.username,
+          label: personLabel(friend),
+        };
       })
     : [];
-  const inviteFriends = friendRows.map((row) => {
-    const friend = row.requesterId === user.id ? row.addressee : row.requester;
-    return {
-      id: friend.id,
-      username: friend.username,
-      label: personLabel(friend),
-    };
-  });
+
+  const memberRows = workspaceMembers.map((m) => ({
+    userId: m.userId,
+    username: m.user.username,
+    label: personLabel(m.user),
+    role: m.role,
+    isSelf: m.userId === user.id,
+    isFriend: friendIds.has(m.userId),
+    requestPending: pendingFriendIds.has(m.userId),
+  }));
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -296,19 +333,21 @@ export default async function WorkspacePage({
                     <option value="MEMBER">Member</option>
                   </select>
                 </InlineActionForm>
-                {pendingInvites.length > 0 ? (
-                  <ul className="mt-3 space-y-1 text-xs text-[#0A3D45]/65">
-                    {pendingInvites.map((inv) => (
-                      <li key={inv.id}>
-                        Pending: {inv.targetUsername ?? inv.targetEmail} ({inv.role})
-                        <br />
-                        <span className="break-all">/invite/{inv.token}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
+                <PendingInvitesDropdown
+                  invites={pendingInvites.map((inv) => ({
+                    id: inv.id,
+                    label: inv.targetUsername ?? inv.targetEmail ?? "invite",
+                    role: inv.role,
+                    token: inv.token,
+                  }))}
+                />
               </div>
             ) : null}
+
+            <WorkspaceMembersPanel
+              workspaceId={workspaceId}
+              members={memberRows}
+            />
           </aside>
 
           <section className="space-y-6">

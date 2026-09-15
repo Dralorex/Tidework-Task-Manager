@@ -3,11 +3,15 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
+  clearChatPresenceAction,
   markChatNotificationsReadAction,
   pulseChatPresenceAction,
 } from "@/app/actions/social";
 
-/** Clears chat unread badges and heartbeats presence while this chat is open. */
+/**
+ * While this exact thread is open: heartbeat presence + clear unread.
+ * On leave: clear presence so list/hub tabs still get notifications.
+ */
 export function MarkChatSeen({ groupId }: { groupId: string }) {
   const router = useRouter();
   const ranFor = useRef<string | null>(null);
@@ -21,8 +25,11 @@ export function MarkChatSeen({ groupId }: { groupId: string }) {
     void pulseChatPresenceAction(groupId);
     const id = window.setInterval(() => {
       void pulseChatPresenceAction(groupId);
-    }, 20_000);
-    return () => window.clearInterval(id);
+    }, 15_000);
+    return () => {
+      window.clearInterval(id);
+      void clearChatPresenceAction(groupId);
+    };
   }, [groupId, router]);
 
   return null;
