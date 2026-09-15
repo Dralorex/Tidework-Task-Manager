@@ -15,9 +15,17 @@ export type BirthdaySaveResult =
   | ActionResult
   | {
       ok: true;
-      needsFriendPicker: true;
-      friends: { id: string; label: string }[];
+      needsFriendPicker?: true;
+      friends?: { id: string; label: string }[];
+      needsWorkspacePicker?: true;
+      workspaces?: { id: string; label: string }[];
     };
+
+function revalidateBirthdayPaths() {
+  revalidatePath("/app/profile");
+  revalidatePath("/app/calendar");
+  revalidatePath("/app/social");
+}
 
 export async function updateBirthdayAction(
   _prev: BirthdaySaveResult | null,
@@ -52,9 +60,7 @@ export async function updateBirthdayAction(
     await prisma.workspaceBirthdayRequest.deleteMany({
       where: { subjectId: user.id },
     });
-    revalidatePath("/app/profile");
-    revalidatePath("/app/calendar");
-    revalidatePath("/app/social");
+    revalidateBirthdayPaths();
     return { ok: true };
   }
 
@@ -73,28 +79,61 @@ export async function updateBirthdayAction(
     },
   });
 
-  // First-time birthday with existing friends → friend picker.
+  // First-time birthday: offer friends + existing workspaces (when ask is on).
   if (wasEmpty) {
-    const friendships = await prisma.friendship.findMany({
-      where: {
-        status: "ACCEPTED",
-        OR: [{ requesterId: user.id }, { addresseeId: user.id }],
-      },
-      include: { requester: true, addressee: true },
+    const [friendships, memberships] = await Promise.all([
+      prisma.friendship.findMany({
+        where: {
+          status: "ACCEPTED",
+          OR: [{ requesterId: user.id }, { addresseeId: user.id }],
+        },
+        include: { requester: true, addressee: true },
+      }),
+      prisma.membership.findMany({
+        where: { userId: user.id },
+        include: { workspace: true },
+        orderBy: { workspace: { name: "asc" } },
+      }),
+    ]);
+
+    const friends = friendships.map((f) => {
+      const other = f.requesterId === user.id ? f.addressee : f.requester;
+      return { id: other.id, label: personLabel(other) };
     });
-    if (friendships.length > 0) {
-      const friends = friendships.map((f) => {
-        const other = f.requesterId === user.id ? f.addressee : f.requester;
-        return { id: other.id, label: personLabel(other) };
-      });
-      revalidatePath("/app/profile");
-      return { ok: true, needsFriendPicker: true, friends };
+
+    const workspaceOptions = memberships.map((m) => ({
+      id: m.workspaceId,
+      label: m.workspace.name,
+    }));
+
+    if (!askBeforeShareBirthday && shareBirthdayWorkspaces) {
+      for (const ws of workspaceOptions) {
+        await requestWorkspaceBirthday(user.id, ws.id);
+      }
+    }
+
+    const needsFriendPicker = friends.length > 0;
+    const needsWorkspacePicker =
+      askBeforeShareBirthday && workspaceOptions.length > 0;
+
+    if (needsFriendPicker || needsWorkspacePicker) {
+      revalidateBirthdayPaths();
+      return {
+        ok: true,
+        ...(needsFriendPicker
+          ? { needsFriendPicker: true as const, friends }
+          : {}),
+        ...(needsWorkspacePicker
+          ? {
+              needsWorkspacePicker: true as const,
+              workspaces: workspaceOptions,
+            }
+          : {}),
+      };
     }
   }
 
-  revalidatePath("/app/profile");
-  revalidatePath("/app/calendar");
-  revalidatePath("/app/social");
+  revalidateBirthdayPaths();
   return { ok: true };
 }
 
@@ -135,9 +174,47 @@ export async function shareBirthdayWithFriendsAction(
     });
   }
 
-  revalidatePath("/app/profile");
-  revalidatePath("/app/calendar");
-  revalidatePath("/app/social");
+  revalidateBirthdayPaths();
+  return { ok: true };
+}
+
+export async function shareBirthdayWithWorkspacesAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!user.birthday) return { ok: false, error: "Set your birthday first." };
+
+  const mode = String(formData.get("mode") ?? "all");
+  let workspaceIds: string[] = [];
+
+  if (mode === "all") {
+    const memberships = await prisma.membership.findMany({
+      where: { userId: user.id },
+      select: { workspaceId: true },
+    });
+    workspaceIds = memberships.map((m) => m.workspaceId);
+  } else {
+    workspaceIds = formData
+      .getAll("workspaceId")
+      .map((v) => String(v))
+      .filter(Boolean);
+  }
+
+  for (const workspaceId of workspaceIds) {
+    const membership = await prisma.membership.findUnique({
+      where: {
+        workspaceId_userId: { workspaceId, userId: user.id },
+      },
+    });
+    if (!membership) continue;
+    const result = await requestWorkspaceBirthday(user.id, workspaceId);
+    if (!result.ok) return { ok: false, error: result.error };
+  }
+
+  revalidateBirthdayPaths();
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
 
