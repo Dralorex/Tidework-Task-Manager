@@ -4,7 +4,31 @@ import { nanoid } from "nanoid";
 import { prisma } from "@/lib/db";
 
 const SESSION_COOKIE = "tidework_session";
-const SESSION_DAYS = 30;
+/**
+ * Server-side ceiling for browser-session logins (cookie itself is cleared
+ * when the browser closes). Keeps abandoned DB rows from lasting forever.
+ */
+const QUICK_SESSION_DAYS = 1;
+/** Practical stand-in for “forever” (browsers may still cap cookie lifetime). */
+const FOREVER_DAYS = 365 * 100;
+
+export type SessionDuration = "session" | 7 | 30 | 180 | 365 | "forever";
+
+export function parseSignInDuration(raw: string): SessionDuration {
+  const value = raw.trim().toLowerCase();
+  if (value === "7") return 7;
+  if (value === "30") return 30;
+  if (value === "180") return 180;
+  if (value === "365") return 365;
+  if (value === "forever") return "forever";
+  return "session";
+}
+
+function durationToDays(duration: SessionDuration): number {
+  if (duration === "session") return QUICK_SESSION_DAYS;
+  if (duration === "forever") return FOREVER_DAYS;
+  return duration;
+}
 
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 12);
@@ -14,10 +38,16 @@ export async function verifyPassword(password: string, hash: string) {
   return bcrypt.compare(password, hash);
 }
 
-export async function createSession(userId: string) {
+export async function createSession(
+  userId: string,
+  opts: { duration?: SessionDuration } = {},
+) {
+  // Default 30 days for signup / password-reset call sites that omit duration.
+  const duration: SessionDuration = opts.duration ?? 30;
+  const persistent = duration !== "session";
   const token = nanoid(48);
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + SESSION_DAYS);
+  expiresAt.setDate(expiresAt.getDate() + durationToDays(duration));
 
   await prisma.session.create({
     data: { token, userId, expiresAt },
@@ -29,7 +59,9 @@ export async function createSession(userId: string) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    expires: expiresAt,
+    // Persistent durations set an expiry. Session-only omits it so the cookie
+    // disappears when the browser closes.
+    ...(persistent ? { expires: expiresAt } : {}),
   });
 
   return token;

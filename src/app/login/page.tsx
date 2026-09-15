@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AuthForm } from "@/app/components/forms";
 import { ShowPasswordField } from "@/app/components/show-password-field";
+import { SignInDurationFields } from "@/app/components/sign-in-duration-fields";
 import { signInAction } from "@/app/actions/auth";
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -52,6 +53,7 @@ export default async function LoginPage({
               />
             </label>
             <ShowPasswordField autoComplete="current-password" />
+            <SignInDurationFields />
           </AuthForm>
         </div>
 
