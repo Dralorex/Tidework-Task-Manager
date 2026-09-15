@@ -5,11 +5,8 @@ import { ChatRowMenu } from "@/app/components/chat-row-menu";
 import { MarkChatSeen } from "@/app/components/mark-chat-seen";
 import { StartDmForm } from "@/app/components/start-dm-form";
 import { CreateFriendGroupForm } from "@/app/components/create-friend-group-form";
-import {
-  createGroupChatAction,
-  respondDmRequestAction,
-  sendMessageAction,
-} from "@/app/actions/social";
+import { CreateWorkspaceGroupForm } from "@/app/components/create-workspace-group-form";
+import { respondDmRequestAction, sendMessageAction } from "@/app/actions/social";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { personLabel, type UserLabel } from "@/lib/utils";
@@ -153,6 +150,36 @@ export default async function ChatPage({
 
   const adminWorkspaceIds = new Set(adminWorkspaces.map((m) => m.workspaceId));
 
+  const adminWorkspaceMemberships =
+    adminWorkspaces.length > 0
+      ? await prisma.membership.findMany({
+          where: {
+            workspaceId: { in: adminWorkspaces.map((m) => m.workspaceId) },
+          },
+          include: { user: true },
+        })
+      : [];
+
+  const membersByWorkspace: Record<
+    string,
+    { id: string; username: string; label: string }[]
+  > = {};
+  for (const row of adminWorkspaceMemberships) {
+    if (row.userId === userId) continue;
+    const list = membersByWorkspace[row.workspaceId] ?? [];
+    list.push({
+      id: row.userId,
+      username: row.user.username,
+      label: personLabel(row.user),
+    });
+    membersByWorkspace[row.workspaceId] = list;
+  }
+  for (const wsId of Object.keys(membersByWorkspace)) {
+    membersByWorkspace[wsId].sort((a, b) =>
+      a.label.localeCompare(b.label, undefined, { sensitivity: "base" }),
+    );
+  }
+
   const acceptedFriendships = await prisma.friendship.findMany({
     where: {
       status: "ACCEPTED",
@@ -275,41 +302,13 @@ export default async function ChatPage({
 
           <CreateFriendGroupForm friends={friendOptions} />
 
-          {adminWorkspaces.length > 0 ? (
-            <div className="border-t border-[#0A3D45]/10 pt-5">
-              <h3 className="font-semibold text-[#0A3D45]">
-                New workspace group (Admin+)
-              </h3>
-              <InlineActionForm
-                className="mt-3 flex flex-col gap-2"
-                action={createGroupChatAction}
-                submitLabel="Create workspace group"
-              >
-                <select
-                  name="workspaceId"
-                  className="tide-input text-sm"
-                  required
-                >
-                  {adminWorkspaces.map((m) => (
-                    <option key={m.workspaceId} value={m.workspaceId}>
-                      {m.workspace.name}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  name="name"
-                  required
-                  placeholder="Group name"
-                  className="tide-input text-sm"
-                />
-                <input
-                  name="members"
-                  placeholder="usernames, comma-separated"
-                  className="tide-input text-sm"
-                />
-              </InlineActionForm>
-            </div>
-          ) : null}
+          <CreateWorkspaceGroupForm
+            workspaces={adminWorkspaces.map((m) => ({
+              id: m.workspaceId,
+              name: m.workspace.name,
+            }))}
+            membersByWorkspace={membersByWorkspace}
+          />
         </div>
       </aside>
 
