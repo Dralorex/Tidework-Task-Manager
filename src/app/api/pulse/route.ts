@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
-/** Lightweight fingerprint so clients can refresh when inbox/chat/tasks change. */
+/** Lightweight fingerprint so clients can refresh when inbox/chat/tasks/roles change. */
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) {
@@ -37,11 +37,19 @@ export async function GET() {
       }),
       prisma.membership.findMany({
         where: { userId: user.id },
-        select: { workspaceId: true },
+        select: { workspaceId: true, role: true, updatedAt: true },
       }),
     ]);
 
   const workspaceIds = memberships.map((m) => m.workspaceId);
+  const membershipStamp = memberships
+    .map(
+      (m) =>
+        `${m.workspaceId}:${m.role}:${m.updatedAt?.toISOString() ?? ""}`,
+    )
+    .sort()
+    .join(",");
+
   const latestTask =
     workspaceIds.length > 0
       ? await prisma.task.findFirst({
@@ -71,6 +79,7 @@ export async function GET() {
     latestTask?.updatedAt?.toISOString() ?? "",
     latestFolder?.id ?? "",
     latestFolder?.updatedAt?.toISOString() ?? "",
+    membershipStamp,
   ].join("|");
 
   return NextResponse.json({

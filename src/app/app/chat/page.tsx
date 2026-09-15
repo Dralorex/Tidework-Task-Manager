@@ -72,12 +72,17 @@ export default async function ChatPage({
     return Boolean(other?.deletedAt);
   }
 
+  function dmIsClosed(g: (typeof groups)[number]) {
+    return Boolean(g.closedAt);
+  }
+
   const dms = groups
     .filter((g) => g.isDirect)
     .sort((a, b) => {
-      const aDel = dmOtherIsDeleted(a) ? 1 : 0;
-      const bDel = dmOtherIsDeleted(b) ? 1 : 0;
-      if (aDel !== bDel) return aDel - bDel;
+      // Active → closed → deleted-account partner (bottom).
+      const aBucket = dmOtherIsDeleted(a) ? 2 : dmIsClosed(a) ? 1 : 0;
+      const bBucket = dmOtherIsDeleted(b) ? 2 : dmIsClosed(b) ? 1 : 0;
+      if (aBucket !== bBucket) return aBucket - bBucket;
       return latestMessageAt(b) - latestMessageAt(a);
     });
 
@@ -150,12 +155,11 @@ export default async function ChatPage({
 
   const adminWorkspaceIds = new Set(adminWorkspaces.map((m) => m.workspaceId));
 
-  const adminWorkspaceMemberships =
-    adminWorkspaces.length > 0
+  const allWorkspaceIds = allWorkspaces.map((m) => m.workspaceId);
+  const allWorkspaceMemberships =
+    allWorkspaceIds.length > 0
       ? await prisma.membership.findMany({
-          where: {
-            workspaceId: { in: adminWorkspaces.map((m) => m.workspaceId) },
-          },
+          where: { workspaceId: { in: allWorkspaceIds } },
           include: { user: true },
         })
       : [];
@@ -164,8 +168,8 @@ export default async function ChatPage({
     string,
     { id: string; username: string; label: string }[]
   > = {};
-  for (const row of adminWorkspaceMemberships) {
-    if (row.userId === userId) continue;
+  for (const row of allWorkspaceMemberships) {
+    if (row.userId === userId || row.user.deletedAt) continue;
     const list = membersByWorkspace[row.workspaceId] ?? [];
     list.push({
       id: row.userId,
@@ -178,6 +182,15 @@ export default async function ChatPage({
     membersByWorkspace[wsId].sort((a, b) =>
       a.label.localeCompare(b.label, undefined, { sensitivity: "base" }),
     );
+  }
+
+  // Workspace-group create still uses only Admin+ workspaces' member lists.
+  const adminMembersByWorkspace: Record<
+    string,
+    { id: string; username: string; label: string }[]
+  > = {};
+  for (const wsId of adminWorkspaceIds) {
+    adminMembersByWorkspace[wsId] = membersByWorkspace[wsId] ?? [];
   }
 
   const acceptedFriendships = await prisma.friendship.findMany({
@@ -197,7 +210,8 @@ export default async function ChatPage({
     };
   });
 
-  const friendsWithDmIds = dms
+  const peopleWithDmIds = dms
+    .filter((g) => !g.closedAt)
     .map((g) => g.members.find((m) => m.user.id !== userId)?.user.id)
     .filter((id): id is string => Boolean(id));
 
@@ -293,11 +307,12 @@ export default async function ChatPage({
         <div className="tide-panel p-4">
           <StartDmForm
             friends={friendOptions}
-            friendsWithDmIds={friendsWithDmIds}
+            peopleWithDmIds={peopleWithDmIds}
             workspaces={allWorkspaces.map((m) => ({
               id: m.workspaceId,
               name: m.workspace.name,
             }))}
+            membersByWorkspace={membersByWorkspace}
           />
 
           <CreateFriendGroupForm friends={friendOptions} />
@@ -307,7 +322,7 @@ export default async function ChatPage({
               id: m.workspaceId,
               name: m.workspace.name,
             }))}
-            membersByWorkspace={membersByWorkspace}
+            membersByWorkspace={adminMembersByWorkspace}
           />
         </div>
       </aside>
@@ -434,6 +449,11 @@ export default async function ChatPage({
                             <span className="truncate font-semibold text-[#0A3D45]">
                               {title}
                             </span>
+                            {tab === "dms" && g.closedAt ? (
+                              <span className="shrink-0 text-[11px] font-medium uppercase tracking-wide text-[#0A3D45]/45">
+                                Closed
+                              </span>
+                            ) : null}
                             {unread > 0 ? (
                               <span className="rounded-full bg-[#E85D4C] px-1.5 text-[11px] font-semibold leading-5 text-white">
                                 {unread > 99 ? "99+" : unread}
@@ -452,6 +472,7 @@ export default async function ChatPage({
                           groupId={g.id}
                           isDirect={g.isDirect}
                           canDelete={canDeleteGroup(g)}
+                          isClosed={Boolean(g.closedAt)}
                           listTab={tab}
                         />
                       </div>
@@ -484,6 +505,7 @@ export default async function ChatPage({
                 </h1>
                 <p className="text-xs text-[#0A3D45]/55">
                   {active.members.map((m) => personLabel(m.user)).join(", ")}
+                  {active.closedAt ? " · closed" : ""}
                 </p>
               </div>
               <ChatRowMenu
@@ -491,6 +513,7 @@ export default async function ChatPage({
                 isDirect={active.isDirect}
                 canDelete={canDeleteGroup(active)}
                 canEditMembers={!active.isDirect && canDeleteGroup(active)}
+                isClosed={Boolean(active.closedAt)}
                 listTab={listKindForGroup(active)}
                 currentMembers={active.members.map((m) => ({
                   userId: m.user.id,
@@ -532,19 +555,26 @@ export default async function ChatPage({
               ) : null}
             </div>
             <div className="mt-3 shrink-0 border-t border-[#0A3D45]/10 bg-[var(--tide-panel-bg,inherit)] pt-3">
-              <InlineActionForm
-                className="flex gap-2"
-                action={sendMessageAction}
-                submitLabel="Send"
-              >
-                <input type="hidden" name="groupId" value={active.id} />
-                <input
-                  name="body"
-                  required
-                  placeholder="Write a message…"
-                  className="tide-input flex-1"
-                />
-              </InlineActionForm>
+              {active.closedAt ? (
+                <p className="rounded-md bg-[#0A3D45]/[0.05] px-3 py-2 text-sm text-[#0A3D45]/70">
+                  This chat was closed. You can still read it, but messaging is
+                  off. Start a new DM with them to chat again.
+                </p>
+              ) : (
+                <InlineActionForm
+                  className="flex gap-2"
+                  action={sendMessageAction}
+                  submitLabel="Send"
+                >
+                  <input type="hidden" name="groupId" value={active.id} />
+                  <input
+                    name="body"
+                    required
+                    placeholder="Write a message…"
+                    className="tide-input flex-1"
+                  />
+                </InlineActionForm>
+              )}
             </div>
           </>
         ) : null}

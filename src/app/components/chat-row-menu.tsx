@@ -26,6 +26,7 @@ export function ChatRowMenu({
   isDirect,
   canDelete,
   canEditMembers = false,
+  isClosed = false,
   listTab = "groups",
   currentMembers = [],
   addCandidates = [],
@@ -36,10 +37,10 @@ export function ChatRowMenu({
   isDirect: boolean;
   canDelete: boolean;
   canEditMembers?: boolean;
+  /** Closed DMs stay readable but aren't closable again. */
+  isClosed?: boolean;
   listTab?: "dms" | "groups" | "workspace-groups";
-  /** Current group members (for edit panel). */
   currentMembers?: GroupMemberRow[];
-  /** People who can be added to the group. */
   addCandidates?: InviteFriendOption[];
   addSearchPlaceholder?: string;
   addItemNoun?: string;
@@ -141,23 +142,27 @@ export function ChatRowMenu({
                 Edit members
               </button>
             ) : null}
-            <button
-              type="button"
-              role="menuitem"
-              className={menuItemClass(true)}
-              onClick={() => {
-                if (
-                  !confirmDelete(
-                    isDirect ? "this chat" : "your membership in this group",
-                  )
-                ) {
-                  return;
-                }
-                void run(leaveChatAction);
-              }}
-            >
-              {isDirect ? "Delete chat" : "Leave group"}
-            </button>
+            {!(isDirect && isClosed) ? (
+              <button
+                type="button"
+                role="menuitem"
+                className={menuItemClass(true)}
+                onClick={() => {
+                  if (
+                    !confirmDelete(
+                      isDirect
+                        ? "this chat (messaging will stop for both of you)"
+                        : "your membership in this group",
+                    )
+                  ) {
+                    return;
+                  }
+                  void run(leaveChatAction);
+                }}
+              >
+                {isDirect ? "Close chat" : "Leave group"}
+              </button>
+            ) : null}
             {canDelete && !isDirect ? (
               <button
                 type="button"

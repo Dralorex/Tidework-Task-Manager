@@ -321,8 +321,25 @@ export async function updateMemberRoleAction(
     data: { role },
   });
 
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { name: true },
+  });
+
+  await prisma.notification.create({
+    data: {
+      userId: memberUserId,
+      type: "ROLE_CHANGED",
+      title: "Role updated",
+      body: `You’re now ${role.toLowerCase()} in “${workspace?.name ?? "a workspace"}”.`,
+      meta: JSON.stringify({ workspaceId, role }),
+    },
+  });
+
   revalidatePath("/app");
   revalidatePath(`/app/w/${workspaceId}`);
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
 

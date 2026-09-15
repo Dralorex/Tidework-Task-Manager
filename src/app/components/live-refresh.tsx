@@ -4,8 +4,8 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 /**
- * Polls /api/pulse and refreshes the RSC tree when notifications, chat, or
- * workspace tasks/folders change for this user.
+ * Polls /api/pulse and refreshes the RSC tree when notifications, chat,
+ * workspace tasks/folders, or the viewer's membership roles change.
  */
 export function LiveRefresh({ intervalMs = 4000 }: { intervalMs?: number }) {
   const router = useRouter();

@@ -10,6 +10,7 @@ import {
 import { inviteMemberAction } from "@/app/actions/workspaces";
 import { FriendInvitePicker } from "@/app/components/friend-invite-picker";
 import { PendingInvitesDropdown } from "@/app/components/pending-invites-dropdown";
+import { ChatSidebarSection } from "@/app/components/chat-sidebar-section";
 import { WorkspaceMembersPanel } from "@/app/components/workspace-members-panel";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -317,30 +318,32 @@ export default async function WorkspacePage({
 
             {canInvite ? (
               <div className="tide-panel p-4">
-                <h2 className="font-[family-name:var(--font-display)] text-lg text-[#0A3D45]">
-                  Invite
-                </h2>
-                <InlineActionForm
-                  className="mt-3 flex flex-col gap-2"
-                  action={inviteMemberAction}
-                  submitLabel="Send invite"
+                <ChatSidebarSection
+                  title="Invite"
+                  description="Invite a friend by username, or type an email. They’ll get a link to join this workspace."
                 >
-                  <input type="hidden" name="workspaceId" value={workspaceId} />
-                  <FriendInvitePicker friends={inviteFriends} targetName="target" />
-                  <select name="role" className="tide-input text-sm" defaultValue="MEMBER">
-                    <option value="ADMIN">Admin</option>
-                    <option value="EDITOR">Editor</option>
-                    <option value="MEMBER">Member</option>
-                  </select>
-                </InlineActionForm>
-                <PendingInvitesDropdown
-                  invites={pendingInvites.map((inv) => ({
-                    id: inv.id,
-                    label: inv.targetUsername ?? inv.targetEmail ?? "invite",
-                    role: inv.role,
-                    token: inv.token,
-                  }))}
-                />
+                  <InlineActionForm
+                    className="flex flex-col gap-2"
+                    action={inviteMemberAction}
+                    submitLabel="Send invite"
+                  >
+                    <input type="hidden" name="workspaceId" value={workspaceId} />
+                    <FriendInvitePicker friends={inviteFriends} targetName="target" />
+                    <select name="role" className="tide-input text-sm" defaultValue="MEMBER">
+                      <option value="ADMIN">Admin</option>
+                      <option value="EDITOR">Editor</option>
+                      <option value="MEMBER">Member</option>
+                    </select>
+                  </InlineActionForm>
+                  <PendingInvitesDropdown
+                    invites={pendingInvites.map((inv) => ({
+                      id: inv.id,
+                      label: inv.targetUsername ?? inv.targetEmail ?? "invite",
+                      role: inv.role,
+                      token: inv.token,
+                    }))}
+                  />
+                </ChatSidebarSection>
               </div>
             ) : null}
 
