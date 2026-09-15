@@ -21,6 +21,8 @@ export function FriendInvitePicker({
   excludeIds = [],
   required = true,
   placeholder = "Friend username or email",
+  searchPlaceholder = "Search friends",
+  selectedItemNoun = "friend",
   emptyMessage = "No friends yet — type a username or email above.",
 }: {
   friends: InviteFriendOption[];
@@ -30,6 +32,8 @@ export function FriendInvitePicker({
   excludeIds?: string[];
   required?: boolean;
   placeholder?: string;
+  searchPlaceholder?: string;
+  selectedItemNoun?: string;
   emptyMessage?: string;
 }) {
   const available = useMemo(() => {
@@ -71,7 +75,7 @@ export function FriendInvitePicker({
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search friends"
+          placeholder={searchPlaceholder}
           autoComplete="off"
           className="tide-input text-sm"
         />
@@ -120,7 +124,7 @@ export function FriendInvitePicker({
         )}
         {selectedUsernames.length > 0 ? (
           <p className="text-xs text-[#0A3D45]/55">
-            {selectedUsernames.length} friend
+            {selectedUsernames.length} {selectedItemNoun}
             {selectedUsernames.length === 1 ? "" : "s"} selected
           </p>
         ) : null}
