@@ -112,22 +112,19 @@
   color: #ffffff;
 }
 
-[data-theme="dark"] :is(h1, h2, h3, h4, h5, h6, legend) {
-  color: var(--tide-title);
-}
-
-[data-theme="dark"] [class*="font-[family-name:var(--font-display)]"] {
-  color: var(--tide-title);
-}
-
-/* Unmigrated hardcoded teal text → white (keep softer opacity when /xx is present) */
+/* Unmigrated hardcoded teal text → white (softer when /opacity is present) */
 [data-theme="dark"] [class*="text-[#0A3D45]"] {
   color: #ffffff;
 }
 
-[data-theme="dark"] [class*="text-[#0A3D45]/"],
-[data-theme="dark"] [class*="text-[#0A3D45]\\/"] {
+[data-theme="dark"] [class*="text-[#0A3D45]/"] {
   color: color-mix(in srgb, #ffffff 72%, transparent);
+}
+
+/* Titles / headers sit a step grayer than body white */
+[data-theme="dark"] :is(h1, h2, h3, h4, h5, h6, legend),
+[data-theme="dark"] [class*="font-[family-name:var(--font-display)]"] {
+  color: var(--tide-title);
 }
 
 [data-theme="dark"] .tide-btn-primary {
