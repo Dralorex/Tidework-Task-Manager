@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AppNav } from "@/app/components/app-nav";
 import { FloatingChatWidget } from "@/app/components/floating-chat-widget";
 import { LiveRefresh } from "@/app/components/live-refresh";
+import { getAccountRosterPublic } from "@/lib/account-roster";
 import { getCurrentUser } from "@/lib/auth";
 import { syncBirthdayNotifications } from "@/lib/birthday";
 import { syncDeadlineNotifications } from "@/lib/deadline-notifications";
@@ -21,7 +22,7 @@ export default async function AppSectionLayout({
     syncBirthdayNotifications(user.id),
   ]);
 
-  const [unreadCount, chatUnreadCount] = await Promise.all([
+  const [unreadCount, chatUnreadCount, accounts] = await Promise.all([
     prisma.notification.count({
       where: {
         userId: user.id,
@@ -36,6 +37,7 @@ export default async function AppSectionLayout({
         type: { in: ["CHAT_MESSAGE", "DM_REQUEST"] },
       },
     }),
+    getAccountRosterPublic(user.id),
   ]);
 
   return (
@@ -45,6 +47,7 @@ export default async function AppSectionLayout({
         displayLabel={personLabel(user)}
         unreadCount={unreadCount}
         chatUnreadCount={chatUnreadCount}
+        accounts={accounts}
       />
       {children}
       <FloatingChatWidget chatUnreadCount={chatUnreadCount} />

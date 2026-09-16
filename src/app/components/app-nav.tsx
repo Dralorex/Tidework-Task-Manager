@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOutAction } from "@/app/actions/auth";
+import {
+  AccountSwitcher,
+  AppHamburgerMenu,
+  type NavAccount,
+} from "@/app/components/account-nav-controls";
 
 type NavKey =
   | "home"
@@ -10,11 +14,13 @@ type NavKey =
   | "chat"
   | "social"
   | "notifications"
-  | "profile";
+  | "profile"
+  | "settings"
+  | "accounts";
 
 const TABS: {
   href: string;
-  key: Exclude<NavKey, "profile">;
+  key: Exclude<NavKey, "profile" | "settings" | "accounts">;
   label: string;
   shortLabel: string;
   badge?: "chat" | "notifications";
@@ -65,7 +71,9 @@ function Badge({
           ? "min-w-[1rem] px-1 text-[9px] leading-4"
           : "min-w-[1.25rem] px-1.5 text-[11px] leading-5"
       } ${
-        active ? "bg-[#E8F7F6] text-[#0A3D45]" : "bg-[#E85D4C] text-white"
+        active
+          ? "bg-[color:var(--tide-foam)] text-[color:var(--tide-deep)]"
+          : "bg-[color:var(--tide-coral)] text-white"
       }`}
     >
       {count > 99 ? "99+" : count}
@@ -77,10 +85,12 @@ export function AppNav({
   displayLabel,
   unreadCount = 0,
   chatUnreadCount = 0,
+  accounts = [],
 }: {
   displayLabel: string;
   unreadCount?: number;
   chatUnreadCount?: number;
+  accounts?: NavAccount[];
 }) {
   const pathname = usePathname();
 
@@ -92,9 +102,13 @@ export function AppNav({
         ? "chat"
         : pathname.startsWith("/app/social")
           ? "social"
-          : pathname.startsWith("/app/profile")
-            ? "profile"
-            : "home";
+          : pathname.startsWith("/app/settings")
+            ? "settings"
+            : pathname.startsWith("/app/accounts")
+              ? "accounts"
+              : pathname.startsWith("/app/profile")
+                ? "profile"
+                : "home";
 
   const badgeFor = (kind?: "chat" | "notifications") => {
     if (kind === "chat") return chatUnreadCount;
@@ -102,42 +116,32 @@ export function AppNav({
     return 0;
   };
 
+  const accountCluster = (compact: boolean) => (
+    <div className="flex min-w-0 items-center gap-1.5">
+      <AccountSwitcher
+        displayLabel={displayLabel}
+        accounts={accounts}
+        compact={compact}
+      />
+      <AppHamburgerMenu accounts={accounts} />
+    </div>
+  );
+
   return (
-    <header className="sticky top-0 z-20 border-b border-[#0A3D45]/10 bg-[#E8F7F6]/85 backdrop-blur-md">
-      {/* Phone: brand row + compact equal tab strip */}
+    <header className="sticky top-0 z-20 border-b border-[color:var(--tide-deep)]/10 bg-[color:var(--header-bg)] backdrop-blur-md">
       <div className="mx-auto max-w-6xl px-3 pt-2.5 pb-2 md:hidden">
         <div className="flex items-center justify-between gap-3">
           <Link
             href="/app"
-            className="font-[family-name:var(--font-display)] text-lg text-[#0A3D45]"
+            className="font-[family-name:var(--font-display)] text-lg text-[color:var(--tide-deep)]"
           >
             Tidework
           </Link>
-          <div className="flex min-w-0 items-center gap-2.5">
-            <Link
-              href="/app/profile"
-              className={`max-w-[9rem] truncate text-xs underline-offset-2 hover:underline ${
-                active === "profile"
-                  ? "font-semibold text-[#0A3D45]"
-                  : "text-[#0A3D45]/70"
-              }`}
-              title="Profile settings"
-            >
-              {displayLabel}
-            </Link>
-            <form action={signOutAction}>
-              <button
-                type="submit"
-                className="shrink-0 text-xs text-[#0A3D45]/70 underline-offset-2 hover:underline"
-              >
-                Sign out
-              </button>
-            </form>
-          </div>
+          {accountCluster(true)}
         </div>
 
         <nav
-          className="mt-2.5 grid grid-cols-5 gap-0.5 rounded-xl bg-[#0A3D45]/[0.06] p-1"
+          className="mt-2.5 grid grid-cols-5 gap-0.5 rounded-xl bg-[color:var(--tide-deep)]/[0.06] p-1"
           aria-label="Main"
         >
           {TABS.map((tab) => {
@@ -149,8 +153,8 @@ export function AppNav({
                 href={tab.href}
                 className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-center transition ${
                   isActive
-                    ? "bg-[#0A3D45] text-[#E8F7F6] shadow-sm"
-                    : "text-[#0A3D45]/75"
+                    ? "bg-[color:var(--tide-deep)] text-[color:var(--tide-foam)] shadow-sm"
+                    : "text-[color:var(--tide-deep)]/75"
                 }`}
               >
                 <span className="inline-flex max-w-full items-center justify-center gap-0.5">
@@ -165,11 +169,10 @@ export function AppNav({
         </nav>
       </div>
 
-      {/* Desktop: single-row layout */}
       <div className="mx-auto hidden max-w-6xl items-center justify-between gap-4 px-4 py-3 md:flex">
         <Link
           href="/app"
-          className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]"
+          className="font-[family-name:var(--font-display)] text-xl text-[color:var(--tide-deep)]"
         >
           Tidework
         </Link>
@@ -183,8 +186,8 @@ export function AppNav({
                 href={tab.href}
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition ${
                   isActive
-                    ? "bg-[#0A3D45] text-[#E8F7F6]"
-                    : "text-[#0A3D45]/80 hover:bg-[#0A3D45]/8"
+                    ? "bg-[color:var(--tide-deep)] text-[color:var(--tide-foam)]"
+                    : "text-[color:var(--tide-deep)]/80 hover:bg-[color:var(--tide-deep)]/8"
                 }`}
               >
                 {tab.label}
@@ -193,27 +196,7 @@ export function AppNav({
             );
           })}
         </nav>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/app/profile"
-            className={`text-sm underline-offset-2 hover:underline ${
-              active === "profile"
-                ? "font-semibold text-[#0A3D45]"
-                : "text-[#0A3D45]/70"
-            }`}
-            title="Profile settings"
-          >
-            {displayLabel}
-          </Link>
-          <form action={signOutAction}>
-            <button
-              type="submit"
-              className="text-sm text-[#0A3D45]/70 underline-offset-2 hover:underline"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
+        {accountCluster(false)}
       </div>
     </header>
   );

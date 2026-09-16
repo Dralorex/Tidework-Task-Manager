@@ -158,8 +158,8 @@ export async function signInAction(
 }
 
 export async function signOutAction() {
-  await destroySession();
-  redirect("/");
+  await destroySession({ removeFromRoster: true });
+  redirect("/login");
 }
 
 export async function requestPasswordResetAction(

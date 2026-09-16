@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { InlineActionForm } from "@/app/components/forms";
 import { FolderActions } from "@/app/components/folder-actions";
+import { FolderCompletionStats } from "@/app/components/folder-completion-stats";
 import { WorkspaceTaskRow } from "@/app/components/workspace-task-row";
 import {
   createFolderAction,
@@ -60,6 +61,27 @@ export default async function WorkspacePage({
   );
   const folderCounts = computeFolderTaskCounts(folders, directCounts);
   const allTasksCount = [...directCounts.values()].reduce((a, b) => a + b, 0);
+
+  const [doneCountRows, totalCountRows] = await Promise.all([
+    prisma.task.groupBy({
+      by: ["folderId"],
+      where: { workspaceId, status: "DONE" },
+      _count: { _all: true },
+    }),
+    prisma.task.groupBy({
+      by: ["folderId"],
+      where: { workspaceId },
+      _count: { _all: true },
+    }),
+  ]);
+  const folderDoneCounts = computeFolderTaskCounts(
+    folders,
+    new Map(doneCountRows.map((r) => [r.folderId, r._count._all])),
+  );
+  const folderTotalCounts = computeFolderTaskCounts(
+    folders,
+    new Map(totalCountRows.map((r) => [r.folderId, r._count._all])),
+  );
 
   // All Tasks = no folder query param. Show all tasks by urgency.
   const isRoot = !sp.folder;
@@ -268,20 +290,27 @@ export default async function WorkspacePage({
                     .filter((f) => !f.parentId)
                     .map((f) => (
                       <li key={f.id}>
-                        <div className="group flex items-center justify-between gap-1">
-                          <Link
-                            href={`/app/w/${workspaceId}?folder=${f.id}`}
-                            className={`inline-flex min-w-0 items-center gap-1.5 ${
-                              currentFolder?.id === f.id
-                                ? "font-semibold text-[#0A3D45]"
-                                : "text-[#0A3D45]/70 hover:text-[#0A3D45]"
-                            }`}
-                          >
-                            <span className="truncate">{f.name}</span>
-                            <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
-                              {folderCounts.get(f.id) ?? 0}
-                            </span>
-                          </Link>
+                        <div className="group flex items-start justify-between gap-1">
+                          <div className="min-w-0 flex-1">
+                            <Link
+                              href={`/app/w/${workspaceId}?folder=${f.id}`}
+                              className={`inline-flex min-w-0 items-center gap-1.5 ${
+                                currentFolder?.id === f.id
+                                  ? "font-semibold text-[#0A3D45]"
+                                  : "text-[#0A3D45]/70 hover:text-[#0A3D45]"
+                              }`}
+                            >
+                              <span className="truncate">{f.name}</span>
+                              <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
+                                {folderCounts.get(f.id) ?? 0}
+                              </span>
+                            </Link>
+                            <FolderCompletionStats
+                              done={folderDoneCounts.get(f.id) ?? 0}
+                              total={folderTotalCounts.get(f.id) ?? 0}
+                              unclaimed={folderCounts.get(f.id) ?? 0}
+                            />
+                          </div>
                           {canEdit ? (
                             <FolderActions
                               workspaceId={workspaceId}
@@ -393,16 +422,23 @@ export default async function WorkspacePage({
                 <ul className="mt-4 space-y-2">
                   {childFolders.map((f) => (
                     <li key={f.id}>
-                      <div className="group flex items-center justify-between gap-2 rounded-lg border border-[#0A3D45]/10 bg-[#0A3D45]/[0.02] px-3 py-2.5 transition hover:border-[#0A3D45]/20 hover:bg-[#0A3D45]/[0.05]">
-                        <Link
-                          href={`/app/w/${workspaceId}?folder=${f.id}`}
-                          className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-[#0A3D45]"
-                        >
-                          <span className="truncate">{f.name}</span>
-                          <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
-                            {folderCounts.get(f.id) ?? 0}
-                          </span>
-                        </Link>
+                      <div className="group flex items-start justify-between gap-2 rounded-lg border border-[#0A3D45]/10 bg-[#0A3D45]/[0.02] px-3 py-2.5 transition hover:border-[#0A3D45]/20 hover:bg-[#0A3D45]/[0.05]">
+                        <div className="min-w-0 flex-1">
+                          <Link
+                            href={`/app/w/${workspaceId}?folder=${f.id}`}
+                            className="flex min-w-0 items-center gap-2 text-sm font-semibold text-[#0A3D45]"
+                          >
+                            <span className="truncate">{f.name}</span>
+                            <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
+                              {folderCounts.get(f.id) ?? 0}
+                            </span>
+                          </Link>
+                          <FolderCompletionStats
+                            done={folderDoneCounts.get(f.id) ?? 0}
+                            total={folderTotalCounts.get(f.id) ?? 0}
+                            unclaimed={folderCounts.get(f.id) ?? 0}
+                          />
+                        </div>
                         {canEdit ? (
                           <FolderActions
                             workspaceId={workspaceId}

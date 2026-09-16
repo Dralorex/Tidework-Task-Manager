@@ -8,41 +8,51 @@ import { redirect } from "next/navigation";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; addAccount?: string }>;
 }) {
   const user = await getCurrentUser();
-  const { next } = await searchParams;
-  if (user) redirect(next?.startsWith("/") && !next.startsWith("//") ? next : "/app");
+  const { next, addAccount } = await searchParams;
+  const addingAccount = addAccount === "1" || addAccount === "true";
+  if (user && !addingAccount) {
+    redirect(next?.startsWith("/") && !next.startsWith("//") ? next : "/app");
+  }
 
   return (
     <main className="tide-wave-bg flex min-h-screen items-center justify-center px-4 py-12">
       <div className="tide-panel w-full max-w-md p-8 animate-tide-rise">
         <Link
-          href="/"
-          className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]"
+          href={addingAccount ? "/app/accounts" : "/"}
+          className="font-[family-name:var(--font-display)] text-2xl text-[color:var(--tide-deep)]"
         >
           Tidework
         </Link>
-        <h1 className="mt-4 font-[family-name:var(--font-display)] text-3xl text-[#0A3D45]">
-          Welcome back
+        <h1 className="mt-4 font-[family-name:var(--font-display)] text-3xl text-[color:var(--tide-deep)]">
+          {addingAccount ? "Add an account" : "Welcome back"}
         </h1>
-        <p className="mt-2 text-sm text-[#0A3D45]/70">Sign in with your username.</p>
+        <p className="mt-2 text-sm text-[color:var(--tide-deep)]/70">
+          {addingAccount
+            ? "Sign in to another account to keep it on this device, or create a new one."
+            : "Sign in with your username."}
+        </p>
 
         <div className="mt-6">
           <AuthForm
             action={signInAction}
-            submitLabel="Sign in"
+            submitLabel={addingAccount ? "Add & sign in" : "Sign in"}
             extras={
               <Link
                 href="/forgot-password"
-                className="text-center text-sm text-[#0A3D45]/70 underline-offset-2 hover:underline"
+                className="text-center text-sm text-[color:var(--tide-deep)]/70 underline-offset-2 hover:underline"
               >
                 Forgot password?
               </Link>
             }
           >
             {next ? <input type="hidden" name="next" value={next} /> : null}
-            <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">
+            {addingAccount ? (
+              <input type="hidden" name="addAccount" value="1" />
+            ) : null}
+            <label className="flex flex-col gap-1 text-sm font-medium text-[color:var(--tide-deep)]">
               Username
               <input
                 name="username"
@@ -71,11 +81,17 @@ export default async function LoginPage({
           </AuthForm>
         </div>
 
-        <p className="mt-6 text-center text-sm text-[#0A3D45]/70">
-          New here?{" "}
+        <p className="mt-6 text-center text-sm text-[color:var(--tide-deep)]/70">
+          {addingAccount ? "Need a new login? " : "New here? "}
           <Link
-            href={next ? `/signup?next=${encodeURIComponent(next)}` : "/signup"}
-            className="font-semibold text-[#0A3D45] underline-offset-2 hover:underline"
+            href={
+              addingAccount
+                ? `/signup?addAccount=1${next ? `&next=${encodeURIComponent(next)}` : ""}`
+                : next
+                  ? `/signup?next=${encodeURIComponent(next)}`
+                  : "/signup"
+            }
+            className="font-semibold text-[color:var(--tide-deep)] underline-offset-2 hover:underline"
           >
             Create an account
           </Link>

@@ -7,27 +7,31 @@ import { redirect } from "next/navigation";
 export default async function SignUpPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; addAccount?: string }>;
 }) {
   const user = await getCurrentUser();
-  const { next } = await searchParams;
-  if (user) redirect(next?.startsWith("/") && !next.startsWith("//") ? next : "/app");
+  const { next, addAccount } = await searchParams;
+  const addingAccount = addAccount === "1" || addAccount === "true";
+  if (user && !addingAccount) {
+    redirect(next?.startsWith("/") && !next.startsWith("//") ? next : "/app");
+  }
 
   return (
     <main className="tide-wave-bg flex min-h-screen items-center justify-center px-4 py-12">
       <div className="tide-panel w-full max-w-md p-8 animate-tide-rise">
         <Link
-          href="/"
-          className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]"
+          href={addingAccount ? "/app/accounts" : "/"}
+          className="font-[family-name:var(--font-display)] text-2xl text-[color:var(--tide-deep)]"
         >
           Tidework
         </Link>
-        <h1 className="mt-4 font-[family-name:var(--font-display)] text-3xl text-[#0A3D45]">
-          Create your account
+        <h1 className="mt-4 font-[family-name:var(--font-display)] text-3xl text-[color:var(--tide-deep)]">
+          {addingAccount ? "Create another account" : "Create your account"}
         </h1>
-        <p className="mt-2 text-sm text-[#0A3D45]/70">
-          Username and password are enough. Add an email to get a welcome confirmation
-          and password reset later.
+        <p className="mt-2 text-sm text-[color:var(--tide-deep)]/70">
+          {addingAccount
+            ? "Make a new login for this device — personal, business, or anything else. Same Tidework, separate account."
+            : "Username and password are enough. Add an email to get a welcome confirmation and password reset later."}
         </p>
 
         <div className="mt-6">
@@ -39,11 +43,17 @@ export default async function SignUpPage({
           />
         </div>
 
-        <p className="mt-6 text-center text-sm text-[#0A3D45]/70">
+        <p className="mt-6 text-center text-sm text-[color:var(--tide-deep)]/70">
           Already aboard?{" "}
           <Link
-            href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
-            className="font-semibold text-[#0A3D45] underline-offset-2 hover:underline"
+            href={
+              addingAccount
+                ? `/login?addAccount=1${next ? `&next=${encodeURIComponent(next)}` : ""}`
+                : next
+                  ? `/login?next=${encodeURIComponent(next)}`
+                  : "/login"
+            }
+            className="font-semibold text-[color:var(--tide-deep)] underline-offset-2 hover:underline"
           >
             Sign in
           </Link>
