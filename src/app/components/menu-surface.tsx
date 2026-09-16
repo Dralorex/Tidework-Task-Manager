@@ -104,7 +104,7 @@ export function MenuSurface({
             <div
               ref={panelRef}
               role="menu"
-              className={`fixed z-[200] rounded-lg border border-[color:var(--tide-deep)]/12 bg-[color:var(--tide-foam)] py-1 shadow-lg ${widthClass}`}
+              className={`fixed z-[200] rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--menu-bg)] py-1 shadow-lg ${widthClass}`}
               style={{
                 top: coords?.top ?? 0,
                 left: coords?.left ?? 0,
@@ -122,6 +122,6 @@ export function MenuSurface({
 
 export function menuItemClass(danger = false) {
   return danger
-    ? "block w-full px-3 py-2 text-left text-sm text-[#9b2f22] hover:bg-[#E85D4C]/10"
-    : "block w-full px-3 py-2 text-left text-sm text-[#0A3D45] hover:bg-[#0A3D45]/8";
+    ? "block w-full px-3 py-2 text-left text-sm text-[color:var(--tide-coral)] hover:bg-[color:var(--tide-coral)]/10"
+    : "block w-full px-3 py-2 text-left text-sm text-[color:var(--tide-deep)] hover:bg-[color:var(--tide-deep)]/8";
 }

@@ -22,7 +22,7 @@ export function PendingInvitesDropdown({
     <div className="mt-3">
       <button
         type="button"
-        className="flex w-full items-center justify-between rounded-md border border-[#0A3D45]/12 bg-white/70 px-2.5 py-2 text-left text-sm text-[#0A3D45]"
+        className="flex w-full items-center justify-between rounded-md border border-[color:var(--panel-border)] bg-[color:var(--menu-bg)] px-2.5 py-2 text-left text-sm text-[color:var(--tide-deep)]"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
@@ -30,14 +30,14 @@ export function PendingInvitesDropdown({
         <span aria-hidden>{open ? "▾" : "▸"}</span>
       </button>
       {open ? (
-        <ul className="mt-2 max-h-48 space-y-2 overflow-y-auto rounded-md border border-[#0A3D45]/10 bg-white/80 p-2 text-xs text-[#0A3D45]/70">
+        <ul className="mt-2 max-h-48 space-y-2 overflow-y-auto rounded-md border border-[color:var(--panel-border)] bg-[color:var(--menu-bg)] p-2 text-xs text-[color:var(--tide-deep)]/70">
           {invites.map((inv) => (
-            <li key={inv.id} className="border-b border-[#0A3D45]/8 pb-2 last:border-b-0 last:pb-0">
-              <p className="font-medium text-[#0A3D45]">
+            <li key={inv.id} className="border-b border-[color:var(--tide-deep)]/8 pb-2 last:border-b-0 last:pb-0">
+              <p className="font-medium text-[color:var(--tide-deep)]">
                 {inv.label}{" "}
-                <span className="font-normal text-[#0A3D45]/55">({inv.role})</span>
+                <span className="font-normal text-[color:var(--tide-deep)]/55">({inv.role})</span>
               </p>
-              <p className="mt-0.5 break-all text-[11px] text-[#0A3D45]/50">
+              <p className="mt-0.5 break-all text-[11px] text-[color:var(--tide-deep)]/50">
                 /invite/{inv.token}
               </p>
             </li>
