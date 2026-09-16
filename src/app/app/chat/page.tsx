@@ -271,8 +271,8 @@ export default async function ChatPage({
         : "No workspace groups yet.";
 
   return (
-    <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[280px_1fr]">
-      <aside className="space-y-4">
+    <main className="mx-auto grid max-w-6xl items-start gap-6 px-4 py-8 lg:grid-cols-[280px_1fr]">
+      <aside className="space-y-4 self-start">
         {dmRequests.length > 0 ? (
           <div className="tide-panel p-4">
             <h3 className="font-semibold text-[#0A3D45]">DM requests</h3>
@@ -328,15 +328,9 @@ export default async function ChatPage({
         </div>
       </aside>
 
-      <section
-        className={`tide-panel flex flex-col p-5 ${
-          active
-            ? "h-[min(36rem,calc(100dvh-6rem))] min-h-[28rem]"
-            : "min-h-[28rem]"
-        }`}
-      >
+      <section className="tide-panel flex h-[min(36rem,calc(100dvh-6rem))] min-h-[28rem] flex-col self-start overflow-hidden p-5">
         {tab === "hub" && !active ? (
-          <>
+          <div className="min-h-0 flex-1 overflow-y-auto">
             <h1 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
               Chat
             </h1>
@@ -415,13 +409,13 @@ export default async function ChatPage({
                 </span>
               </Link>
             </div>
-          </>
+          </div>
         ) : null}
 
         {(tab === "dms" || tab === "groups" || tab === "workspace-groups") &&
         !active ? (
-          <>
-            <div className="flex items-center gap-3">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex shrink-0 items-center gap-3">
               <Link
                 href="/app/chat"
                 className="text-sm text-[#0A3D45]/60 hover:underline"
@@ -429,10 +423,10 @@ export default async function ChatPage({
                 ← Back
               </Link>
             </div>
-            <h1 className="mt-2 font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
+            <h1 className="mt-2 shrink-0 font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
               {listTitle}
             </h1>
-            <ul className="mt-4 space-y-2">
+            <ul className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto">
               {listItems.map((g) => {
                 const title =
                   tab === "dms" ? dmDisplayName(g.members, userId) : g.name;
@@ -485,7 +479,7 @@ export default async function ChatPage({
                 <li className="text-sm text-[#0A3D45]/55">{listEmpty}</li>
               ) : null}
             </ul>
-          </>
+          </div>
         ) : null}
 
         {active ? (
