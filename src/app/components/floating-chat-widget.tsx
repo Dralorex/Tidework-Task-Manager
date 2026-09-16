@@ -313,17 +313,17 @@ export function FloatingChatWidget({
     <div className="pointer-events-none fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
       {open ? (
         <div
-          className="pointer-events-auto flex h-[min(34rem,calc(100vh-6.5rem))] w-[min(22.5rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border border-[#0A3D45]/12 bg-[rgba(255,255,255,0.92)] shadow-[0_18px_50px_rgba(10,61,69,0.18)] backdrop-blur-md animate-[tide-rise_220ms_ease]"
+          className="pointer-events-auto flex h-[min(34rem,calc(100vh-6.5rem))] w-[min(22.5rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--menu-bg)] shadow-[0_18px_50px_color-mix(in_srgb,var(--tide-deep)_18%,transparent)] backdrop-blur-md animate-[tide-rise_220ms_ease]"
           role="dialog"
           aria-label="Chat"
         >
-          <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[#0A3D45]/10 px-3 py-2.5">
+          <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--tide-deep)]/10 px-3 py-2.5">
             <div className="min-w-0">
               {view === "thread" ? (
                 <button
                   type="button"
                   onClick={backFromThread}
-                  className="text-left text-xs text-[#0A3D45]/60 hover:underline"
+                  className="text-left text-xs text-[color:var(--tide-deep)]/60 hover:underline"
                 >
                   ← {tabTitle(listTab)}
                 </button>
@@ -331,23 +331,23 @@ export function FloatingChatWidget({
                 <button
                   type="button"
                   onClick={backFromList}
-                  className="text-left text-xs text-[#0A3D45]/60 hover:underline"
+                  className="text-left text-xs text-[color:var(--tide-deep)]/60 hover:underline"
                 >
                   ← Chat
                 </button>
               ) : (
-                <p className="text-xs font-medium uppercase tracking-wide text-[#0A3D45]/50">
+                <p className="text-xs font-medium uppercase tracking-wide text-[color:var(--tide-deep)]/50">
                   Chat
                 </p>
               )}
-              <h2 className="truncate font-[family-name:var(--font-display)] text-lg text-[#0A3D45]">
+              <h2 className="truncate font-[family-name:var(--font-display)] text-lg text-[color:var(--tide-deep)]">
                 {headerTitle}
               </h2>
             </div>
             <button
               type="button"
               onClick={closePanel}
-              className="rounded-full px-2.5 py-1 text-lg leading-none text-[#0A3D45]/55 hover:bg-[#0A3D45]/8 hover:text-[#0A3D45]"
+              className="rounded-full px-2.5 py-1 text-lg leading-none text-[color:var(--tide-deep)]/55 hover:bg-[color:var(--tide-deep)]/8 hover:text-[color:var(--tide-deep)]"
               aria-label="Close chat"
             >
               ×
@@ -355,12 +355,12 @@ export function FloatingChatWidget({
           </header>
 
           {error ? (
-            <p className="shrink-0 px-3 py-2 text-sm text-[#9b2f22]">{error}</p>
+            <p className="shrink-0 px-3 py-2 text-sm text-[color:var(--tide-coral)]">{error}</p>
           ) : null}
 
           {view === "hub" ? (
             <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
-              <p className="mb-3 text-xs text-[#0A3D45]/60">
+              <p className="mb-3 text-xs text-[color:var(--tide-deep)]/60">
                 Choose Groups, Workspace groups, or DMs.
               </p>
               <div className="flex flex-col gap-2">
@@ -393,24 +393,24 @@ export function FloatingChatWidget({
                     key={item.tab}
                     type="button"
                     onClick={() => openList(item.tab)}
-                    className="group flex w-full items-center justify-between rounded-lg border border-[#0A3D45]/12 bg-[#0A3D45]/[0.03] px-3 py-3.5 text-left transition hover:border-[#0A3D45]/25 hover:bg-[#0A3D45]/[0.06]"
+                    className="group flex w-full items-center justify-between rounded-lg border border-[color:var(--tide-deep)]/12 bg-[color:var(--tide-deep)]/[0.03] px-3 py-3.5 text-left transition hover:border-[color:var(--tide-deep)]/25 hover:bg-[color:var(--tide-deep)]/[0.06]"
                   >
                     <div className="min-w-0">
-                      <p className="flex items-center gap-2 font-[family-name:var(--font-display)] text-base text-[#0A3D45]">
+                      <p className="flex items-center gap-2 font-[family-name:var(--font-display)] text-base text-[color:var(--tide-deep)]">
                         {item.label}
                         {item.unread > 0 ? (
-                          <span className="rounded-full bg-[#E85D4C] px-1.5 text-[10px] font-semibold leading-4 text-white">
+                          <span className="rounded-full bg-[color:var(--tide-coral)] px-1.5 text-[10px] font-semibold leading-4 text-white">
                             {item.unread > 99 ? "99+" : item.unread}
                           </span>
                         ) : null}
                       </p>
-                      <p className="mt-0.5 text-xs text-[#0A3D45]/55">
+                      <p className="mt-0.5 text-xs text-[color:var(--tide-deep)]/55">
                         {item.count} conversation{item.count === 1 ? "" : "s"}
                         {" · "}
                         {item.blurb}
                       </p>
                     </div>
-                    <span className="text-[#0A3D45]/40 transition group-hover:text-[#0A3D45]">
+                    <span className="text-[color:var(--tide-deep)]/40 transition group-hover:text-[color:var(--tide-deep)]">
                       →
                     </span>
                   </button>
@@ -422,9 +422,9 @@ export function FloatingChatWidget({
           {view === "list" ? (
             <div className="min-h-0 flex-1 overflow-y-auto">
               {pending && filtered.length === 0 ? (
-                <p className="px-3 py-4 text-sm text-[#0A3D45]/55">Loading…</p>
+                <p className="px-3 py-4 text-sm text-[color:var(--tide-deep)]/55">Loading…</p>
               ) : null}
-              <ul className="divide-y divide-[#0A3D45]/8">
+              <ul className="divide-y divide-[color:var(--tide-deep)]/8">
                 {filtered.map((chat) => (
                   <li key={chat.id}>
                     <button
@@ -434,25 +434,25 @@ export function FloatingChatWidget({
                           void openThread(chat.id, listTab);
                         });
                       }}
-                      className="flex w-full items-start gap-2 px-3 py-2.5 text-left hover:bg-[#0A3D45]/[0.04]"
+                      className="flex w-full items-start gap-2 px-3 py-2.5 text-left hover:bg-[color:var(--tide-deep)]/[0.04]"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="truncate text-sm font-semibold text-[#0A3D45]">
+                          <span className="truncate text-sm font-semibold text-[color:var(--tide-deep)]">
                             {chat.title}
                           </span>
                           {chat.closed ? (
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-[#0A3D45]/40">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-[color:var(--tide-deep)]/40">
                               Closed
                             </span>
                           ) : null}
                           {chat.unread > 0 ? (
-                            <span className="rounded-full bg-[#E85D4C] px-1.5 text-[10px] font-semibold leading-4 text-white">
+                            <span className="rounded-full bg-[color:var(--tide-coral)] px-1.5 text-[10px] font-semibold leading-4 text-white">
                               {chat.unread > 99 ? "99+" : chat.unread}
                             </span>
                           ) : null}
                         </div>
-                        <p className="mt-0.5 truncate text-xs text-[#0A3D45]/55">
+                        <p className="mt-0.5 truncate text-xs text-[color:var(--tide-deep)]/55">
                           {chat.snippet}
                         </p>
                       </div>
@@ -461,7 +461,7 @@ export function FloatingChatWidget({
                 ))}
               </ul>
               {!pending && filtered.length === 0 ? (
-                <p className="px-3 py-4 text-sm text-[#0A3D45]/55">
+                <p className="px-3 py-4 text-sm text-[color:var(--tide-deep)]/55">
                   No conversations here yet. Open the Chat tab to start one.
                 </p>
               ) : null}
@@ -471,32 +471,32 @@ export function FloatingChatWidget({
           {view === "thread" && thread ? (
             <>
               <MarkChatSeen groupId={thread.id} />
-              <p className="shrink-0 truncate px-3 pt-2 text-[11px] text-[#0A3D45]/45">
+              <p className="shrink-0 truncate px-3 pt-2 text-[11px] text-[color:var(--tide-deep)]/45">
                 {thread.membersLabel}
                 {thread.closed ? " · closed" : ""}
               </p>
               <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-2">
                 {thread.messages.map((msg) => (
                   <div key={msg.id} className="text-sm">
-                    <span className="font-semibold text-[#0A3D45]">
+                    <span className="font-semibold text-[color:var(--tide-deep)]">
                       {msg.mine ? "You" : msg.senderLabel}
                     </span>{" "}
-                    <span className="text-[11px] text-[#0A3D45]/45">
+                    <span className="text-[11px] text-[color:var(--tide-deep)]/45">
                       {format(new Date(msg.createdAt), "MMM d · HH:mm")}
                     </span>
-                    <p className="whitespace-pre-wrap text-[#0A3D45]/80">
+                    <p className="whitespace-pre-wrap text-[color:var(--tide-deep)]/80">
                       {msg.body}
                     </p>
                   </div>
                 ))}
                 {thread.messages.length === 0 ? (
-                  <p className="text-sm text-[#0A3D45]/55">No messages yet.</p>
+                  <p className="text-sm text-[color:var(--tide-deep)]/55">No messages yet.</p>
                 ) : null}
                 <div ref={messagesEndRef} />
               </div>
-              <div className="shrink-0 border-t border-[#0A3D45]/10 px-3 py-2.5">
+              <div className="shrink-0 border-t border-[color:var(--tide-deep)]/10 px-3 py-2.5">
                 {thread.closed ? (
-                  <p className="rounded-md bg-[#0A3D45]/[0.05] px-2.5 py-2 text-xs text-[#0A3D45]/70">
+                  <p className="rounded-md bg-[color:var(--tide-deep)]/[0.05] px-2.5 py-2 text-xs text-[color:var(--tide-deep)]/70">
                     This chat was closed. You can still read it here.
                   </p>
                 ) : (
@@ -524,7 +524,7 @@ export function FloatingChatWidget({
           ) : null}
 
           {view === "thread" && !thread && pending ? (
-            <p className="px-3 py-4 text-sm text-[#0A3D45]/55">Loading chat…</p>
+            <p className="px-3 py-4 text-sm text-[color:var(--tide-deep)]/55">Loading chat…</p>
           ) : null}
         </div>
       ) : null}
@@ -532,7 +532,7 @@ export function FloatingChatWidget({
       <button
         type="button"
         onClick={toggleOpen}
-        className="pointer-events-auto relative flex h-14 w-14 items-center justify-center rounded-full bg-[#0A3D45] text-[#E8F7F6] shadow-[0_12px_32px_rgba(10,61,69,0.28)] transition hover:scale-[1.04] hover:bg-[#1A7A82] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3DBEAB]"
+        className="pointer-events-auto relative flex h-14 w-14 items-center justify-center rounded-full bg-[color:var(--tide-deep)] text-[color:var(--tide-foam)] shadow-[0_12px_32px_color-mix(in_srgb,var(--tide-deep)_28%,transparent)] transition hover:scale-[1.04] hover:bg-[color:var(--tide-mid)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--tide-sea)]"
         aria-label={open ? "Close chat" : "Open chat"}
         aria-expanded={open}
       >
@@ -563,7 +563,7 @@ export function FloatingChatWidget({
           </svg>
         )}
         {!open && badge ? (
-          <span className="absolute -right-0.5 -top-0.5 min-w-[1.25rem] rounded-full bg-[#E85D4C] px-1 text-center text-[11px] font-semibold leading-5 text-white">
+          <span className="absolute -right-0.5 -top-0.5 min-w-[1.25rem] rounded-full bg-[color:var(--tide-coral)] px-1 text-center text-[11px] font-semibold leading-5 text-white">
             {badge}
           </span>
         ) : null}
