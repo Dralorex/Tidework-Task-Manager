@@ -132,7 +132,7 @@ export async function signUpAction(
     },
   });
 
-  await createSession(user.id);
+  await createSession(user.id, { remember: true });
   redirect(next ?? "/app");
 }
 
@@ -159,8 +159,8 @@ export async function signInAction(
 }
 
 export async function signOutAction() {
-  await destroySession();
-  redirect("/");
+  await destroySession({ removeFromRoster: true });
+  redirect("/login");
 }
 
 export async function requestPasswordResetAction(
@@ -281,6 +281,6 @@ export async function resetPasswordAction(
     prisma.passwordResetToken.deleteMany({ where: { userId: record.userId } }),
   ]);
 
-  await createSession(record.userId);
+  await createSession(record.userId, { remember: true });
   redirect("/app");
 }
