@@ -17,7 +17,8 @@
   --wave-3: rgba(232, 93, 76, 0.12);
   --wave-base: linear-gradient(165deg, #d8f3f0 0%, #e8f7f6 40%, #f0faf8 100%);
   --panel-bg: rgba(255, 255, 255, 0.65);
-  --panel-border: rgba(10, 61, 69, 0.08);
+  --panel-border: #000000;
+  --menu-bg: var(--background);
   --input-bg: rgba(255, 255, 255, 0.75);
   --btn-secondary-bg: rgba(255, 255, 255, 0.55);
 }
@@ -38,7 +39,8 @@
   --wave-3: rgba(232, 93, 76, 0.06);
   --wave-base: linear-gradient(165deg, #ffffff 0%, #f7fafb 45%, #eef4f5 100%);
   --panel-bg: rgba(255, 255, 255, 0.88);
-  --panel-border: rgba(28, 43, 51, 0.08);
+  --panel-border: #000000;
+  --menu-bg: var(--background);
   --input-bg: #ffffff;
   --btn-secondary-bg: rgba(255, 255, 255, 0.9);
 }
@@ -59,7 +61,8 @@
   --wave-3: rgba(255, 90, 69, 0.18);
   --wave-base: linear-gradient(165deg, #d4fff6 0%, #f5fffd 40%, #fff8e8 100%);
   --panel-bg: rgba(255, 255, 255, 0.78);
-  --panel-border: rgba(5, 53, 60, 0.1);
+  --panel-border: #000000;
+  --menu-bg: var(--background);
   --input-bg: rgba(255, 255, 255, 0.92);
   --btn-secondary-bg: rgba(255, 255, 255, 0.75);
 }
@@ -80,7 +83,8 @@
   --wave-3: rgba(196, 92, 78, 0.1);
   --wave-base: linear-gradient(165deg, #e2e6eb 0%, #eef0f3 45%, #f5f5f4 100%);
   --panel-bg: rgba(255, 255, 255, 0.7);
-  --panel-border: rgba(42, 47, 54, 0.1);
+  --panel-border: #000000;
+  --menu-bg: var(--background);
   --input-bg: rgba(255, 255, 255, 0.85);
   --btn-secondary-bg: rgba(255, 255, 255, 0.7);
 }
@@ -103,6 +107,7 @@
   --wave-base: linear-gradient(165deg, #0b1719 0%, #102226 45%, #0f1c1e 100%);
   --panel-bg: rgba(22, 36, 39, 0.85);
   --panel-border: rgba(255, 255, 255, 0.34);
+  --menu-bg: var(--background);
   --input-bg: rgba(16, 28, 30, 0.9);
   --btn-secondary-bg: rgba(22, 36, 39, 0.9);
 }
@@ -171,7 +176,8 @@
   --wave-3: rgba(217, 64, 42, 0.16);
   --wave-base: linear-gradient(165deg, #ffe0c8 0%, #fff4ec 40%, #f6e0cb 100%);
   --panel-bg: rgba(255, 252, 248, 0.75);
-  --panel-border: rgba(59, 29, 20, 0.1);
+  --panel-border: #000000;
+  --menu-bg: var(--background);
   --input-bg: rgba(255, 255, 255, 0.85);
   --btn-secondary-bg: rgba(255, 255, 255, 0.7);
 }

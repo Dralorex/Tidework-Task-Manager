@@ -86,23 +86,23 @@ export function FriendInvitePicker({
           required={required && selectedUsernames.length === 0}
         />
         {available.length > 0 ? (
-          <ul className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-[#0A3D45]/12 bg-white/70 p-2">
+          <ul className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-[color:var(--panel-border)] bg-[color:var(--menu-bg)] p-2">
             {filtered.length > 0 ? (
               filtered.map((friend) => {
                 const checked = selected.has(friend.id);
                 return (
                   <li key={friend.id}>
-                    <label className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-[#0A3D45] transition hover:bg-[#0A3D45]/8">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-[color:var(--tide-deep)] transition hover:bg-[color:var(--tide-deep)]/8">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 accent-[#0A3D45]"
+                        className="h-4 w-4 accent-[color:var(--tide-deep)]"
                         checked={checked}
                         onChange={() => toggle(friend.id)}
                       />
                       <span className="min-w-0 flex-1 truncate font-medium">
                         {friend.label}
                       </span>
-                      <span className="shrink-0 text-xs text-[#0A3D45]/55">
+                      <span className="shrink-0 text-xs text-[color:var(--tide-deep)]/55">
                         @{friend.username}
                       </span>
                     </label>
@@ -110,7 +110,7 @@ export function FriendInvitePicker({
                 );
               })
             ) : (
-              <li className="px-2 py-1.5 text-xs text-[#0A3D45]/55">
+              <li className="px-2 py-1.5 text-xs text-[color:var(--tide-deep)]/55">
                 No friends match “{query.trim()}”.
               </li>
             )}
@@ -144,17 +144,17 @@ export function FriendInvitePicker({
         className="tide-input text-sm"
       />
       {available.length > 0 ? (
-        <ul className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-[#0A3D45]/12 bg-white/70 p-2">
+        <ul className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-[color:var(--panel-border)] bg-[color:var(--menu-bg)] p-2">
           {filtered.length > 0 ? (
             filtered.map((friend) => (
               <li key={friend.id}>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm text-[#0A3D45] transition hover:bg-[#0A3D45]/8"
+                  className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm text-[color:var(--tide-deep)] transition hover:bg-[color:var(--tide-deep)]/8"
                   onClick={() => setQuery(friend.username)}
                 >
                   <span className="truncate font-medium">{friend.label}</span>
-                  <span className="ml-2 shrink-0 text-xs text-[#0A3D45]/55">
+                  <span className="ml-2 shrink-0 text-xs text-[color:var(--tide-deep)]/55">
                     @{friend.username}
                   </span>
                 </button>
