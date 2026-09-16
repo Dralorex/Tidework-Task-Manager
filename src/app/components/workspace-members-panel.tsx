@@ -10,6 +10,8 @@ export type WorkspaceMemberRow = {
   username: string;
   label: string;
   role: string;
+  customRoleIds: string[];
+  customRoleNames: string[];
   isSelf: boolean;
   isFriend: boolean;
   requestPending: boolean;
@@ -34,11 +36,13 @@ export function WorkspaceMembersPanel({
   workspaceId,
   members,
   viewerRole,
+  workspaceRoles = [],
 }: {
   workspaceId: string;
   members: WorkspaceMemberRow[];
   /** Current user's role — Admin+ get per-member edit menus. */
   viewerRole: string;
+  workspaceRoles?: { id: string; name: string }[];
 }) {
   const [open, setOpen] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -116,6 +120,11 @@ export function WorkspaceMembersPanel({
                           · you
                         </span>
                       ) : null}
+                      {member.customRoleNames.length > 0 ? (
+                        <span className="ml-1 block truncate text-[11px] font-normal text-[#0A3D45]/50">
+                          {member.customRoleNames.join(" · ")}
+                        </span>
+                      ) : null}
                     </span>
                     <div className="flex shrink-0 items-center gap-1">
                       {!member.isSelf && !member.isFriend ? (
@@ -139,6 +148,8 @@ export function WorkspaceMembersPanel({
                           memberLabel={member.label}
                           memberRole={member.role}
                           viewerRole={viewerRole}
+                          workspaceRoles={workspaceRoles}
+                          memberCustomRoleIds={member.customRoleIds}
                         />
                       ) : null}
                     </div>

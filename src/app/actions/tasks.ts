@@ -9,9 +9,24 @@ import {
   canEditContent,
   requireMembership,
 } from "@/lib/permissions";
+import { assertCanAccessFolder } from "@/lib/folder-access";
 import type { TaskPriority } from "@/generated/prisma/client";
 import type { ActionResult } from "@/app/actions/auth";
 import { personLabel } from "@/lib/utils";
+
+async function requireTaskFolderAccess(
+  workspaceId: string,
+  membershipId: string,
+  folderId: string,
+): Promise<ActionResult | null> {
+  const access = await assertCanAccessFolder({
+    workspaceId,
+    folderId,
+    membershipId,
+  });
+  if (!access.ok) return access;
+  return null;
+}
 
 export async function createFolderAction(
   _prev: ActionResult | null,
@@ -29,6 +44,15 @@ export async function createFolderAction(
 
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "Folder needs a name." };
+
+  if (parentId) {
+    const access = await assertCanAccessFolder({
+      workspaceId,
+      folderId: parentId,
+      membershipId: membership.id,
+    });
+    if (!access.ok) return access;
+  }
 
   await prisma.folder.create({
     data: { workspaceId, parentId, name },
@@ -59,6 +83,13 @@ export async function renameFolderAction(
   });
   if (!folder) return { ok: false, error: "Folder not found." };
 
+  const access = await assertCanAccessFolder({
+    workspaceId,
+    folderId,
+    membershipId: membership.id,
+  });
+  if (!access.ok) return access;
+
   await prisma.folder.update({
     where: { id: folderId },
     data: { name },
@@ -85,6 +116,13 @@ export async function deleteFolderAction(
     where: { id: folderId, workspaceId },
   });
   if (!folder) return { ok: false, error: "Folder not found." };
+
+  const access = await assertCanAccessFolder({
+    workspaceId,
+    folderId,
+    membershipId: membership.id,
+  });
+  if (!access.ok) return access;
 
   const parentId = folder.parentId;
   await prisma.folder.delete({ where: { id: folderId } });
@@ -126,6 +164,13 @@ export async function createTaskAction(
   });
   if (!folder) return { ok: false, error: "Folder not found." };
 
+  const access = await assertCanAccessFolder({
+    workspaceId,
+    folderId,
+    membershipId: membership.id,
+  });
+  if (!access.ok) return access;
+
   await prisma.task.create({
     data: {
       workspaceId,
@@ -149,12 +194,19 @@ export async function claimTaskAction(
   const user = await requireUser();
   const workspaceId = String(formData.get("workspaceId") ?? "");
   const taskId = String(formData.get("taskId") ?? "");
-  await requireMembership(workspaceId, user.id);
-
   const task = await prisma.task.findFirst({
     where: { id: taskId, workspaceId },
   });
   if (!task) return { ok: false, error: "Task not found." };
+
+  const membership = await requireMembership(workspaceId, user.id);
+  const access = await assertCanAccessFolder({
+    workspaceId,
+    folderId: task.folderId,
+    membershipId: membership.id,
+  });
+  if (!access.ok) return access;
+
   if (task.assigneeId && task.assigneeId !== user.id) {
     return { ok: false, error: "Someone else already claimed this task." };
   }
@@ -200,7 +252,7 @@ export async function unclaimTaskAction(
   const taskId = String(formData.get("taskId") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
   const workNote = String(formData.get("workNote") ?? "").trim();
-  await requireMembership(workspaceId, user.id);
+  const membership = await requireMembership(workspaceId, user.id);
 
   if (!reason) {
     return { ok: false, error: "Say why you’re unclaiming this task." };
@@ -213,6 +265,12 @@ export async function unclaimTaskAction(
     },
   });
   if (!task) return { ok: false, error: "Task not found." };
+  const denied = await requireTaskFolderAccess(
+    workspaceId,
+    membership.id,
+    task.folderId,
+  );
+  if (denied) return denied;
   if (task.assigneeId !== user.id) {
     return { ok: false, error: "Only the assignee can unclaim this task." };
   }
@@ -289,6 +347,12 @@ export async function updateTaskAction(
     where: { id: taskId, workspaceId },
   });
   if (!task) return { ok: false, error: "Task not found." };
+  const denied = await requireTaskFolderAccess(
+    workspaceId,
+    membership.id,
+    task.folderId,
+  );
+  if (denied) return denied;
 
   await prisma.task.update({
     where: { id: taskId },
@@ -334,6 +398,12 @@ export async function forceUnclaimTaskAction(
     },
   });
   if (!task) return { ok: false, error: "Task not found." };
+  const deniedForce = await requireTaskFolderAccess(
+    workspaceId,
+    membership.id,
+    task.folderId,
+  );
+  if (deniedForce) return deniedForce;
   if (!task.assigneeId) {
     return { ok: false, error: "This task isn’t claimed." };
   }
@@ -409,17 +479,22 @@ export async function completeTaskAction(
   const user = await requireUser();
   const workspaceId = String(formData.get("workspaceId") ?? "");
   const taskId = String(formData.get("taskId") ?? "");
-  await requireMembership(workspaceId, user.id);
-
   const comment = String(formData.get("comment") ?? "").trim();
   if (!comment) {
     return { ok: false, error: "Add a short note on what you completed." };
   }
 
+  const membership = await requireMembership(workspaceId, user.id);
   const task = await prisma.task.findFirst({
     where: { id: taskId, workspaceId },
   });
   if (!task) return { ok: false, error: "Task not found." };
+  const deniedComplete = await requireTaskFolderAccess(
+    workspaceId,
+    membership.id,
+    task.folderId,
+  );
+  if (deniedComplete) return deniedComplete;
   if (task.assigneeId !== user.id) {
     return { ok: false, error: "Only the assignee can mark this ready for review." };
   }
@@ -477,6 +552,12 @@ export async function reviewTaskAction(
   if (!task || task.status !== "IN_REVIEW") {
     return { ok: false, error: "Nothing to review." };
   }
+  const deniedReview = await requireTaskFolderAccess(
+    workspaceId,
+    membership.id,
+    task.folderId,
+  );
+  if (deniedReview) return deniedReview;
 
   await prisma.task.update({
     where: { id: taskId },

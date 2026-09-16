@@ -13,9 +13,19 @@ import { FriendInvitePicker } from "@/app/components/friend-invite-picker";
 import { PendingInvitesDropdown } from "@/app/components/pending-invites-dropdown";
 import { ChatSidebarSection } from "@/app/components/chat-sidebar-section";
 import { WorkspaceMembersPanel } from "@/app/components/workspace-members-panel";
+import { WorkspaceRolesPanel } from "@/app/components/workspace-roles-panel";
+import { RoleActivityNotices } from "@/app/components/role-activity-notices";
+import { MarkRoleActivitySeen } from "@/app/components/mark-role-activity-seen";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { computeFolderTaskCounts } from "@/lib/folder-counts";
+import {
+  buildFolderVisibility,
+  canAccessFolder,
+  getRoleActivityUnread,
+  loadUserCustomRoleIds,
+  type FolderAccessRow,
+} from "@/lib/folder-access";
 import { canEditContent, canManagePeople } from "@/lib/permissions";
 import { compareTasksByUrgency } from "@/lib/urgency";
 import { personLabel, searchRelevance } from "@/lib/utils";
@@ -42,10 +52,34 @@ export default async function WorkspacePage({
     where: { id: workspaceId },
   });
 
-  const folders = await prisma.folder.findMany({
-    where: { workspaceId },
-    orderBy: { name: "asc" },
-  });
+  const [folderRecords, userRoleIds, workspaceRoles] = await Promise.all([
+    prisma.folder.findMany({
+      where: { workspaceId },
+      orderBy: { name: "asc" },
+      include: { requiredRoles: { select: { roleId: true } } },
+    }),
+    loadUserCustomRoleIds(membership.id),
+    prisma.workspaceRole.findMany({
+      where: { workspaceId },
+      orderBy: { name: "asc" },
+      include: { _count: { select: { members: true } } },
+    }),
+  ]);
+
+  const folderAccessRows: FolderAccessRow[] = folderRecords.map((f) => ({
+    id: f.id,
+    parentId: f.parentId,
+    name: f.name,
+    requiredRoleIds: f.requiredRoles.map((r) => r.roleId),
+  }));
+  const foldersById = new Map(folderAccessRows.map((f) => [f.id, f]));
+  const visibleFolders = buildFolderVisibility(folderAccessRows, userRoleIds);
+  const accessibleFolderIds = new Set(
+    visibleFolders.filter((f) => f.canAccess).map((f) => f.id),
+  );
+
+  const folders = folderRecords;
+  const roleOptions = workspaceRoles.map((r) => ({ id: r.id, name: r.name }));
 
   const taskCountRows = await prisma.task.groupBy({
     by: ["folderId"],
@@ -60,7 +94,10 @@ export default async function WorkspacePage({
     taskCountRows.map((r) => [r.folderId, r._count._all]),
   );
   const folderCounts = computeFolderTaskCounts(folders, directCounts);
-  const allTasksCount = [...directCounts.values()].reduce((a, b) => a + b, 0);
+  const allTasksCount = [...accessibleFolderIds].reduce(
+    (sum, id) => sum + (directCounts.get(id) ?? 0),
+    0,
+  );
 
   const [doneCountRows, totalCountRows] = await Promise.all([
     prisma.task.groupBy({
@@ -94,7 +131,14 @@ export default async function WorkspacePage({
     redirect(`/app/w/${workspaceId}`);
   }
 
-  const childFolders = folders.filter(
+  if (
+    currentFolder &&
+    !canAccessFolder(currentFolder.id, foldersById, userRoleIds)
+  ) {
+    redirect(`/app/w/${workspaceId}`);
+  }
+
+  const childFolders = visibleFolders.filter(
     (f) => f.parentId === (currentFolder?.id ?? null),
   );
 
@@ -114,15 +158,20 @@ export default async function WorkspacePage({
     : null;
 
   let tasks = isRoot
-    ? await prisma.task.findMany({
-        where: { workspaceId },
-        include: {
-          assignee: true,
-          folder: true,
-          lastUnclaimedBy: true,
-          tags: { include: { tag: true } },
-        },
-      })
+    ? accessibleFolderIds.size === 0
+      ? []
+      : await prisma.task.findMany({
+          where: {
+            workspaceId,
+            folderId: { in: [...accessibleFolderIds] },
+          },
+          include: {
+            assignee: true,
+            folder: true,
+            lastUnclaimedBy: true,
+            tags: { include: { tag: true } },
+          },
+        })
     : currentFolder
       ? await prisma.task.findMany({
           where: { folderId: currentFolder.id },
@@ -168,6 +217,20 @@ export default async function WorkspacePage({
 
   const canEdit = canEditContent(membership.role);
   const canInvite = canManagePeople(membership.role);
+  const canManageRoles = canManagePeople(membership.role);
+
+  const roleActivity = await getRoleActivityUnread(
+    user.id,
+    workspaceId,
+    userRoleIds,
+  );
+
+  const currentRequiredRoleIds = currentFolder
+    ? (foldersById.get(currentFolder.id)?.requiredRoleIds ?? [])
+    : [];
+  const markSeenRoleIds = currentRequiredRoleIds.filter((id) =>
+    userRoleIds.has(id),
+  );
 
   const pendingInvites = canInvite
     ? await prisma.invite.findMany({
@@ -178,7 +241,10 @@ export default async function WorkspacePage({
 
   const workspaceMembers = await prisma.membership.findMany({
     where: { workspaceId },
-    include: { user: true },
+    include: {
+      user: true,
+      customRoles: { include: { role: true } },
+    },
     orderBy: { createdAt: "asc" },
   });
 
@@ -224,10 +290,26 @@ export default async function WorkspacePage({
     username: m.user.username,
     label: personLabel(m.user),
     role: m.role,
+    customRoleIds: m.customRoles.map((cr) => cr.roleId),
+    customRoleNames: m.customRoles.map((cr) => cr.role.name),
     isSelf: m.userId === user.id,
     isFriend: friendIds.has(m.userId),
     requestPending: pendingFriendIds.has(m.userId),
   }));
+
+  const rootFolders = visibleFolders.filter((f) => !f.parentId);
+
+  function folderActionsProps(folderId: string, folderName: string) {
+    const row = foldersById.get(folderId);
+    return {
+      workspaceId,
+      folderId,
+      folderName,
+      canManageRoles,
+      workspaceRoles: roleOptions,
+      requiredRoleIds: row?.requiredRoleIds ?? [],
+    };
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -266,6 +348,19 @@ export default async function WorkspacePage({
           </form>
         </div>
 
+        {roleActivity.length > 0 ? (
+          <div className="mt-6">
+            <RoleActivityNotices workspaceId={workspaceId} items={roleActivity} />
+          </div>
+        ) : null}
+
+        {markSeenRoleIds.length > 0 ? (
+          <MarkRoleActivitySeen
+            workspaceId={workspaceId}
+            roleIds={markSeenRoleIds}
+          />
+        ) : null}
+
         <div className="mt-8 grid gap-6 lg:grid-cols-[240px_1fr]">
           <aside className="space-y-4">
             <div className="tide-panel p-4">
@@ -286,37 +381,50 @@ export default async function WorkspacePage({
                       </span>
                     </Link>
                   </li>
-                  {folders
-                    .filter((f) => !f.parentId)
-                    .map((f) => (
+                  {rootFolders.map((f) => (
                       <li key={f.id}>
                         <div className="group flex items-start justify-between gap-1">
                           <div className="min-w-0 flex-1">
-                            <Link
-                              href={`/app/w/${workspaceId}?folder=${f.id}`}
-                              className={`inline-flex min-w-0 items-center gap-1.5 ${
-                                currentFolder?.id === f.id
-                                  ? "font-semibold text-[#0A3D45]"
-                                  : "text-[#0A3D45]/70 hover:text-[#0A3D45]"
-                              }`}
-                            >
-                              <span className="truncate">{f.name}</span>
-                              <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
-                                {folderCounts.get(f.id) ?? 0}
+                            {f.locked ? (
+                              <span
+                                className="inline-flex min-w-0 cursor-not-allowed items-center gap-1.5 text-[#0A3D45]/45"
+                                title="You don’t have a required role for this folder"
+                                aria-disabled="true"
+                              >
+                                <span className="truncate">{f.name}</span>
+                                <span aria-hidden>🔒</span>
+                                <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/55">
+                                  {folderCounts.get(f.id) ?? 0}
+                                </span>
                               </span>
-                            </Link>
+                            ) : (
+                              <Link
+                                href={`/app/w/${workspaceId}?folder=${f.id}`}
+                                className={`inline-flex min-w-0 items-center gap-1.5 ${
+                                  currentFolder?.id === f.id
+                                    ? "font-semibold text-[#0A3D45]"
+                                    : "text-[#0A3D45]/70 hover:text-[#0A3D45]"
+                                }`}
+                              >
+                                <span className="truncate">{f.name}</span>
+                                {f.requiredRoleIds.length > 0 ? (
+                                  <span className="text-[10px] text-[#0A3D45]/40" title="Role-restricted">
+                                    ●
+                                  </span>
+                                ) : null}
+                                <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
+                                  {folderCounts.get(f.id) ?? 0}
+                                </span>
+                              </Link>
+                            )}
                             <FolderCompletionStats
                               done={folderDoneCounts.get(f.id) ?? 0}
                               total={folderTotalCounts.get(f.id) ?? 0}
                               unclaimed={folderCounts.get(f.id) ?? 0}
                             />
                           </div>
-                          {canEdit ? (
-                            <FolderActions
-                              workspaceId={workspaceId}
-                              folderId={f.id}
-                              folderName={f.name}
-                            />
+                          {canEdit && f.canAccess ? (
+                            <FolderActions {...folderActionsProps(f.id, f.name)} />
                           ) : null}
                         </div>
                       </li>
@@ -383,10 +491,21 @@ export default async function WorkspacePage({
               </div>
             ) : null}
 
+            <WorkspaceRolesPanel
+              workspaceId={workspaceId}
+              roles={workspaceRoles.map((r) => ({
+                id: r.id,
+                name: r.name,
+                memberCount: r._count.members,
+              }))}
+              canManage={canManageRoles}
+            />
+
             <WorkspaceMembersPanel
               workspaceId={workspaceId}
               members={memberRows}
               viewerRole={membership.role}
+              workspaceRoles={roleOptions}
             />
           </aside>
 
@@ -406,9 +525,7 @@ export default async function WorkspacePage({
                 </h2>
                 {canEdit && currentFolder ? (
                   <FolderActions
-                    workspaceId={workspaceId}
-                    folderId={currentFolder.id}
-                    folderName={currentFolder.name}
+                    {...folderActionsProps(currentFolder.id, currentFolder.name)}
                   />
                 ) : null}
               </div>
@@ -422,29 +539,53 @@ export default async function WorkspacePage({
                 <ul className="mt-4 space-y-2">
                   {childFolders.map((f) => (
                     <li key={f.id}>
-                      <div className="group flex items-start justify-between gap-2 rounded-lg border border-[#0A3D45]/10 bg-[#0A3D45]/[0.02] px-3 py-2.5 transition hover:border-[#0A3D45]/20 hover:bg-[#0A3D45]/[0.05]">
+                      <div
+                        className={`group flex items-start justify-between gap-2 rounded-lg border px-3 py-2.5 transition ${
+                          f.locked
+                            ? "cursor-not-allowed border-[#0A3D45]/8 bg-[#0A3D45]/[0.015] opacity-80"
+                            : "border-[#0A3D45]/10 bg-[#0A3D45]/[0.02] hover:border-[#0A3D45]/20 hover:bg-[#0A3D45]/[0.05]"
+                        }`}
+                      >
                         <div className="min-w-0 flex-1">
-                          <Link
-                            href={`/app/w/${workspaceId}?folder=${f.id}`}
-                            className="flex min-w-0 items-center gap-2 text-sm font-semibold text-[#0A3D45]"
-                          >
-                            <span className="truncate">{f.name}</span>
-                            <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
-                              {folderCounts.get(f.id) ?? 0}
+                          {f.locked ? (
+                            <span
+                              className="flex min-w-0 items-center gap-2 text-sm font-semibold text-[#0A3D45]/45"
+                              title="You don’t have a required role for this folder"
+                              aria-disabled="true"
+                            >
+                              <span className="truncate">{f.name}</span>
+                              <span aria-hidden>🔒</span>
+                              <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/55">
+                                {folderCounts.get(f.id) ?? 0}
+                              </span>
                             </span>
-                          </Link>
+                          ) : (
+                            <Link
+                              href={`/app/w/${workspaceId}?folder=${f.id}`}
+                              className="flex min-w-0 items-center gap-2 text-sm font-semibold text-[#0A3D45]"
+                            >
+                              <span className="truncate">{f.name}</span>
+                              {f.requiredRoleIds.length > 0 ? (
+                                <span
+                                  className="text-[10px] text-[#0A3D45]/40"
+                                  title="Role-restricted"
+                                >
+                                  ●
+                                </span>
+                              ) : null}
+                              <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
+                                {folderCounts.get(f.id) ?? 0}
+                              </span>
+                            </Link>
+                          )}
                           <FolderCompletionStats
                             done={folderDoneCounts.get(f.id) ?? 0}
                             total={folderTotalCounts.get(f.id) ?? 0}
                             unclaimed={folderCounts.get(f.id) ?? 0}
                           />
                         </div>
-                        {canEdit ? (
-                          <FolderActions
-                            workspaceId={workspaceId}
-                            folderId={f.id}
-                            folderName={f.name}
-                          />
+                        {canEdit && f.canAccess ? (
+                          <FolderActions {...folderActionsProps(f.id, f.name)} />
                         ) : null}
                       </div>
                     </li>

@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { syncBirthdayNotifications } from "@/lib/birthday";
 import { syncDeadlineNotifications } from "@/lib/deadline-notifications";
 import { prisma } from "@/lib/db";
+import { getRoleActivityUnread } from "@/lib/folder-access";
 import { personLabel } from "@/lib/utils";
 
 export default async function AppSectionLayout({
@@ -22,7 +23,25 @@ export default async function AppSectionLayout({
     syncBirthdayNotifications(user.id),
   ]);
 
-  const [unreadCount, chatUnreadCount, accounts] = await Promise.all([
+  const memberships = await prisma.membership.findMany({
+    where: { userId: user.id },
+    include: { customRoles: { select: { roleId: true } } },
+  });
+
+  const roleUnreadLists = await Promise.all(
+    memberships.map((m) =>
+      getRoleActivityUnread(
+        user.id,
+        m.workspaceId,
+        new Set(m.customRoles.map((cr) => cr.roleId)),
+      ),
+    ),
+  );
+  const roleUnreadTotal = roleUnreadLists
+    .flat()
+    .reduce((sum, row) => sum + row.count, 0);
+
+  const [notifUnread, chatUnreadCount, accounts] = await Promise.all([
     prisma.notification.count({
       where: {
         userId: user.id,
@@ -39,6 +58,8 @@ export default async function AppSectionLayout({
     }),
     getAccountRosterPublic(user.id),
   ]);
+
+  const unreadCount = notifUnread + roleUnreadTotal;
 
   return (
     <div className="tide-wave-bg min-h-screen">
