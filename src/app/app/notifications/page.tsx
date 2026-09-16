@@ -14,8 +14,10 @@ import {
 } from "@/app/actions/birthday";
 import { InlineActionForm } from "@/app/components/forms";
 import { MarkNotificationsSeen } from "@/app/components/mark-notifications-seen";
+import { RoleActivityNotices } from "@/app/components/role-activity-notices";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getRoleActivityUnread } from "@/lib/folder-access";
 
 type NotifMeta = {
   token?: string;
@@ -193,6 +195,31 @@ export default async function NotificationsPage() {
     pendingWorkspaceBirthdayRequests.map((request) => request.id),
   );
 
+  const memberships = await prisma.membership.findMany({
+    where: { userId: user.id },
+    include: {
+      customRoles: { select: { roleId: true } },
+      workspace: { select: { id: true, name: true } },
+    },
+  });
+
+  const roleActivityByWorkspace = (
+    await Promise.all(
+      memberships.map(async (m) => {
+        const items = await getRoleActivityUnread(
+          user.id,
+          m.workspaceId,
+          new Set(m.customRoles.map((cr) => cr.roleId)),
+        );
+        return items.map((item) => ({
+          ...item,
+          workspaceId: m.workspaceId,
+          workspaceName: m.workspace.name,
+        }));
+      }),
+    )
+  ).flat();
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
       <MarkNotificationsSeen hasUnread={hasUnread} />
@@ -200,14 +227,42 @@ export default async function NotificationsPage() {
         Notifications
       </h1>
       <p className="mt-2 text-[#0A3D45]/70">
-        Invites, friends, deadlines, and task updates. Chat messages and DM requests
-        live under Chat. Opening this tab clears the unread badge here.
+        Invites, friends, deadlines, role task activity, and task updates. Chat
+        messages and DM requests live under Chat. Opening this tab clears the
+        unread badge for inbox items (role activity is cleared per role when
+        marked seen or when you open that role’s folders).
       </p>
 
+      {roleActivityByWorkspace.length > 0 ? (
+        <div className="mt-8 space-y-4">
+          {memberships.map((m) => {
+            const items = roleActivityByWorkspace.filter(
+              (row) => row.workspaceId === m.workspaceId,
+            );
+            if (items.length === 0) return null;
+            return (
+              <section key={m.workspaceId}>
+                <h2 className="mb-2 text-sm font-semibold text-[#0A3D45]/70">
+                  {m.workspace.name} · role activity
+                </h2>
+                <RoleActivityNotices
+                  workspaceId={m.workspaceId}
+                  items={items.map(({ roleId, roleName, count }) => ({
+                    roleId,
+                    roleName,
+                    count,
+                  }))}
+                />
+              </section>
+            );
+          })}
+        </div>
+      ) : null}
+
       <ul className="mt-8 space-y-3">
-        {notifications.length === 0 ? (
+        {notifications.length === 0 && roleActivityByWorkspace.length === 0 ? (
           <li className="text-[#0A3D45]/60">You’re all caught up.</li>
-        ) : (
+        ) : notifications.length === 0 ? null : (
           notifications.map((n) => {
             const meta = parseMeta(n.meta);
             const invite =
