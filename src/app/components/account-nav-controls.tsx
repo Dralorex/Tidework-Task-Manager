@@ -142,18 +142,18 @@ export function AppHamburgerMenu({ accounts }: { accounts: NavAccount[] }) {
         Profile
       </Link>
       <Link
+        href="/app/accounts"
+        className={menuItemClass()}
+        onClick={() => setOpen(false)}
+      >
+        Account
+      </Link>
+      <Link
         href="/app/settings"
         className={menuItemClass()}
         onClick={() => setOpen(false)}
       >
         Settings
-      </Link>
-      <Link
-        href="/app/accounts"
-        className={menuItemClass()}
-        onClick={() => setOpen(false)}
-      >
-        Accounts
       </Link>
       <div className="mx-2 my-1 border-t border-[color:var(--tide-deep)]/10" />
       <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--tide-deep)]/45">
