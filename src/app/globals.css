@@ -86,24 +86,76 @@
 }
 
 [data-theme="dark"] {
-  --tide-deep: #d7ebe8;
-  --tide-mid: #7ec8c0;
+  --tide-deep: #ffffff;
+  --tide-mid: #9fd8d1;
   --tide-foam: #0b1719;
   --tide-sea: #3dbeab;
   --tide-coral: #f07a6a;
   --tide-sand: #1a2426;
-  --tide-ink: #e8f7f6;
+  --tide-ink: #ffffff;
+  --tide-title: #b6bfc2;
   --background: #0b1719;
-  --foreground: var(--tide-ink);
+  --foreground: #ffffff;
   --header-bg: rgba(11, 23, 25, 0.92);
   --wave-1: rgba(61, 190, 171, 0.22);
   --wave-2: rgba(126, 200, 192, 0.12);
   --wave-3: rgba(240, 122, 106, 0.12);
   --wave-base: linear-gradient(165deg, #0b1719 0%, #102226 45%, #0f1c1e 100%);
   --panel-bg: rgba(22, 36, 39, 0.85);
-  --panel-border: rgba(215, 235, 232, 0.12);
+  --panel-border: rgba(255, 255, 255, 0.34);
   --input-bg: rgba(16, 28, 30, 0.9);
   --btn-secondary-bg: rgba(22, 36, 39, 0.9);
+}
+
+/* Dark mode: body/UI text reads white; titles a step grayer; outlines brighter */
+[data-theme="dark"] body {
+  color: #ffffff;
+}
+
+[data-theme="dark"] :is(h1, h2, h3, h4, h5, h6, legend) {
+  color: var(--tide-title);
+}
+
+[data-theme="dark"] [class*="font-[family-name:var(--font-display)]"] {
+  color: var(--tide-title);
+}
+
+/* Unmigrated hardcoded teal text → white (keep softer opacity when /xx is present) */
+[data-theme="dark"] [class*="text-[#0A3D45]"] {
+  color: #ffffff;
+}
+
+[data-theme="dark"] [class*="text-[#0A3D45]/"],
+[data-theme="dark"] [class*="text-[#0A3D45]\\/"] {
+  color: color-mix(in srgb, #ffffff 72%, transparent);
+}
+
+[data-theme="dark"] .tide-btn-primary {
+  background: var(--tide-sea);
+  color: #0b1719;
+}
+
+[data-theme="dark"] .tide-btn-primary:hover {
+  background: var(--tide-mid);
+  color: #0b1719;
+}
+
+[data-theme="dark"] .tide-btn-secondary {
+  border-color: rgba(255, 255, 255, 0.38);
+  color: #ffffff;
+}
+
+[data-theme="dark"] .tide-input {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+[data-theme="dark"] .tide-panel {
+  border-color: var(--panel-border);
+}
+
+[data-theme="dark"] [class*="border-[#0A3D45]"] {
+  border-color: rgba(255, 255, 255, 0.28);
 }
 
 [data-theme="burn"] {
