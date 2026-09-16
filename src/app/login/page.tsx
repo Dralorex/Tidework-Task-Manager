@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AuthForm } from "@/app/components/forms";
 import { ShowPasswordField } from "@/app/components/show-password-field";
+import { SignInDurationFields } from "@/app/components/sign-in-duration-fields";
 import { signInAction } from "@/app/actions/auth";
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -62,22 +63,7 @@ export default async function LoginPage({
               />
             </label>
             <ShowPasswordField autoComplete="current-password" />
-            <label className="flex items-start gap-2 text-sm text-[#0A3D45]/80">
-              <input
-                type="checkbox"
-                name="remember"
-                className="mt-0.5 h-4 w-4 accent-[#0A3D45]"
-              />
-              <span>
-                <span className="font-medium text-[#0A3D45]">
-                  Remember my login for 30 days
-                </span>
-                <span className="block text-xs text-[#0A3D45]/60">
-                  Leave unchecked for a quick session that ends when you close
-                  the browser.
-                </span>
-              </span>
-            </label>
+            <SignInDurationFields />
           </AuthForm>
         </div>
 

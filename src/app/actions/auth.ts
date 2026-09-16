@@ -5,6 +5,7 @@ import {
   createSession,
   destroySession,
   hashPassword,
+  parseSignInDuration,
   verifyPassword,
 } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -142,9 +143,9 @@ export async function signInAction(
   const username = normalizeUsername(String(formData.get("username") ?? ""));
   const password = String(formData.get("password") ?? "");
   const next = safeNextPath(formData.get("next"));
-  const remember =
-    String(formData.get("remember") ?? "") === "on" ||
-    String(formData.get("remember") ?? "") === "true";
+  const duration = parseSignInDuration(
+    String(formData.get("signInDuration") ?? ""),
+  );
   const user = await prisma.user.findUnique({ where: { username } });
   if (
     !user ||
@@ -153,7 +154,7 @@ export async function signInAction(
   ) {
     return { ok: false, error: "Incorrect username or password." };
   }
-  await createSession(user.id, { remember });
+  await createSession(user.id, { duration });
   redirect(next ?? "/app");
 }
 

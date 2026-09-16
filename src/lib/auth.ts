@@ -6,13 +6,31 @@ import { prisma } from "@/lib/db";
 import { personLabel } from "@/lib/utils";
 
 const SESSION_COOKIE = "tidework_session";
-/** Persistent “remember me” login length. */
-const REMEMBER_DAYS = 30;
 /**
  * Server-side ceiling for browser-session logins (cookie itself is cleared
  * when the browser closes). Keeps abandoned DB rows from lasting forever.
  */
 const QUICK_SESSION_DAYS = 1;
+/** Practical stand-in for “forever” (browsers may still cap cookie lifetime). */
+const FOREVER_DAYS = 365 * 100;
+
+export type SessionDuration = "session" | 7 | 30 | 180 | 365 | "forever";
+
+export function parseSignInDuration(raw: string): SessionDuration {
+  const value = raw.trim().toLowerCase();
+  if (value === "7") return 7;
+  if (value === "30") return 30;
+  if (value === "180") return 180;
+  if (value === "365") return 365;
+  if (value === "forever") return "forever";
+  return "session";
+}
+
+function durationToDays(duration: SessionDuration): number {
+  if (duration === "session") return QUICK_SESSION_DAYS;
+  if (duration === "forever") return FOREVER_DAYS;
+  return duration;
+}
 
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 12);
@@ -24,14 +42,16 @@ export async function verifyPassword(password: string, hash: string) {
 
 export async function createSession(
   userId: string,
-  opts: { remember?: boolean } = {},
+  opts: { duration?: SessionDuration; remember?: boolean } = {},
 ) {
-  const remember = opts.remember ?? true;
+  // Prefer explicit duration. Legacy `remember` maps to 30 days / session.
+  const duration: SessionDuration =
+    opts.duration ??
+    (opts.remember === false ? "session" : opts.remember === true ? 30 : 30);
+  const persistent = duration !== "session";
   const token = nanoid(48);
   const expiresAt = new Date();
-  expiresAt.setDate(
-    expiresAt.getDate() + (remember ? REMEMBER_DAYS : QUICK_SESSION_DAYS),
-  );
+  expiresAt.setDate(expiresAt.getDate() + durationToDays(duration));
 
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
 
@@ -45,9 +65,9 @@ export async function createSession(
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    // Remember me → persistent cookie. Otherwise a session cookie that
-    // disappears when the browser is closed.
-    ...(remember ? { expires: expiresAt } : {}),
+    // Persistent durations set an expiry. Session-only omits it so the cookie
+    // disappears when the browser closes.
+    ...(persistent ? { expires: expiresAt } : {}),
   });
 
   await upsertRosterAccount({
