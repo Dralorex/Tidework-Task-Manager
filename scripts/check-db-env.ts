@@ -5,6 +5,8 @@
 import { getMigrationDatabaseUrl } from "../src/lib/db-url";
 
 const KNOWN = [
+  "ROWGON_DATABASE_URL",
+  "ROWGON_DATABASE_URL_UNPOOLED",
   "TheHollowCrown_DATABASE_URL",
   "TheHollowCrown_DATABASE_URL_UNPOOLED",
   "DATABASE_URL",
@@ -28,8 +30,8 @@ if (!getMigrationDatabaseUrl()) {
 [db-env] No usable Postgres URL for Prisma migrate.
 
 Fix in Vercel → Project → Settings → Environment Variables:
-  1. Add TheHollowCrown_DATABASE_URL = Neon pooled connection string
-  2. Add TheHollowCrown_DATABASE_URL_UNPOOLED = Neon direct connection string
+  1. Add ROWGON_DATABASE_URL = Neon pooled connection string
+  2. Add ROWGON_DATABASE_URL_UNPOOLED = Neon direct connection string
   3. Enable both for Production AND Preview
   4. Redeploy (env changes do not apply to an already-running build)
 `);

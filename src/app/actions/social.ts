@@ -62,7 +62,7 @@ export async function sendFriendRequestAction(
       userId: other.id,
       type: "FRIEND_REQUEST",
       title: "Friend request",
-      body: `${personLabel(user)} wants to be friends on Tidework.`,
+      body: `${personLabel(user)} wants to be friends on Rowgon.`,
       meta: JSON.stringify({
         fromUserId: user.id,
         friendshipId: friendship.id,

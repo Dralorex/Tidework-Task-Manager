@@ -1,7 +1,7 @@
 import { getAppBaseUrl } from "@/lib/mail";
 
 function shell(title: string, bodyHtml: string, bodyText: string) {
-  const brand = "Tidework";
+  const brand = "Rowgon";
   return {
     html: `<!DOCTYPE html>
 <html>
@@ -16,7 +16,7 @@ function shell(title: string, bodyHtml: string, bodyText: string) {
                 <h1 style="margin:0 0 16px;font-size:24px;line-height:1.3;">${title}</h1>
                 ${bodyHtml}
                 <p style="margin:24px 0 0;font-size:12px;color:rgba(10,61,69,0.55);">
-                  Sent by Tidework regarding your account. Manage email settings in Profile.
+                  Sent by Rowgon regarding your account. Manage email settings in Profile.
                 </p>
               </td>
             </tr>
@@ -26,7 +26,7 @@ function shell(title: string, bodyHtml: string, bodyText: string) {
     </table>
   </body>
 </html>`,
-    text: `${brand}\n\n${title}\n\n${bodyText}\n\nSent by Tidework regarding your account. Manage email settings in Profile.\n`,
+    text: `${brand}\n\n${title}\n\n${bodyText}\n\nSent by Rowgon regarding your account. Manage email settings in Profile.\n`,
   };
 }
 
@@ -36,12 +36,12 @@ export function emailVerificationCodeEmail(opts: {
   email: string;
 }) {
   return {
-    subject: "Your Tidework verification code",
+    subject: "Your Rowgon verification code",
     ...shell(
       "Confirm your email",
       `<p style="margin:0 0 12px;font-size:16px;line-height:1.5;color:rgba(10,61,69,0.85);">
         Hi @${escapeHtml(opts.username)}, use this code to confirm
-        <strong>${escapeHtml(opts.email)}</strong> on Tidework:
+        <strong>${escapeHtml(opts.email)}</strong> on Rowgon:
       </p>
       <p style="margin:0 0 20px;font-size:36px;letter-spacing:0.35em;font-weight:700;color:#0A3D45;">
         ${escapeHtml(opts.code)}
@@ -49,7 +49,7 @@ export function emailVerificationCodeEmail(opts: {
       <p style="margin:0;font-size:14px;line-height:1.5;color:rgba(10,61,69,0.7);">
         This code expires in 15 minutes. If you didn’t request it, you can ignore this email.
       </p>`,
-      `Hi @${opts.username}, your Tidework verification code for ${opts.email} is: ${opts.code}\n\nIt expires in 15 minutes.`,
+      `Hi @${opts.username}, your Rowgon verification code for ${opts.email} is: ${opts.code}\n\nIt expires in 15 minutes.`,
     ),
   };
 }
@@ -61,11 +61,11 @@ export function welcomeAccountEmail(opts: {
   const name = opts.nickname?.trim() || opts.username;
   const appUrl = getAppBaseUrl();
   return {
-    subject: "Welcome to Tidework",
+    subject: "Welcome to Rowgon",
     ...shell(
       "Thanks for creating your account",
       `<p style="margin:0 0 12px;font-size:16px;line-height:1.5;color:rgba(10,61,69,0.85);">
-        Hi ${escapeHtml(name)}, thanks for joining Tidework. Your account is ready —
+        Hi ${escapeHtml(name)}, thanks for joining Rowgon. Your account is ready —
         you can sign in anytime with your username <strong>@${escapeHtml(opts.username)}</strong>.
       </p>
       <p style="margin:0 0 20px;font-size:16px;line-height:1.5;color:rgba(10,61,69,0.85);">
@@ -73,17 +73,17 @@ export function welcomeAccountEmail(opts: {
       </p>
       <p style="margin:0;">
         <a href="${appUrl}/app" style="display:inline-block;background:#0A3D45;color:#E8F7F6;text-decoration:none;padding:12px 18px;border-radius:999px;font-size:14px;">
-          Open Tidework
+          Open Rowgon
         </a>
       </p>`,
-      `Hi ${name}, thanks for joining Tidework. Your account is ready — sign in with @${opts.username}.\n\nOpen Tidework: ${appUrl}/app`,
+      `Hi ${name}, thanks for joining Rowgon. Your account is ready — sign in with @${opts.username}.\n\nOpen Rowgon: ${appUrl}/app`,
     ),
   };
 }
 
 export function passwordResetEmail(opts: { username: string; code: string }) {
   return {
-    subject: "Your Tidework password reset code",
+    subject: "Your Rowgon password reset code",
     code: opts.code,
     ...shell(
       "Password reset",
@@ -94,10 +94,10 @@ export function passwordResetEmail(opts: { username: string; code: string }) {
         ${escapeHtml(opts.code)}
       </p>
       <p style="margin:0;font-size:14px;line-height:1.5;color:rgba(10,61,69,0.7);">
-        Enter this code on the Tidework website to choose a new password. It expires in 15 minutes.
+        Enter this code on the Rowgon website to choose a new password. It expires in 15 minutes.
         If you didn’t ask for a reset, you can ignore this email.
       </p>`,
-      `Reset the password for @${opts.username}.\n\nYour code: ${opts.code}\n\nEnter it on the Tidework website within 15 minutes.\n\nIf you didn’t ask for a reset, ignore this email.`,
+      `Reset the password for @${opts.username}.\n\nYour code: ${opts.code}\n\nEnter it on the Rowgon website within 15 minutes.\n\nIf you didn’t ask for a reset, ignore this email.`,
     ),
   };
 }

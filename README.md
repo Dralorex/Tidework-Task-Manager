@@ -1,6 +1,8 @@
-# Tidework Task Manager
+# Rowgon Task Manager
 
-Collaborative task management where urgency rises with due dates — nested folders, claimable tasks, roles, friends, and private chats.
+Collaborative task management — nested folders, claimable tasks, roles, friends, and private chats.
+
+Production: [https://rowgon.com](https://rowgon.com)
 
 ## Features (v1)
 
@@ -13,6 +15,7 @@ Collaborative task management where urgency rises with due dates — nested fold
 - **Search** — name relevance + tag filters in the current folder area
 - **Invites** — Owner/Admin invite by username or email
 - **Social** — friends; DMs (friends free; workspace DMs need accept); Admin+ group chats
+- **Custom roles** — workspace roles for folder access and role-based task alerts
 
 ## Stack
 
@@ -33,7 +36,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-Demo login after seeding: **`tide_demo` / `password123`**
+Demo login after seeding: **`rowgon_demo` / `password123`**
 
 ## Deploy to Vercel
 
@@ -43,11 +46,14 @@ Demo login after seeding: **`tide_demo` / `password123`**
    - **Neon integration** in Vercel → Storage / Marketplace, **or**
    - Paste env vars from the [Neon console](https://console.neon.tech) under **Settings → Environment Variables**
 4. Ensure these are set for **Production** and **Preview** (empty values count as missing):
-   - `TheHollowCrown_DATABASE_URL` — Neon **pooled** connection string  
-   - `TheHollowCrown_DATABASE_URL_UNPOOLED` — Neon **direct** connection string  
-5. Redeploy. The build runs `prisma migrate deploy`, seeds the demo user, then `next build`.
+   - `ROWGON_DATABASE_URL` — Neon **pooled** connection string  
+   - `ROWGON_DATABASE_URL_UNPOOLED` — Neon **direct** connection string  
+   - `APP_URL` — `https://rowgon.com`
+   - `EMAIL_FROM` — e.g. `Rowgon <noreply@rowgon.com>` (after verifying the domain in Resend)
+5. Point the Vercel project’s production domain to **rowgon.com** (and `www` if you use it).
+6. Redeploy. The build runs `prisma migrate deploy`, seeds the demo user, then `next build`.
 
-If the build says the connection URL is empty, the env vars were not applied to that environment — open the failed deployment → **Environment**, confirm `TheHollowCrown_DATABASE_URL` is present, then **Redeploy**.
+If the build says the connection URL is empty, the env vars were not applied to that environment — open the failed deployment → **Environment**, confirm `ROWGON_DATABASE_URL` is present, then **Redeploy**. Legacy `TheHollowCrown_DATABASE_URL*` names are still accepted as fallbacks.
 
 ## Scripts
 

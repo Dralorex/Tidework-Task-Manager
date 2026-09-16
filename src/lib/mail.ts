@@ -12,7 +12,7 @@ export function getAppBaseUrl() {
 export function getEmailFrom() {
   return (
     process.env.EMAIL_FROM?.trim() ||
-    "Tidework <onboarding@resend.dev>"
+    "Rowgon <onboarding@resend.dev>"
   );
 }
 
@@ -57,7 +57,7 @@ export function explainMailError(raw: string): string {
   if (lower.includes("domain is not verified") || lower.includes("not verified")) {
     return (
       "EMAIL_FROM uses a domain that isn’t verified in Resend. " +
-      "Verify it at resend.com/domains or use Tidework <onboarding@resend.dev> " +
+      "Verify it at resend.com/domains or use Rowgon <onboarding@resend.dev> " +
       "and only mail your Resend account email."
     );
   }
@@ -75,7 +75,7 @@ export async function sendEmail(
 ): Promise<{ ok: true; mocked: boolean } | { ok: false; error: string }> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) {
-    console.info("[tidework:mail:dev]", {
+    console.info("[rowgon:mail:dev]", {
       to: input.to,
       subject: input.subject,
       text: input.text,
@@ -106,12 +106,12 @@ export async function sendEmail(
       },
     });
     if (result.error) {
-      console.error("[tidework:mail]", result.error);
+      console.error("[rowgon:mail]", result.error);
       return { ok: false, error: explainMailError(result.error.message) };
     }
     return { ok: true, mocked: false };
   } catch (err) {
-    console.error("[tidework:mail]", err);
+    console.error("[rowgon:mail]", err);
     const raw = err instanceof Error ? err.message : "Failed to send email.";
     return { ok: false, error: explainMailError(raw) };
   }

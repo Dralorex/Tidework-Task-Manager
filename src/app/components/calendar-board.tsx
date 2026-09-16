@@ -504,7 +504,7 @@ function EventRow({
   );
 }
 
-const CALENDAR_PREFS_KEY = "tidework.calendar.prefs";
+const CALENDAR_PREFS_KEY = "rowgon.calendar.prefs";
 
 type CalendarPrefs = {
   scope?: Scope;

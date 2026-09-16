@@ -1,15 +1,14 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
-import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { getDatabaseUrl } from "../src/lib/db-url";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+
+const adapter = new PrismaBetterSqlite3({
+  url: process.env.DATABASE_URL ?? "file:./prisma/dev.db",
+});
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const connectionString = getDatabaseUrl();
-  const prisma = new PrismaClient({
-    adapter: new PrismaNeon({ connectionString }),
-  });
-
   const passwordHash = await bcrypt.hash("password123", 12);
   const user = await prisma.user.upsert({
     where: { username: "rowgon_demo" },
@@ -43,28 +42,37 @@ async function main() {
     });
   }
 
-  const existingTask = await prisma.task.findFirst({
-    where: { workspaceId: workspace.id, folderId: folder.id, name: "Ship landing page" },
+  let task = await prisma.task.findFirst({
+    where: { workspaceId: workspace.id, name: "Ship landing page" },
   });
-  if (!existingTask) {
-    await prisma.task.create({
+  if (!task) {
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 2);
+    task = await prisma.task.create({
       data: {
         workspaceId: workspace.id,
         folderId: folder.id,
         name: "Ship landing page",
-        description: "Polish hero, signup, and workspace shell.",
+        description: "First draft of marketing page",
         priority: "HIGH",
-        dueDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3),
+        dueDate,
         createdById: user.id,
       },
     });
   }
 
-  console.log("Seeded demo user rowgon_demo / password123");
-  await prisma.$disconnect();
+  console.log({
+    userId: user.id,
+    workspaceId: workspace.id,
+    folderId: folder.id,
+    taskId: task.id,
+  });
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+main()
+  .then(() => prisma.$disconnect())
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

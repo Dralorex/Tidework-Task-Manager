@@ -25,7 +25,7 @@ export default async function LoginPage({
           href={addingAccount ? "/app/accounts" : "/"}
           className="font-[family-name:var(--font-display)] text-2xl text-[color:var(--tide-deep)]"
         >
-          Tidework
+          Rowgon
         </Link>
         <h1 className="mt-4 font-[family-name:var(--font-display)] text-3xl text-[color:var(--tide-deep)]">
           {addingAccount ? "Add an account" : "Welcome back"}

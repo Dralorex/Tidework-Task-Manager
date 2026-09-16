@@ -2,7 +2,8 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { personLabel } from "@/lib/utils";
 
-export const ACCOUNT_ROSTER_COOKIE = "tidework_accounts";
+export const ACCOUNT_ROSTER_COOKIE = "rowgon_accounts";
+const LEGACY_ACCOUNT_ROSTER_COOKIE = "tidework_accounts";
 
 export type RosterAccount = {
   userId: string;
@@ -51,11 +52,15 @@ async function writeRoster(accounts: RosterAccount[]) {
     path: "/",
     expires: new Date(maxExpires),
   });
+  cookieStore.delete(LEGACY_ACCOUNT_ROSTER_COOKIE);
 }
 
 export async function getAccountRoster(): Promise<RosterAccount[]> {
   const cookieStore = await cookies();
-  const accounts = decodeRoster(cookieStore.get(ACCOUNT_ROSTER_COOKIE)?.value);
+  const accounts = decodeRoster(
+    cookieStore.get(ACCOUNT_ROSTER_COOKIE)?.value ??
+      cookieStore.get(LEGACY_ACCOUNT_ROSTER_COOKIE)?.value,
+  );
   const now = Date.now();
   const valid: RosterAccount[] = [];
 

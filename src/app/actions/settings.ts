@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import {
   THEME_COOKIE,
+  LEGACY_THEME_COOKIE,
   isDisplayThemeId,
   type DisplayThemeId,
 } from "@/lib/theme";
@@ -28,6 +29,7 @@ export async function setDisplayThemeAction(
     path: "/",
     maxAge: 60 * 60 * 24 * 365 * 5,
   });
+  cookieStore.delete(LEGACY_THEME_COOKIE);
 
   revalidatePath("/", "layout");
   return { ok: true };

@@ -23,14 +23,14 @@ export default async function SignUpPage({
           href={addingAccount ? "/app/accounts" : "/"}
           className="font-[family-name:var(--font-display)] text-2xl text-[color:var(--tide-deep)]"
         >
-          Tidework
+          Rowgon
         </Link>
         <h1 className="mt-4 font-[family-name:var(--font-display)] text-3xl text-[color:var(--tide-deep)]">
           {addingAccount ? "Create another account" : "Create your account"}
         </h1>
         <p className="mt-2 text-sm text-[color:var(--tide-deep)]/70">
           {addingAccount
-            ? "Make a new login for this device — personal, business, or anything else. Same Tidework, separate account."
+            ? "Make a new login for this device — personal, business, or anything else. Same Rowgon, separate account."
             : "Username and password are enough. Add an email to get a welcome confirmation and password reset later."}
         </p>
 

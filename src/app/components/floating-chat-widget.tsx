@@ -12,7 +12,7 @@ import {
 import { sendMessageAction } from "@/app/actions/social";
 import { MarkChatSeen } from "@/app/components/mark-chat-seen";
 
-const STORAGE_KEY = "tidework.chat.widget";
+const STORAGE_KEY = "rowgon.chat.widget";
 
 type ChatTab = "dms" | "groups" | "workspace-groups";
 type View = "hub" | "list" | "thread";
