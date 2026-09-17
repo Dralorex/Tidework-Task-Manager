@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { ActionResult } from "@/app/actions/auth";
 import { EmailVerifyModal } from "@/app/components/email-verify-modal";
 import { PasswordFields } from "@/app/components/password-fields";
+import { SignInDurationFields } from "@/app/components/sign-in-duration-fields";
 
 type FormAction = (
   prev: ActionResult | null,
@@ -106,6 +107,8 @@ export function SignUpForm({
         <p className="text-xs leading-relaxed text-[#0A3D45]/60">
           Add an email to verify with a 4-digit code and enable password resets.
         </p>
+
+        <SignInDurationFields />
 
         {state && !state.ok ? (
           <p className="rounded-lg bg-[#E85D4C]/12 px-3 py-2 text-sm text-[#9b2f22]">

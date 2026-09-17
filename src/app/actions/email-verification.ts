@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createSession, getCurrentUser, requireUser } from "@/lib/auth";
+import { createSession, getCurrentUser, parseSignInDuration, requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { welcomeAccountEmail } from "@/lib/email-templates";
 import {
@@ -110,7 +110,9 @@ export async function verifyEmailCodeAction(
       },
     });
     await prisma.pendingSignup.delete({ where: { id: pending.id } });
-    await createSession(user.id);
+    await createSession(user.id, {
+      duration: parseSignInDuration(pending.signInDuration),
+    });
 
     const content = welcomeAccountEmail({
       username: user.username,

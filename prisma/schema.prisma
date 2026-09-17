@@ -142,14 +142,16 @@ model EmailVerification {
 
 /** Signup with email: account is created only after the code is verified. */
 model PendingSignup {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  passwordHash String
-  email        String
-  code         String
-  expiresAt    DateTime
-  lastSentAt   DateTime @default(now())
-  createdAt    DateTime @default(now())
+  id             String   @id @default(cuid())
+  username       String   @unique
+  passwordHash   String
+  email          String
+  code           String
+  /** Parsed by parseSignInDuration — session | 7 | 30 | 180 | 365 | forever */
+  signInDuration String   @default("session")
+  expiresAt      DateTime
+  lastSentAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
 
   @@index([email])
 }

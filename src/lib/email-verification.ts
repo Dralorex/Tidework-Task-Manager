@@ -86,6 +86,7 @@ export async function issuePendingSignup(opts: {
   username: string;
   passwordHash: string;
   email: string;
+  signInDuration?: string;
   forceResend?: boolean;
   pendingId?: string;
 }): Promise<
@@ -112,6 +113,8 @@ export async function issuePendingSignup(opts: {
   const code = generateEmailCode();
   const expiresAt = new Date(Date.now() + EMAIL_CODE_TTL_MS);
   const now = new Date();
+  const signInDuration =
+    opts.signInDuration?.trim() || existing?.signInDuration || "session";
 
   const pending = existing
     ? await prisma.pendingSignup.update({
@@ -121,6 +124,9 @@ export async function issuePendingSignup(opts: {
           email,
           code,
           expiresAt,
+          ...(opts.signInDuration?.trim()
+            ? { signInDuration: opts.signInDuration.trim() }
+            : {}),
         },
       })
     : await prisma.pendingSignup.create({
@@ -130,6 +136,7 @@ export async function issuePendingSignup(opts: {
           email,
           code,
           expiresAt,
+          signInDuration,
           lastSentAt: new Date(0),
         },
       });

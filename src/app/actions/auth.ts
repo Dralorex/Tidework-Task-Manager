@@ -104,6 +104,9 @@ export async function signUpAction(
 
   const email = emailRaw ? emailRaw.toLowerCase() : null;
   const passwordHash = await hashPassword(password);
+  const duration = parseSignInDuration(
+    String(formData.get("signInDuration") ?? ""),
+  );
 
   // With email: hold the signup until the code is verified — don't create the User yet.
   if (email) {
@@ -111,6 +114,7 @@ export async function signUpAction(
       username,
       passwordHash,
       email,
+      signInDuration: String(duration),
     });
     if (!issued.ok) {
       return { ok: false, error: issued.error };
@@ -132,7 +136,7 @@ export async function signUpAction(
     },
   });
 
-  await createSession(user.id, { remember: true });
+  await createSession(user.id, { duration });
   redirect(next ?? "/app");
 }
 
