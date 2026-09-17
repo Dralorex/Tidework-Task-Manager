@@ -24,7 +24,7 @@ export function DisplayThemeSettings({
       <div>
         <h2 className="font-semibold text-[color:var(--tide-deep)]">Display</h2>
         <p className="mt-1 text-xs text-[color:var(--tide-deep)]/60">
-          Color modes for Tidework on this device. Cool mode is the default.
+          Color modes for Rowgon on this device. Cool mode is the default.
         </p>
       </div>
       <ul className="space-y-2">

@@ -11,7 +11,8 @@ function firstNonEmpty(...values: Array<string | undefined>): string | undefined
 }
 
 const POOLED_CANDIDATES = [
-  "TheHollowCrown_DATABASE_URL",
+  "ROWGON_DATABASE_URL",
+  "TheHollowCrown_DATABASE_URL", // legacy — keep until Vercel env is renamed
   "DATABASE_URL",
   "POSTGRES_PRISMA_URL",
   "POSTGRES_URL",
@@ -19,9 +20,11 @@ const POOLED_CANDIDATES = [
 ] as const;
 
 const DIRECT_CANDIDATES = [
-  "TheHollowCrown_DATABASE_URL_UNPOOLED",
+  "ROWGON_DATABASE_URL_UNPOOLED",
+  "TheHollowCrown_DATABASE_URL_UNPOOLED", // legacy
   "DATABASE_URL_UNPOOLED",
   "POSTGRES_URL_NON_POOLING",
+  "ROWGON_DATABASE_URL",
   "TheHollowCrown_DATABASE_URL",
   "DATABASE_URL",
   "POSTGRES_PRISMA_URL",
@@ -38,7 +41,7 @@ export function getDatabaseUrl(): string {
   const url = readEnv(POOLED_CANDIDATES);
   if (!url) {
     throw new Error(
-      "No database URL found. Set TheHollowCrown_DATABASE_URL (Neon pooled) for Production and Preview in Vercel.",
+      "No database URL found. Set ROWGON_DATABASE_URL (Neon pooled) for Production and Preview in Vercel.",
     );
   }
   return url;
@@ -56,7 +59,7 @@ export function requireMigrationDatabaseUrl(): string {
   const url = getMigrationDatabaseUrl();
   if (!url) {
     throw new Error(
-      "No migration database URL found. Set TheHollowCrown_DATABASE_URL_UNPOOLED (Neon direct) or TheHollowCrown_DATABASE_URL in Vercel.",
+      "No migration database URL found. Set ROWGON_DATABASE_URL_UNPOOLED (Neon direct) or ROWGON_DATABASE_URL in Vercel.",
     );
   }
   return url;

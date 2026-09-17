@@ -2,14 +2,17 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { DisplayThemeSettings } from "@/app/components/display-theme-settings";
 import { getCurrentUser } from "@/lib/auth";
-import { THEME_COOKIE, parseDisplayTheme } from "@/lib/theme";
+import { THEME_COOKIE, LEGACY_THEME_COOKIE, parseDisplayTheme } from "@/lib/theme";
 import Link from "next/link";
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const cookieStore = await cookies();
-  const theme = parseDisplayTheme(cookieStore.get(THEME_COOKIE)?.value);
+  const theme = parseDisplayTheme(
+    cookieStore.get(THEME_COOKIE)?.value ??
+      cookieStore.get(LEGACY_THEME_COOKIE)?.value,
+  );
 
   return (
     <main className="mx-auto max-w-lg px-4 py-10">

@@ -5,7 +5,8 @@ import { upsertRosterAccount, removeRosterAccount } from "@/lib/account-roster";
 import { prisma } from "@/lib/db";
 import { personLabel } from "@/lib/utils";
 
-const SESSION_COOKIE = "tidework_session";
+const SESSION_COOKIE = "rowgon_session";
+const LEGACY_SESSION_COOKIE = "tidework_session";
 /**
  * Server-side ceiling for browser-session logins (cookie itself is cleared
  * when the browser closes). Keeps abandoned DB rows from lasting forever.
@@ -97,11 +98,14 @@ export async function setSessionCookieFromToken(
 
 export async function destroySession(opts: { removeFromRoster?: boolean } = {}) {
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  const token =
+    cookieStore.get(SESSION_COOKIE)?.value ??
+    cookieStore.get(LEGACY_SESSION_COOKIE)?.value;
   if (token) {
     const session = await prisma.session.findUnique({ where: { token } });
     await prisma.session.deleteMany({ where: { token } });
     cookieStore.delete(SESSION_COOKIE);
+    cookieStore.delete(LEGACY_SESSION_COOKIE);
     if (opts.removeFromRoster !== false && session) {
       await removeRosterAccount(session.userId);
     }
@@ -110,7 +114,9 @@ export async function destroySession(opts: { removeFromRoster?: boolean } = {}) 
 
 export async function getCurrentUser() {
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  const token =
+    cookieStore.get(SESSION_COOKIE)?.value ??
+    cookieStore.get(LEGACY_SESSION_COOKIE)?.value;
   if (!token) return null;
 
   const session = await prisma.session.findUnique({
@@ -128,6 +134,7 @@ export async function getCurrentUser() {
   if (session.user.deletedAt) {
     await prisma.session.deleteMany({ where: { userId: session.user.id } });
     cookieStore.delete(SESSION_COOKIE);
+    cookieStore.delete(LEGACY_SESSION_COOKIE);
     await removeRosterAccount(session.user.id);
     return null;
   }

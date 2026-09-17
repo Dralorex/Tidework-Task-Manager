@@ -1,4 +1,5 @@
-export const THEME_COOKIE = "tidework_theme";
+export const THEME_COOKIE = "rowgon_theme";
+export const LEGACY_THEME_COOKIE = "tidework_theme";
 
 export const DISPLAY_THEMES = [
   {

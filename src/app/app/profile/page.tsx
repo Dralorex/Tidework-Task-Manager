@@ -15,7 +15,7 @@ export default async function ProfilePage() {
         Profile
       </h1>
       <p className="mt-2 text-sm text-[#0A3D45]/70">
-        Shown as {personLabel(user)} across Tidework. Nickname is preferred once
+        Shown as {personLabel(user)} across Rowgon. Nickname is preferred once
         set.
       </p>
 

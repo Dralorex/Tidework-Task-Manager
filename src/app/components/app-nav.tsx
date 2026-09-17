@@ -135,7 +135,7 @@ export function AppNav({
             href="/app"
             className="font-[family-name:var(--font-display)] text-lg text-[color:var(--tide-deep)]"
           >
-            Tidework
+            Rowgon
           </Link>
           {accountCluster(true)}
         </div>
@@ -174,7 +174,7 @@ export function AppNav({
           href="/app"
           className="font-[family-name:var(--font-display)] text-xl text-[color:var(--tide-deep)]"
         >
-          Tidework
+          Rowgon
         </Link>
         <nav className="flex flex-wrap items-center gap-1">
           {TABS.map((tab) => {

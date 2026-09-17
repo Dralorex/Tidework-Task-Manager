@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Nunito } from "next/font/google";
 import { cookies } from "next/headers";
-import { THEME_COOKIE, parseDisplayTheme } from "@/lib/theme";
+import { THEME_COOKIE, LEGACY_THEME_COOKIE, parseDisplayTheme } from "@/lib/theme";
 import "./globals.css";
 
 const display = Fraunces({
@@ -16,14 +16,18 @@ const body = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "Tidework Task Manager",
+  metadataBase: new URL("https://rowgon.com"),
+  title: "Rowgon Task Manager",
   description:
-    "Claim work as the tide rises. Nested folders, urgency that pulls due tasks up, friends, and private chats.",
+    "Nested folders, urgency that pulls due tasks up, friends, and private chats.",
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const cookieStore = await cookies();
-  const theme = parseDisplayTheme(cookieStore.get(THEME_COOKIE)?.value);
+  const theme = parseDisplayTheme(
+    cookieStore.get(THEME_COOKIE)?.value ??
+      cookieStore.get(LEGACY_THEME_COOKIE)?.value,
+  );
 
   return (
     <html

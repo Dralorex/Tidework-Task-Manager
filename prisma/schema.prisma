@@ -1,4 +1,4 @@
-// Tidework Task Manager — Prisma schema
+// Rowgon Task Manager — Prisma schema
 
 generator client {
   provider = "prisma-client"
