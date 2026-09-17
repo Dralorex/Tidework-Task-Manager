@@ -10,9 +10,13 @@ function firstNonEmpty(...values: Array<string | undefined>): string | undefined
   return undefined;
 }
 
+/** Neon/Vercel storage for this project is named `rowgon_storage`. */
 const POOLED_CANDIDATES = [
+  "rowgon_storage_DATABASE_URL",
+  "rowgon_storage_POSTGRES_PRISMA_URL",
+  "rowgon_storage_POSTGRES_URL",
   "ROWGON_DATABASE_URL",
-  "TheHollowCrown_DATABASE_URL", // legacy — keep until Vercel env is renamed
+  "TheHollowCrown_DATABASE_URL", // legacy
   "DATABASE_URL",
   "POSTGRES_PRISMA_URL",
   "POSTGRES_URL",
@@ -20,10 +24,14 @@ const POOLED_CANDIDATES = [
 ] as const;
 
 const DIRECT_CANDIDATES = [
+  "rowgon_storage_DATABASE_URL_UNPOOLED",
+  "rowgon_storage_POSTGRES_URL_NON_POOLING",
   "ROWGON_DATABASE_URL_UNPOOLED",
   "TheHollowCrown_DATABASE_URL_UNPOOLED", // legacy
   "DATABASE_URL_UNPOOLED",
   "POSTGRES_URL_NON_POOLING",
+  "rowgon_storage_DATABASE_URL",
+  "rowgon_storage_POSTGRES_URL",
   "ROWGON_DATABASE_URL",
   "TheHollowCrown_DATABASE_URL",
   "DATABASE_URL",
@@ -41,7 +49,7 @@ export function getDatabaseUrl(): string {
   const url = readEnv(POOLED_CANDIDATES);
   if (!url) {
     throw new Error(
-      "No database URL found. Set ROWGON_DATABASE_URL (Neon pooled) for Production and Preview in Vercel.",
+      "No database URL found. Set rowgon_storage_DATABASE_URL (Neon pooled) for Production and Preview in Vercel.",
     );
   }
   return url;
@@ -59,7 +67,7 @@ export function requireMigrationDatabaseUrl(): string {
   const url = getMigrationDatabaseUrl();
   if (!url) {
     throw new Error(
-      "No migration database URL found. Set ROWGON_DATABASE_URL_UNPOOLED (Neon direct) or ROWGON_DATABASE_URL in Vercel.",
+      "No migration database URL found. Set rowgon_storage_DATABASE_URL_UNPOOLED (Neon direct) or rowgon_storage_DATABASE_URL in Vercel.",
     );
   }
   return url;
