@@ -46,14 +46,14 @@ Demo login after seeding: **`rowgon_demo` / `password123`**
    - **Neon integration** in Vercel → Storage / Marketplace, **or**
    - Paste env vars from the [Neon console](https://console.neon.tech) under **Settings → Environment Variables**
 4. Ensure these are set for **Production** and **Preview** (empty values count as missing):
-   - `ROWGON_DATABASE_URL` — Neon **pooled** connection string  
-   - `ROWGON_DATABASE_URL_UNPOOLED` — Neon **direct** connection string  
+   - `rowgon_storage_DATABASE_URL` — Neon **pooled** connection string  
+   - `rowgon_storage_DATABASE_URL_UNPOOLED` — Neon **direct** connection string  
    - `APP_URL` — `https://rowgon.com`
    - `EMAIL_FROM` — e.g. `Rowgon <noreply@rowgon.com>` (after verifying the domain in Resend)
 5. Point the Vercel project’s production domain to **rowgon.com** (and `www` if you use it).
 6. Redeploy. The build runs `prisma migrate deploy`, seeds the demo user, then `next build`.
 
-If the build says the connection URL is empty, the env vars were not applied to that environment — open the failed deployment → **Environment**, confirm `ROWGON_DATABASE_URL` is present, then **Redeploy**. Legacy `TheHollowCrown_DATABASE_URL*` names are still accepted as fallbacks.
+If the build says the connection URL is empty, the env vars were not applied to that environment — open the failed deployment → **Environment**, confirm `rowgon_storage_DATABASE_URL` is present, then **Redeploy**. Older `ROWGON_DATABASE_URL*` / `TheHollowCrown_DATABASE_URL*` names are still accepted as fallbacks.
 
 ## Scripts
 
