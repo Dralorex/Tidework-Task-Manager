@@ -6,6 +6,7 @@ import { FolderCompletionStats } from "@/app/components/folder-completion-stats"
 import { WorkspaceTaskRow } from "@/app/components/workspace-task-row";
 import { TaskStatusSections } from "@/app/components/task-status-sections";
 import { DueDateField } from "@/app/components/due-date-field";
+import { PriorityField } from "@/app/components/priority-field";
 import {
   createFolderAction,
   createTaskAction,
@@ -641,20 +642,7 @@ export default async function WorkspacePage({
                   <input type="hidden" name="workspaceId" value={workspaceId} />
                   <input type="hidden" name="folderId" value={currentFolder.id} />
                   <input name="name" required placeholder="Task name" className="tide-input" />
-                  <select
-                    name="priority"
-                    required
-                    defaultValue=""
-                    className="tide-input text-[color-mix(in_srgb,var(--tide-ink)_45%,transparent)] valid:text-[var(--tide-ink)]"
-                  >
-                    <option value="" disabled>
-                      Priority level
-                    </option>
-                    <option value="CRITICAL">Critical</option>
-                    <option value="HIGH">High</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="LOW">Low</option>
-                  </select>
+                  <PriorityField />
                   <input
                     name="description"
                     placeholder="Description"

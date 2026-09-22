@@ -160,6 +160,27 @@
   border-color: rgba(255, 255, 255, 0.28);
 }
 
+/* Calendar: day cells + event chips/rows match the dark canvas so titles pop */
+[data-theme="dark"] .calendar-day-cell {
+  background: color-mix(in srgb, var(--background) 88%, #ffffff 4%);
+}
+
+[data-theme="dark"] .calendar-day-cell-muted {
+  background: color-mix(in srgb, var(--background) 96%, transparent);
+}
+
+[data-theme="dark"] .calendar-event-chip {
+  background: var(--background);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+[data-theme="dark"] .calendar-event-row {
+  background: var(--background);
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: none;
+}
+
 [data-theme="burn"] {
   --tide-deep: #3b1d14;
   --tide-mid: #a34528;
@@ -248,6 +269,15 @@ body {
   color: var(--tide-ink);
   outline: none;
   transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.tide-input-hint {
+  color: color-mix(in srgb, var(--tide-ink) 45%, transparent);
+}
+
+.tide-input option {
+  color: var(--tide-ink);
+  background: var(--input-bg);
 }
 
 .tide-input:focus {
