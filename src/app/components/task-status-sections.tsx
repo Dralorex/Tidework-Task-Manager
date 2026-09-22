@@ -5,6 +5,7 @@ import {
   WorkspaceTaskRow,
   type WorkspaceTaskData,
 } from "@/app/components/workspace-task-row";
+import type { UrgencyChipPrefs } from "@/app/components/task-ui";
 import type { TaskStatus } from "@/generated/prisma/client";
 
 type SectionId = "unclaimed" | "claimed" | "completed";
@@ -73,6 +74,7 @@ export function TaskStatusSections({
   tasks,
   publicTagOptions = [],
   privateTagOptions = [],
+  urgencyChips,
 }: {
   workspaceId: string;
   userId: string;
@@ -80,6 +82,7 @@ export function TaskStatusSections({
   tasks: WorkspaceTaskData[];
   publicTagOptions?: string[];
   privateTagOptions?: string[];
+  urgencyChips?: UrgencyChipPrefs;
 }) {
   const grouped: Record<SectionId, WorkspaceTaskData[]> = {
     unclaimed: [],
@@ -121,6 +124,7 @@ export function TaskStatusSections({
                   task={task}
                   publicTagOptions={publicTagOptions}
                   privateTagOptions={privateTagOptions}
+                  urgencyChips={urgencyChips}
                 />
               ))
             )}

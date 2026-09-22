@@ -19,6 +19,7 @@ import { PendingInvitesDropdown } from "@/app/components/pending-invites-dropdow
 import { ChatSidebarSection } from "@/app/components/chat-sidebar-section";
 import { WorkspaceMembersPanel } from "@/app/components/workspace-members-panel";
 import { WorkspaceRolesPanel } from "@/app/components/workspace-roles-panel";
+import { UrgencyChipSettings } from "@/app/components/urgency-chip-settings";
 import { RoleActivityNotices } from "@/app/components/role-activity-notices";
 import { MarkRoleActivitySeen } from "@/app/components/mark-role-activity-seen";
 import { getCurrentUser } from "@/lib/auth";
@@ -63,7 +64,14 @@ export default async function WorkspacePage({
     prisma.folder.findMany({
       where: { workspaceId },
       orderBy: { name: "asc" },
-      include: { requiredRoles: { select: { roleId: true } } },
+      include: {
+        requiredRoles: {
+          select: {
+            roleId: true,
+            role: { select: { hideFolders: true } },
+          },
+        },
+      },
     }),
     loadUserCustomRoleIds(membership.id),
     prisma.workspaceRole.findMany({
@@ -78,9 +86,17 @@ export default async function WorkspacePage({
     parentId: f.parentId,
     name: f.name,
     requiredRoleIds: f.requiredRoles.map((r) => r.roleId),
+    hideFromUnauthorized: f.hideFromUnauthorized,
+    alwaysVisible: f.alwaysVisible,
+    roleHidesFolder: f.requiredRoles.some((r) => r.role.hideFolders),
   }));
   const foldersById = new Map(folderAccessRows.map((f) => [f.id, f]));
-  const visibleFolders = buildFolderVisibility(folderAccessRows, userRoleIds);
+  const visibilityOpts = { membershipRole: membership.role };
+  const visibleFolders = buildFolderVisibility(
+    folderAccessRows,
+    userRoleIds,
+    visibilityOpts,
+  );
   const accessibleFolderIds = new Set(
     visibleFolders.filter((f) => f.canAccess).map((f) => f.id),
   );
@@ -143,7 +159,7 @@ export default async function WorkspacePage({
 
   if (
     currentFolder &&
-    !canAccessFolder(currentFolder.id, foldersById, userRoleIds)
+    !canAccessFolder(currentFolder.id, foldersById, userRoleIds, visibilityOpts)
   ) {
     redirect(`/app/w/${workspaceId}`);
   }
@@ -358,8 +374,16 @@ export default async function WorkspacePage({
       canManageRoles,
       workspaceRoles: roleOptions,
       requiredRoleIds: row?.requiredRoleIds ?? [],
+      hideFromUnauthorized: row?.hideFromUnauthorized ?? false,
+      alwaysVisible: row?.alwaysVisible ?? false,
     };
   }
+
+  const urgencyChips = {
+    showBase: workspace.showUrgencyBase,
+    showDate: workspace.showUrgencyDate,
+    showTotal: workspace.showUrgencyTotal,
+  };
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -544,7 +568,16 @@ export default async function WorkspacePage({
                 id: r.id,
                 name: r.name,
                 memberCount: r._count.members,
+                hideFolders: r.hideFolders,
               }))}
+              canManage={canManageRoles}
+            />
+
+            <UrgencyChipSettings
+              workspaceId={workspaceId}
+              showBase={workspace.showUrgencyBase}
+              showDate={workspace.showUrgencyDate}
+              showTotal={workspace.showUrgencyTotal}
               canManage={canManageRoles}
             />
 
@@ -652,6 +685,7 @@ export default async function WorkspacePage({
                     task={task}
                     publicTagOptions={publicTagOptions}
                     privateTagOptions={privateTagOptions}
+                    urgencyChips={urgencyChips}
                   />
                 ))}
                 {tasks.length === 0 ? (
@@ -668,6 +702,7 @@ export default async function WorkspacePage({
                 tasks={tasks}
                 publicTagOptions={publicTagOptions}
                 privateTagOptions={privateTagOptions}
+                urgencyChips={urgencyChips}
               />
             )}
           </section>

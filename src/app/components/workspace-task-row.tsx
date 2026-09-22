@@ -6,7 +6,11 @@ import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { InlineActionForm } from "@/app/components/forms";
 import { MenuSurface, menuItemClass } from "@/app/components/menu-surface";
-import { TaskUrgencyEdge, UrgencyTag } from "@/app/components/task-ui";
+import {
+  TaskUrgencyEdge,
+  UrgencyChips,
+  type UrgencyChipPrefs,
+} from "@/app/components/task-ui";
 import { AddTaskTagsForm } from "@/app/components/add-task-tags-form";
 import { SendBackTaskControl } from "@/app/components/send-back-task-control";
 import { UnclaimTaskControl } from "@/app/components/unclaim-task-control";
@@ -22,6 +26,7 @@ import {
 import { personLabel } from "@/lib/utils";
 import { confirmDelete } from "@/lib/confirm";
 import type { TaskPriority, TaskStatus } from "@/generated/prisma/client";
+import { PRIORITY_LABELS, TASK_PRIORITIES } from "@/lib/urgency";
 
 type Person = {
   id: string;
@@ -229,10 +234,11 @@ function TaskEditorMenu({
             onChange={(e) => setPriority(e.target.value as TaskPriority)}
             className="tide-input w-full text-sm"
           >
-            <option value="CRITICAL">Critical</option>
-            <option value="HIGH">High</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="LOW">Low</option>
+            {TASK_PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {PRIORITY_LABELS[p]}
+              </option>
+            ))}
           </select>
           <input
             type="date"
@@ -389,6 +395,7 @@ export function WorkspaceTaskRow({
   isRoot,
   publicTagOptions = [],
   privateTagOptions = [],
+  urgencyChips,
 }: {
   workspaceId: string;
   task: WorkspaceTaskData;
@@ -397,6 +404,7 @@ export function WorkspaceTaskRow({
   isRoot: boolean;
   publicTagOptions?: string[];
   privateTagOptions?: string[];
+  urgencyChips?: UrgencyChipPrefs;
 }) {
   const isClaimed = Boolean(task.assigneeId);
   const canClaim =
@@ -443,7 +451,11 @@ export function WorkspaceTaskRow({
               </span>
             </button>
             <h3 className="text-lg font-semibold text-[#0A3D45]">{task.name}</h3>
-            <UrgencyTag priority={task.priority} dueDate={task.dueDate} />
+            <UrgencyChips
+              priority={task.priority}
+              dueDate={task.dueDate}
+              prefs={urgencyChips}
+            />
             {!expanded ? (
               <span className="text-xs text-[#0A3D45]/60">
                 {isClaimed
