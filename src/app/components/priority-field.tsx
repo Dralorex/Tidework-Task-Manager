@@ -23,11 +23,11 @@ export function PriorityField({
       required={required}
       value={value}
       onChange={(e) => setValue(e.target.value)}
-      aria-label="Priority level"
+      aria-label="Priority Level"
       className={`tide-input ${isHint ? "tide-input-hint" : ""} ${className ?? ""}`}
     >
       <option value="" disabled>
-        Priority level
+        Priority Level
       </option>
       <option value="CRITICAL">Critical</option>
       <option value="HIGH">High</option>

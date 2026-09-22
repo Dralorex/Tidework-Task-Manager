@@ -214,7 +214,7 @@ function TaskEditorMenu({
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="tide-input w-full text-sm"
-            placeholder="Task name"
+            placeholder="Task Name"
             required
             autoFocus
           />

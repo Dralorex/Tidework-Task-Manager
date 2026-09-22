@@ -614,7 +614,7 @@ export default async function WorkspacePage({
                 >
                   <input type="hidden" name="workspaceId" value={workspaceId} />
                   <input type="hidden" name="folderId" value={currentFolder.id} />
-                  <input name="name" required placeholder="Task name" className="tide-input" />
+                  <input name="name" required placeholder="Task Name" className="tide-input" />
                   <PriorityField />
                   <input
                     name="description"
