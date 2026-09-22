@@ -100,10 +100,6 @@ export default async function WorkspacePage({
     taskCountRows.map((r) => [r.folderId, r._count._all]),
   );
   const folderCounts = computeFolderTaskCounts(folders, directCounts);
-  const allTasksCount = [...accessibleFolderIds].reduce(
-    (sum, id) => sum + (directCounts.get(id) ?? 0),
-    0,
-  );
 
   const [doneCountRows, totalCountRows] = await Promise.all([
     prisma.task.groupBy({
@@ -117,13 +113,20 @@ export default async function WorkspacePage({
       _count: { _all: true },
     }),
   ]);
+  const directTotalCounts = new Map(
+    totalCountRows.map((r) => [r.folderId, r._count._all]),
+  );
+  const allTasksCount = [...accessibleFolderIds].reduce(
+    (sum, id) => sum + (directTotalCounts.get(id) ?? 0),
+    0,
+  );
   const folderDoneCounts = computeFolderTaskCounts(
     folders,
     new Map(doneCountRows.map((r) => [r.folderId, r._count._all])),
   );
   const folderTotalCounts = computeFolderTaskCounts(
     folders,
-    new Map(totalCountRows.map((r) => [r.folderId, r._count._all])),
+    directTotalCounts,
   );
 
   // All Tasks = no folder query param. Show all tasks by urgency.
@@ -441,9 +444,6 @@ export default async function WorkspacePage({
                               >
                                 <span className="truncate">{f.name}</span>
                                 <span aria-hidden>🔒</span>
-                                <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/55">
-                                  {folderCounts.get(f.id) ?? 0}
-                                </span>
                               </span>
                             ) : (
                               <span
@@ -459,9 +459,6 @@ export default async function WorkspacePage({
                                     ●
                                   </span>
                                 ) : null}
-                                <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
-                                  {folderCounts.get(f.id) ?? 0}
-                                </span>
                               </span>
                             )}
                             <FolderCompletionStats
@@ -594,7 +591,6 @@ export default async function WorkspacePage({
                         name={f.name}
                         locked={f.locked}
                         restricted={f.requiredRoleIds.length > 0}
-                        count={folderCounts.get(f.id) ?? 0}
                         done={folderDoneCounts.get(f.id) ?? 0}
                         total={folderTotalCounts.get(f.id) ?? 0}
                         unclaimed={folderCounts.get(f.id) ?? 0}

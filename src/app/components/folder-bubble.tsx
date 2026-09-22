@@ -18,7 +18,6 @@ export function FolderBubble({
   name,
   locked,
   restricted,
-  count,
   done,
   total,
   unclaimed,
@@ -30,7 +29,6 @@ export function FolderBubble({
   name: string;
   locked: boolean;
   restricted: boolean;
-  count: number;
   done: number;
   total: number;
   unclaimed: number;
@@ -64,9 +62,6 @@ export function FolderBubble({
           >
             <span className="truncate">{name}</span>
             <span aria-hidden>🔒</span>
-            <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/55">
-              {count}
-            </span>
           </span>
         ) : (
           <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-[#0A3D45]">
@@ -79,9 +74,6 @@ export function FolderBubble({
                 ●
               </span>
             ) : null}
-            <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
-              {count}
-            </span>
           </span>
         )}
         <FolderCompletionStats done={done} total={total} unclaimed={unclaimed} />
