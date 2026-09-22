@@ -161,12 +161,14 @@
 }
 
 /* Calendar: day cells + event chips/rows match the dark canvas so titles pop */
-[data-theme="dark"] .calendar-day-cell {
-  background: color-mix(in srgb, var(--background) 88%, #ffffff 4%);
+[data-theme="dark"] .calendar-day-cell-current {
+  background: color-mix(in srgb, var(--background) 62%, #ffffff 16%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 [data-theme="dark"] .calendar-day-cell-muted {
-  background: color-mix(in srgb, var(--background) 96%, transparent);
+  background: color-mix(in srgb, var(--background) 94%, transparent);
+  opacity: 0.55;
 }
 
 [data-theme="dark"] .calendar-event-chip {
