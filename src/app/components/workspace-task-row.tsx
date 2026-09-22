@@ -46,6 +46,7 @@ export type WorkspaceTaskData = {
   priority: TaskPriority;
   status: TaskStatus;
   dueDate: Date | null;
+  createdAt: Date;
   folderId: string;
   assigneeId: string | null;
   completionComment: string | null;
@@ -432,24 +433,64 @@ export function WorkspaceTaskRow({
     setExpanded(false);
   }, [task.id, isClaimed]);
 
+  function expandFromEmptySpace(e: React.MouseEvent) {
+    if (expanded) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("a, button, input, textarea, select, label, form")) {
+      return;
+    }
+    setExpanded(true);
+  }
+
+  function collapseFromHeader(e: React.MouseEvent) {
+    e.stopPropagation();
+    const target = e.target as HTMLElement;
+    if (target.closest("a, button, input, textarea, select, label, form")) {
+      return;
+    }
+    setExpanded(false);
+  }
+
   return (
-    <li className="tide-panel relative overflow-hidden p-4 pl-5">
+    <li
+      className={`tide-panel relative overflow-hidden p-4 pl-5 transition ${
+        expanded ? "" : "cursor-pointer"
+      }`}
+      onClick={expandFromEmptySpace}
+    >
       <TaskUrgencyEdge priority={task.priority} dueDate={task.dueDate} />
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              aria-expanded={expanded}
-              aria-label={expanded ? "Hide task details" : "Show task details"}
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[#0A3D45]/70 transition hover:bg-[#0A3D45]/8"
-              onClick={() => setExpanded((v) => !v)}
+          <div
+            className={
+              expanded
+                ? "flex cursor-pointer flex-wrap items-center gap-2 rounded-xl border border-[#0A3D45]/18 bg-[#0A3D45]/[0.03] px-2.5 py-2 transition hover:border-[#0A3D45]/28 hover:bg-[#0A3D45]/[0.05]"
+                : "flex flex-wrap items-center gap-2"
+            }
+            onClick={expanded ? collapseFromHeader : undefined}
+            role={expanded ? "button" : undefined}
+            tabIndex={expanded ? 0 : undefined}
+            aria-label={expanded ? "Collapse task details" : undefined}
+            onKeyDown={
+              expanded
+                ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setExpanded(false);
+                    }
+                  }
+                : undefined
+            }
+          >
+            <span
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[#0A3D45]/70"
+              aria-hidden
             >
-              <span className="text-sm leading-none" aria-hidden>
+              <span className="text-sm leading-none">
                 {expanded ? "▾" : "▸"}
               </span>
-            </button>
+            </span>
             <h3 className="text-lg font-semibold text-[#0A3D45]">{task.name}</h3>
             <UrgencyChips
               priority={task.priority}
@@ -469,12 +510,21 @@ export function WorkspaceTaskRow({
                 {task.status.replace("_", " ")}
               </span>
             )}
+            {canEdit ? (
+              <span
+                className="ml-auto inline-flex"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <TaskEditorMenu workspaceId={workspaceId} task={task} />
+              </span>
+            ) : null}
           </div>
 
           {expanded ? (
             <>
               {isRoot && task.folder ? (
-                <p className="mt-1 text-xs text-[#0A3D45]/55">
+                <p className="mt-2 text-xs text-[#0A3D45]/55">
                   In{" "}
                   <Link
                     href={`/app/w/${workspaceId}?folder=${task.folderId}`}
@@ -533,8 +583,11 @@ export function WorkspaceTaskRow({
         </div>
 
         <div className="flex max-w-full shrink-0 flex-col items-end gap-2">
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {!expanded && canClaim ? (
+          {!expanded && canClaim ? (
+            <div
+              className="flex flex-wrap items-center justify-end gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
               <InlineActionForm
                 className="flex flex-row items-center gap-2"
                 action={claimTaskAction}
@@ -543,14 +596,14 @@ export function WorkspaceTaskRow({
                 <input type="hidden" name="workspaceId" value={workspaceId} />
                 <input type="hidden" name="taskId" value={task.id} />
               </InlineActionForm>
-            ) : null}
-            {canEdit ? (
-              <TaskEditorMenu workspaceId={workspaceId} task={task} />
-            ) : null}
-          </div>
+            </div>
+          ) : null}
 
           {expanded ? (
-            <div className="flex w-full max-w-xs flex-col items-stretch gap-2 sm:w-72">
+            <div
+              className="flex w-full max-w-xs flex-col items-stretch gap-2 sm:w-72"
+              onClick={(e) => e.stopPropagation()}
+            >
               {task.tags.length > 0 ? (
                 <div className="flex flex-wrap justify-end gap-1">
                   {task.tags.map((tt) => (

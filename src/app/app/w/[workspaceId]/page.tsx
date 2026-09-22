@@ -4,8 +4,7 @@ import { InlineActionForm } from "@/app/components/forms";
 import { FolderActions } from "@/app/components/folder-actions";
 import { FolderBubble } from "@/app/components/folder-bubble";
 import { CreateFolderForm } from "@/app/components/create-folder-form";
-import { WorkspaceTaskRow } from "@/app/components/workspace-task-row";
-import { TaskStatusSections } from "@/app/components/task-status-sections";
+import { WorkspaceTaskList } from "@/app/components/workspace-task-list";
 import { DueDateField } from "@/app/components/due-date-field";
 import { PriorityField } from "@/app/components/priority-field";
 import { TagSuggestInput } from "@/app/components/tag-suggest-input";
@@ -522,16 +521,26 @@ export default async function WorkspacePage({
                 <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
                   {currentFolder ? currentFolder.name : "All Tasks"}
                 </h2>
-                {canEdit && currentFolder ? (
-                  <FolderActions
-                    {...folderActionsProps(currentFolder.id, currentFolder.name)}
-                  />
-                ) : null}
+                <div className="flex flex-wrap items-center gap-2">
+                  {currentFolder ? (
+                    <Link
+                      href={`/app/w/${workspaceId}`}
+                      className="tide-btn-secondary !px-3 !py-1.5 text-xs"
+                    >
+                      See All Tasks
+                    </Link>
+                  ) : null}
+                  {canEdit && currentFolder ? (
+                    <FolderActions
+                      {...folderActionsProps(currentFolder.id, currentFolder.name)}
+                    />
+                  ) : null}
+                </div>
               </div>
               <p className="text-sm text-[#0A3D45]/60">
                 {isRoot
-                  ? "Every task in this workspace, sorted by urgency (priority + due date)."
-                  : "Subfolders and tasks grouped by status. Urgency edge rises with priority and due dates."}
+                  ? "Every task in this workspace. Sort follows the urgency chips that are turned on."
+                  : "Subfolders and tasks grouped by status. Sort follows the urgency chips that are turned on."}
               </p>
 
               {childFolders.length > 0 ? (
@@ -592,38 +601,16 @@ export default async function WorkspacePage({
               ) : null}
             </div>
 
-            {isRoot ? (
-              <ul className="space-y-3">
-                {tasks.map((task) => (
-                  <WorkspaceTaskRow
-                    key={task.id}
-                    workspaceId={workspaceId}
-                    userId={user.id}
-                    canEdit={canEdit}
-                    isRoot
-                    task={task}
-                    publicTagOptions={publicTagOptions}
-                    privateTagOptions={privateTagOptions}
-                    urgencyChips={urgencyChips}
-                  />
-                ))}
-                {tasks.length === 0 ? (
-                  <li className="text-sm text-[#0A3D45]/60">
-                    No tasks in this workspace yet.
-                  </li>
-                ) : null}
-              </ul>
-            ) : (
-              <TaskStatusSections
-                workspaceId={workspaceId}
-                userId={user.id}
-                canEdit={canEdit}
-                tasks={tasks}
-                publicTagOptions={publicTagOptions}
-                privateTagOptions={privateTagOptions}
-                urgencyChips={urgencyChips}
-              />
-            )}
+            <WorkspaceTaskList
+              workspaceId={workspaceId}
+              userId={user.id}
+              canEdit={canEdit}
+              isRoot={isRoot}
+              tasks={tasks}
+              publicTagOptions={publicTagOptions}
+              privateTagOptions={privateTagOptions}
+              urgencyChips={urgencyChips}
+            />
           </section>
         </div>
       </main>

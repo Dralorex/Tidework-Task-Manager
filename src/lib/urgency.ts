@@ -202,3 +202,38 @@ export function compareTasksByUrgency<
   else if (b.dueDate) return 1;
   return b.createdAt.getTime() - a.createdAt.getTime();
 }
+
+export type TaskSortMode = "total" | "base" | "due";
+
+export function compareTasksByBase<
+  T extends { priority: TaskPriority; dueDate: Date | null; createdAt: Date },
+>(a: T, b: T): number {
+  const baseDiff = priorityBase(b.priority) - priorityBase(a.priority);
+  if (baseDiff !== 0) return baseDiff;
+  return compareTasksByUrgency(a, b);
+}
+
+/** Soonest due first; tasks with no due date sink. */
+export function compareTasksByDueDate<
+  T extends { priority: TaskPriority; dueDate: Date | null; createdAt: Date },
+>(a: T, b: T): number {
+  if (a.dueDate && b.dueDate) {
+    const dueDiff = a.dueDate.getTime() - b.dueDate.getTime();
+    if (dueDiff !== 0) return dueDiff;
+  } else if (a.dueDate) return -1;
+  else if (b.dueDate) return 1;
+  return compareTasksByUrgency(a, b);
+}
+
+export function compareTasksBySortMode<
+  T extends { priority: TaskPriority; dueDate: Date | null; createdAt: Date },
+>(mode: TaskSortMode, a: T, b: T, now = new Date()): number {
+  switch (mode) {
+    case "base":
+      return compareTasksByBase(a, b);
+    case "due":
+      return compareTasksByDueDate(a, b);
+    default:
+      return compareTasksByUrgency(a, b, now);
+  }
+}
