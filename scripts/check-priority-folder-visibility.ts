@@ -1,6 +1,6 @@
 /**
  * Quick logic checks for urgency scoring + folder visibility (no DB).
- * Run: npx tsx scripts/check-priority-folder-visibility.ts
+ * Run: DATABASE_URL=postgresql://u:p@localhost:5432/db npx tsx scripts/check-priority-folder-visibility.ts
  */
 import assert from "node:assert/strict";
 import {
@@ -10,6 +10,8 @@ import {
 } from "../src/lib/folder-access";
 import {
   PRIORITY_WEIGHT,
+  dateBand,
+  duePressure,
   urgencyLevel,
   urgencyParts,
   urgencyScore,
@@ -26,14 +28,36 @@ function folder(partial: Partial<FolderAccessRow> & Pick<FolderAccessRow, "id" |
   };
 }
 
-// --- Urgency ---
-assert.equal(PRIORITY_WEIGHT.CRITICAL, 10);
-assert.equal(PRIORITY_WEIGHT.MINIMAL, 1);
-assert.equal(urgencyParts("MEDIUM", null).total, 4);
+function daysFromNow(days: number) {
+  const d = new Date();
+  d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+// --- Urgency /100 ---
+assert.equal(PRIORITY_WEIGHT.CRITICAL, 80);
+assert.equal(PRIORITY_WEIGHT.MINIMAL, 10);
+assert.equal(urgencyParts("MEDIUM", null).total, 40);
 assert.equal(urgencyParts("MEDIUM", null).date, 0);
-assert.ok(urgencyScore("CRITICAL", new Date(Date.now() - 86_400_000)) >= 15);
-assert.equal(urgencyLevel(12), "critical");
-assert.equal(urgencyLevel(9), "high");
+assert.equal(urgencyParts("MEDIUM", null).base, 40);
+
+// Cubic date curve: Minimal + ~2 days → Critical total
+const twoDays = duePressure(daysFromNow(2));
+assert.ok(twoDays >= 70, `expected Date(2d) >= 70, got ${twoDays}`);
+const minimalSoon = urgencyParts("MINIMAL", daysFromNow(2));
+assert.equal(urgencyLevel(minimalSoon.total), "critical");
+assert.ok(minimalSoon.total >= 80, `expected Total >= 80, got ${minimalSoon.total}`);
+
+assert.equal(dateBand(0), "none");
+assert.equal(dateBand(twoDays), "due");
+assert.equal(urgencyLevel(10), "calm");
+assert.equal(urgencyLevel(40), "medium");
+assert.equal(urgencyLevel(80), "critical");
+assert.ok(urgencyScore("CRITICAL", daysFromNow(-1)) >= 80);
+
+// Far out → little date pressure
+assert.ok(duePressure(daysFromNow(28)) <= 1);
 
 // --- Folder visibility ---
 const roleA = "role-a";

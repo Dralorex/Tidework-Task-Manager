@@ -1,17 +1,22 @@
 import type { TaskPriority } from "@/generated/prisma/client";
 
-/** Manual priority (Base) + due-date pressure (Date) → Total sort score and edge color. */
+/**
+ * Urgency on a 0–100 scale:
+ * - Base: manual priority (10–80, eight levels × 10)
+ * - Date: due pressure (0–90) via cubic ease-in toward the due date
+ * - Total: clamp(Base + Date, 100) — near deadlines, Date can force Critical
+ *   even from Minimal base (~2 days out).
+ */
 
-/** Base weight ~1–10 for each named priority level. */
 export const PRIORITY_WEIGHT: Record<TaskPriority, number> = {
-  CRITICAL: 10,
-  URGENT: 8,
-  HIGH: 7,
-  ELEVATED: 5,
-  MEDIUM: 4,
-  NORMAL: 3,
-  LOW: 2,
-  MINIMAL: 1,
+  CRITICAL: 80,
+  URGENT: 70,
+  HIGH: 60,
+  ELEVATED: 50,
+  MEDIUM: 40,
+  NORMAL: 30,
+  LOW: 20,
+  MINIMAL: 10,
 };
 
 export const PRIORITY_LABELS: Record<TaskPriority, string> = {
@@ -27,6 +32,11 @@ export const PRIORITY_LABELS: Record<TaskPriority, string> = {
 
 export const TASK_PRIORITIES = Object.keys(PRIORITY_WEIGHT) as TaskPriority[];
 
+/** Max Date contribution on the /100 scale. */
+export const DATE_MAX = 90;
+/** Days ahead where Date pressure starts rising from ~0. */
+export const DATE_HORIZON_DAYS = 28;
+
 export function isTaskPriority(value: string): value is TaskPriority {
   return value in PRIORITY_WEIGHT;
 }
@@ -35,18 +45,65 @@ export function priorityBase(priority: TaskPriority): number {
   return PRIORITY_WEIGHT[priority];
 }
 
-export function duePressure(dueDate: Date | null | undefined, now = new Date()): number {
-  if (!dueDate) return 0;
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const dueDay = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
-  const diffDays = Math.floor((dueDay.getTime() - startOfToday.getTime()) / 86_400_000);
+function startOfLocalDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
 
-  if (diffDays < 0) return 5;
-  if (diffDays === 0) return 4;
-  if (diffDays <= 2) return 3;
-  if (diffDays <= 7) return 2;
-  if (diffDays <= 14) return 1;
-  return 0;
+/** Whole days until due (negative = overdue). Null when no due date. */
+export function daysUntilDue(
+  dueDate: Date | null | undefined,
+  now = new Date(),
+): number | null {
+  if (!dueDate) return null;
+  const startOfToday = startOfLocalDay(now);
+  const dueDay = startOfLocalDay(dueDate);
+  return Math.floor((dueDay.getTime() - startOfToday.getTime()) / 86_400_000);
+}
+
+/**
+ * Date pressure 0–90.
+ * Upcoming: cubic ease-in over DATE_HORIZON_DAYS (flat far out, steep near due).
+ * Overdue: sits at the top of the curve (~83–90).
+ */
+export function duePressure(dueDate: Date | null | undefined, now = new Date()): number {
+  const d = daysUntilDue(dueDate, now);
+  if (d === null) return 0;
+
+  if (d >= 0) {
+    const t = Math.min(1, Math.max(0, 1 - d / DATE_HORIZON_DAYS));
+    return Math.round(DATE_MAX * t * t * t);
+  }
+
+  const over = Math.min(1, -d / 14);
+  return Math.round(DATE_MAX * (0.92 + 0.08 * over));
+}
+
+export type DateBand = "none" | "distant" | "approaching" | "soon" | "due" | "overdue";
+
+export function dateBand(dateScore: number): DateBand {
+  if (dateScore <= 0) return "none";
+  if (dateScore <= 15) return "distant";
+  if (dateScore <= 35) return "approaching";
+  if (dateScore <= 55) return "soon";
+  if (dateScore <= 75) return "due";
+  return "overdue";
+}
+
+export function dateBandLabel(band: DateBand): string {
+  switch (band) {
+    case "none":
+      return "None";
+    case "distant":
+      return "Distant";
+    case "approaching":
+      return "Approaching";
+    case "soon":
+      return "Soon";
+    case "due":
+      return "Due";
+    default:
+      return "Overdue";
+  }
 }
 
 export function urgencyParts(
@@ -56,7 +113,8 @@ export function urgencyParts(
 ) {
   const base = priorityBase(priority);
   const date = duePressure(dueDate, now);
-  return { base, date, total: base + date };
+  const total = Math.min(100, base + date);
+  return { base, date, total };
 }
 
 export function urgencyScore(
@@ -69,12 +127,12 @@ export function urgencyScore(
 
 export type UrgencyLevel = "critical" | "high" | "medium" | "low" | "calm";
 
-/** Map total score (≈1–15) onto visual urgency bands. */
+/** Map Total /100 onto visual urgency bands. */
 export function urgencyLevel(score: number): UrgencyLevel {
-  if (score >= 12) return "critical";
-  if (score >= 9) return "high";
-  if (score >= 6) return "medium";
-  if (score >= 3) return "low";
+  if (score >= 80) return "critical";
+  if (score >= 60) return "high";
+  if (score >= 40) return "medium";
+  if (score >= 20) return "low";
   return "calm";
 }
 
@@ -101,7 +159,7 @@ export function urgencyLabel(level: UrgencyLevel): string {
   }
 }
 
-/** Short badge copy for collapsed task rows (updates as due pressure rises). */
+/** Short Total-chip label. */
 export function urgencyTag(level: UrgencyLevel): string {
   switch (level) {
     case "critical":
@@ -109,13 +167,28 @@ export function urgencyTag(level: UrgencyLevel): string {
     case "high":
       return "High";
     case "medium":
-      return "Med";
+      return "Medium";
     case "low":
       return "Low";
     default:
       return "Calm";
   }
 }
+
+export function formatBaseHover(base: number): string {
+  return `Priority level: ${base}/100`;
+}
+
+export function formatDateHover(date: number): string {
+  return `Date pressure: ${date}/100`;
+}
+
+export function formatTotalHover(total: number): string {
+  return `Total urgency: ${total}/100`;
+}
+
+/** Notify when Date pressure reaches “Soon” (~7 days on the curve). */
+export const DEADLINE_NOTIFY_DATE_MIN = 38;
 
 export function compareTasksByUrgency<
   T extends { priority: TaskPriority; dueDate: Date | null; createdAt: Date },
