@@ -531,8 +531,10 @@ export function WorkspaceTaskRow({
                     name="name"
                     required
                     tags={privateTagOptions}
-                    placeholder="my-focus"
+                    placeholder="add tags: example, test, help"
+                    hint="Separate multiple tags with commas."
                     emptyMessage="No private tags yet — type a new one"
+                    allowMultiple
                     submitOnPick
                   />
                 </InlineActionForm>
@@ -550,8 +552,10 @@ export function WorkspaceTaskRow({
                     name="name"
                     required
                     tags={publicTagOptions}
-                    placeholder="design"
+                    placeholder="add tags: example, test, help"
+                    hint="Separate multiple tags with commas."
                     emptyMessage="No public tags in this folder yet — type a new one"
+                    allowMultiple
                     submitOnPick
                   />
                 </InlineActionForm>

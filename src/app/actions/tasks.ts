@@ -13,6 +13,7 @@ import { assertCanAccessFolder } from "@/lib/folder-access";
 import type { TaskPriority } from "@/generated/prisma/client";
 import type { ActionResult } from "@/app/actions/auth";
 import { personLabel } from "@/lib/utils";
+import { parseTagNames } from "@/lib/tags";
 
 async function requireTaskFolderAccess(
   workspaceId: string,
@@ -609,34 +610,36 @@ export async function addPrivateTagAction(
     return { ok: false, error: "Claim the task first to add your private tags." };
   }
 
-  const name = String(formData.get("name") ?? "").trim().toLowerCase();
-  if (!name) return { ok: false, error: "Tag needs a name." };
+  const names = parseTagNames(String(formData.get("name") ?? ""));
+  if (names.length === 0) return { ok: false, error: "Tag needs a name." };
 
-  let tag = await prisma.tag.findFirst({
-    where: {
-      workspaceId,
-      name,
-      isPublic: false,
-      creatorId: user.id,
-    },
-  });
-
-  if (!tag) {
-    tag = await prisma.tag.create({
-      data: {
+  for (const name of names) {
+    let tag = await prisma.tag.findFirst({
+      where: {
         workspaceId,
         name,
         isPublic: false,
         creatorId: user.id,
       },
     });
-  }
 
-  await prisma.taskTag.upsert({
-    where: { taskId_tagId: { taskId, tagId: tag.id } },
-    create: { taskId, tagId: tag.id },
-    update: {},
-  });
+    if (!tag) {
+      tag = await prisma.tag.create({
+        data: {
+          workspaceId,
+          name,
+          isPublic: false,
+          creatorId: user.id,
+        },
+      });
+    }
+
+    await prisma.taskTag.upsert({
+      where: { taskId_tagId: { taskId, tagId: tag.id } },
+      create: { taskId, tagId: tag.id },
+      update: {},
+    });
+  }
 
   revalidatePath(`/app/w/${workspaceId}`);
   return { ok: true };
@@ -654,23 +657,25 @@ export async function addPublicTagAction(
     return { ok: false, error: "Only editors and above manage public tags." };
   }
 
-  const name = String(formData.get("name") ?? "").trim().toLowerCase();
-  if (!name) return { ok: false, error: "Tag needs a name." };
+  const names = parseTagNames(String(formData.get("name") ?? ""));
+  if (names.length === 0) return { ok: false, error: "Tag needs a name." };
 
-  let tag = await prisma.tag.findFirst({
-    where: { workspaceId, name, isPublic: true },
-  });
-  if (!tag) {
-    tag = await prisma.tag.create({
-      data: { workspaceId, name, isPublic: true, creatorId: user.id },
+  for (const name of names) {
+    let tag = await prisma.tag.findFirst({
+      where: { workspaceId, name, isPublic: true },
+    });
+    if (!tag) {
+      tag = await prisma.tag.create({
+        data: { workspaceId, name, isPublic: true, creatorId: user.id },
+      });
+    }
+
+    await prisma.taskTag.upsert({
+      where: { taskId_tagId: { taskId, tagId: tag.id } },
+      create: { taskId, tagId: tag.id },
+      update: {},
     });
   }
-
-  await prisma.taskTag.upsert({
-    where: { taskId_tagId: { taskId, tagId: tag.id } },
-    create: { taskId, tagId: tag.id },
-    update: {},
-  });
 
   revalidatePath(`/app/w/${workspaceId}`);
   return { ok: true };
