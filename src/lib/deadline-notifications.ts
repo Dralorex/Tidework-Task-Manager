@@ -1,9 +1,14 @@
-import { duePressure } from "@/lib/urgency";
+import {
+  DEADLINE_NOTIFY_DATE_MIN,
+  daysUntilDue,
+  duePressure,
+} from "@/lib/urgency";
 import { prisma } from "@/lib/db";
 
 /**
  * Create DEADLINE_SOON notifications for the user's claimed tasks that are
- * overdue or due within 2 days. Skips if one already exists for that task today.
+ * overdue or approaching on the Date curve (Soon band+). Skips if one already
+ * exists for that task today.
  */
 export async function syncDeadlineNotifications(userId: string) {
   const now = new Date();
@@ -25,7 +30,7 @@ export async function syncDeadlineNotifications(userId: string) {
   });
 
   const urgent = tasks.filter(
-    (t) => t.dueDate && duePressure(t.dueDate, now) >= 2,
+    (t) => t.dueDate && duePressure(t.dueDate, now) >= DEADLINE_NOTIFY_DATE_MIN,
   );
   if (urgent.length === 0) return;
 
@@ -55,13 +60,17 @@ export async function syncDeadlineNotifications(userId: string) {
 
   await prisma.notification.createMany({
     data: toCreate.map((task) => {
-      const pressure = duePressure(task.dueDate, now);
+      const days = daysUntilDue(task.dueDate, now);
       const when =
-        pressure >= 4
-          ? "overdue"
-          : pressure === 3
-            ? "due today"
-            : "due within 2 days";
+        days === null
+          ? "due soon"
+          : days < 0
+            ? "overdue"
+            : days === 0
+              ? "due today"
+              : days <= 2
+                ? "due within 2 days"
+                : "due soon";
       return {
         userId,
         type: "DEADLINE_SOON",

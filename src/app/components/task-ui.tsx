@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 import {
   PRIORITY_LABELS,
   URGENCY_EDGE,
+  dateBand,
+  dateBandLabel,
+  formatBaseHover,
+  formatDateHover,
+  formatTotalHover,
+  priorityBase,
   urgencyLabel,
   urgencyLevel,
   urgencyParts,
@@ -32,7 +38,7 @@ export function TaskUrgencyEdge({
     <span
       className="absolute inset-y-0 left-0 w-[4px] rounded-l-md"
       style={{ backgroundColor: URGENCY_EDGE[level] }}
-      title={`${urgencyLabel(level)} · score ${score}`}
+      title={`${urgencyLabel(level)} · ${formatTotalHover(score)}`}
       aria-hidden
     />
   );
@@ -40,7 +46,10 @@ export function TaskUrgencyEdge({
 
 export function PriorityBadge({ priority }: { priority: TaskPriority }) {
   return (
-    <span className="urgency-chip urgency-chip-neutral rounded-md px-2 py-0.5 text-xs font-medium">
+    <span
+      className="urgency-chip urgency-chip-neutral rounded-md px-2 py-0.5 text-xs font-medium"
+      title={formatBaseHover(priorityBase(priority))}
+    >
       {PRIORITY_LABELS[priority]}
     </span>
   );
@@ -57,7 +66,7 @@ const TAG_STYLES: Record<UrgencyLevel, string> = {
 const CHIP_BASE =
   "urgency-chip rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide";
 
-/** Live urgency chip (Low / Med / High / Critical) — recomputes as time passes. */
+/** Live urgency chip — recomputes as time passes. */
 export function UrgencyTag({
   priority,
   dueDate,
@@ -77,7 +86,7 @@ export function UrgencyTag({
   return (
     <span
       className={`${CHIP_BASE} ${TAG_STYLES[level]}`}
-      title={`${urgencyLabel(level)} · score ${score}`}
+      title={formatTotalHover(score)}
     >
       {urgencyTag(level)}
     </span>
@@ -85,8 +94,7 @@ export function UrgencyTag({
 }
 
 /**
- * Base / Date / Total chips. Defaults to Total only when prefs omit flags.
- * Recomputes as due pressure rises over time.
+ * Base / Date / Total chips — level names on the face, /100 scores on hover only.
  */
 export function UrgencyChips({
   priority,
@@ -113,34 +121,32 @@ export function UrgencyChips({
 
   const { base, date, total } = urgencyParts(priority, dueDate, now);
   const level = urgencyLevel(total);
+  const dateLabel = dateBandLabel(dateBand(date));
 
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5">
       {showBase ? (
         <span
           className={`${CHIP_BASE} urgency-chip-neutral`}
-          title={`${PRIORITY_LABELS[priority]} · base ${base}`}
+          title={formatBaseHover(base)}
         >
-          Base {base}
+          Base: {PRIORITY_LABELS[priority]}
         </span>
       ) : null}
       {showDate ? (
         <span
           className={`${CHIP_BASE} urgency-chip-neutral`}
-          title={`Due pressure · date ${date}`}
+          title={formatDateHover(date)}
         >
-          Date {date}
+          Date: {dateLabel}
         </span>
       ) : null}
       {showTotal ? (
         <span
           className={`${CHIP_BASE} ${TAG_STYLES[level]}`}
-          title={`${urgencyLabel(level)} · total ${total}`}
+          title={formatTotalHover(total)}
         >
-          {urgencyTag(level)}
-          <span className="urgency-chip-score ml-1 font-medium normal-case tracking-normal">
-            {total}
-          </span>
+          Total: {urgencyTag(level)}
         </span>
       ) : null}
     </span>

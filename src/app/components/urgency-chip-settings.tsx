@@ -54,7 +54,7 @@ export function UrgencyChipSettings({
     <div className="tide-panel p-4">
       <ChatSidebarSection
         title="Urgency chips"
-        description="Choose which priority chips appear on task rows. Total is base + due-date pressure."
+        description="Choose which priority chips appear on task rows. Faces show level names; hover shows /100 scores. Total = Base + Date (capped at 100)."
       >
         <ul className="space-y-2 text-sm text-[color:var(--tide-deep)]">
           <li>
@@ -71,7 +71,7 @@ export function UrgencyChipSettings({
               <span>
                 Base
                 <span className="mt-0.5 block text-[11px] text-[color:var(--tide-deep)]/50">
-                  Manual priority weight (1–10)
+                  Manual priority (10–80)
                 </span>
               </span>
             </label>
@@ -90,7 +90,7 @@ export function UrgencyChipSettings({
               <span>
                 Date
                 <span className="mt-0.5 block text-[11px] text-[color:var(--tide-deep)]/50">
-                  Due-date pressure (0–5)
+                  Due pressure (0–90, steeper near deadline)
                 </span>
               </span>
             </label>
@@ -109,7 +109,7 @@ export function UrgencyChipSettings({
               <span>
                 Total
                 <span className="mt-0.5 block text-[11px] text-[color:var(--tide-deep)]/50">
-                  Combined urgency label + score
+                  Combined urgency band (Base + Date)
                 </span>
               </span>
             </label>
