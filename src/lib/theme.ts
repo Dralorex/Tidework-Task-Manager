@@ -3,7 +3,7 @@ export const LEGACY_THEME_COOKIE = "tidework_theme";
 /** Once set, cookie value `burn` means dark-ember Burn (not the old soft theme). */
 export const THEME_MIGRATION_COOKIE = "rowgon_theme_v2";
 
-export type DisplayThemeGroup = "recommended" | "classic" | "fun";
+export type DisplayThemeGroup = "recommended" | "classic" | "fun" | "owners";
 
 export const DISPLAY_THEME_GROUPS: {
   id: DisplayThemeGroup;
@@ -24,6 +24,11 @@ export const DISPLAY_THEME_GROUPS: {
     id: "fun",
     label: "Fun",
     description: "Beach, peach, and ember for a bolder vibe.",
+  },
+  {
+    id: "owners",
+    label: "Owner's Choice",
+    description: "A stark signature look — pure black and blood red.",
   },
 ];
 
@@ -61,7 +66,7 @@ export const DISPLAY_THEMES = [
   {
     id: "beach",
     label: "Beach mode",
-    description: "Sky above, water mid, sand below.",
+    description: "Wavy sky, water, and sand.",
     group: "fun",
   },
   {
@@ -75,6 +80,12 @@ export const DISPLAY_THEMES = [
     label: "Burn mode",
     description: "Dark ember — red, yellow, and orange heat.",
     group: "fun",
+  },
+  {
+    id: "owners",
+    label: "Owner's Choice",
+    description: "Pure black with maroon blood-red lines and text.",
+    group: "owners",
   },
 ] as const;
 
