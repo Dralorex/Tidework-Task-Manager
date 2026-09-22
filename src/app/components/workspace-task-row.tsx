@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { InlineActionForm } from "@/app/components/forms";
 import { MenuSurface, menuItemClass } from "@/app/components/menu-surface";
 import { TaskUrgencyEdge, UrgencyTag } from "@/app/components/task-ui";
+import { TagSuggestInput } from "@/app/components/tag-suggest-input";
 import { UnclaimTaskControl } from "@/app/components/unclaim-task-control";
 import {
   addPrivateTagAction,
@@ -354,12 +355,16 @@ export function WorkspaceTaskRow({
   userId,
   canEdit,
   isRoot,
+  publicTagOptions = [],
+  privateTagOptions = [],
 }: {
   workspaceId: string;
   task: WorkspaceTaskData;
   userId: string;
   canEdit: boolean;
   isRoot: boolean;
+  publicTagOptions?: string[];
+  privateTagOptions?: string[];
 }) {
   const isClaimed = Boolean(task.assigneeId);
   const canClaim =
@@ -522,11 +527,13 @@ export function WorkspaceTaskRow({
                 >
                   <input type="hidden" name="workspaceId" value={workspaceId} />
                   <input type="hidden" name="taskId" value={task.id} />
-                  <input
+                  <TagSuggestInput
                     name="name"
                     required
+                    tags={privateTagOptions}
                     placeholder="my-focus"
-                    className="tide-input text-sm"
+                    emptyMessage="No private tags yet — type a new one"
+                    submitOnPick
                   />
                 </InlineActionForm>
               ) : null}
@@ -539,11 +546,13 @@ export function WorkspaceTaskRow({
                 >
                   <input type="hidden" name="workspaceId" value={workspaceId} />
                   <input type="hidden" name="taskId" value={task.id} />
-                  <input
+                  <TagSuggestInput
                     name="name"
                     required
+                    tags={publicTagOptions}
                     placeholder="design"
-                    className="tide-input text-sm"
+                    emptyMessage="No public tags in this folder yet — type a new one"
+                    submitOnPick
                   />
                 </InlineActionForm>
               ) : null}

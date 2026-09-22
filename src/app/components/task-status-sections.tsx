@@ -1,0 +1,132 @@
+"use client";
+
+import { useState } from "react";
+import {
+  WorkspaceTaskRow,
+  type WorkspaceTaskData,
+} from "@/app/components/workspace-task-row";
+import type { TaskStatus } from "@/generated/prisma/client";
+
+type SectionId = "unclaimed" | "claimed" | "completed";
+
+const SECTIONS: {
+  id: SectionId;
+  title: string;
+}[] = [
+  { id: "unclaimed", title: "Unclaimed" },
+  { id: "claimed", title: "Claimed" },
+  { id: "completed", title: "Completed" },
+];
+
+function sectionForTask(task: {
+  status: TaskStatus;
+  assigneeId: string | null;
+}): SectionId {
+  if (task.status === "DONE") return "completed";
+  if (task.status === "IN_REVIEW") return "claimed";
+  if (task.status === "CLAIMED" && task.assigneeId) return "claimed";
+  return "unclaimed";
+}
+
+function TaskSection({
+  title,
+  count,
+  defaultOpen = true,
+  children,
+}: {
+  title: string;
+  count: number;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <section className="space-y-2">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-2 rounded-lg px-1 py-1.5 text-left transition hover:bg-[#0A3D45]/[0.03]"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="flex items-center gap-2">
+          <span className="font-[family-name:var(--font-display)] text-lg text-[#0A3D45]">
+            {title}
+          </span>
+          <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
+            {count}
+          </span>
+        </span>
+        <span className="text-sm text-[#0A3D45]/55" aria-hidden>
+          {open ? "▾" : "▸"}
+        </span>
+      </button>
+      {open ? <ul className="space-y-3">{children}</ul> : null}
+    </section>
+  );
+}
+
+export function TaskStatusSections({
+  workspaceId,
+  userId,
+  canEdit,
+  tasks,
+  publicTagOptions = [],
+  privateTagOptions = [],
+}: {
+  workspaceId: string;
+  userId: string;
+  canEdit: boolean;
+  tasks: WorkspaceTaskData[];
+  publicTagOptions?: string[];
+  privateTagOptions?: string[];
+}) {
+  const grouped: Record<SectionId, WorkspaceTaskData[]> = {
+    unclaimed: [],
+    claimed: [],
+    completed: [],
+  };
+
+  for (const task of tasks) {
+    grouped[sectionForTask(task)].push(task);
+  }
+
+  if (tasks.length === 0) {
+    return (
+      <p className="text-sm text-[#0A3D45]/60">No tasks here yet.</p>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {SECTIONS.map((section) => {
+        const list = grouped[section.id];
+        return (
+          <TaskSection
+            key={section.id}
+            title={section.title}
+            count={list.length}
+            defaultOpen={section.id !== "completed"}
+          >
+            {list.length === 0 ? (
+              <li className="text-sm text-[#0A3D45]/50">None</li>
+            ) : (
+              list.map((task) => (
+                <WorkspaceTaskRow
+                  key={task.id}
+                  workspaceId={workspaceId}
+                  userId={userId}
+                  canEdit={canEdit}
+                  isRoot={false}
+                  task={task}
+                  publicTagOptions={publicTagOptions}
+                  privateTagOptions={privateTagOptions}
+                />
+              ))
+            )}
+          </TaskSection>
+        );
+      })}
+    </div>
+  );
+}

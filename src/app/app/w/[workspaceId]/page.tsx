@@ -4,6 +4,8 @@ import { InlineActionForm } from "@/app/components/forms";
 import { FolderActions } from "@/app/components/folder-actions";
 import { FolderCompletionStats } from "@/app/components/folder-completion-stats";
 import { WorkspaceTaskRow } from "@/app/components/workspace-task-row";
+import { TaskStatusSections } from "@/app/components/task-status-sections";
+import { DueDateField } from "@/app/components/due-date-field";
 import {
   createFolderAction,
   createTaskAction,
@@ -18,7 +20,7 @@ import { RoleActivityNotices } from "@/app/components/role-activity-notices";
 import { MarkRoleActivitySeen } from "@/app/components/mark-role-activity-seen";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { computeFolderTaskCounts } from "@/lib/folder-counts";
+import { computeFolderTaskCounts, collectSubtreeFolderIds } from "@/lib/folder-counts";
 import {
   buildFolderVisibility,
   canAccessFolder,
@@ -29,6 +31,7 @@ import {
 import { canEditContent, canManagePeople } from "@/lib/permissions";
 import { compareTasksByUrgency } from "@/lib/urgency";
 import { personLabel, searchRelevance } from "@/lib/utils";
+import { TagFilterField } from "@/app/components/tag-filter-field";
 
 export default async function WorkspacePage({
   params,
@@ -157,13 +160,32 @@ export default async function WorkspacePage({
       : "All Tasks"
     : null;
 
-  let tasks = isRoot
-    ? accessibleFolderIds.size === 0
+  const q = sp.q?.trim() ?? "";
+  const tagFilter = sp.tag?.trim().toLowerCase() ?? "";
+
+  const tagScopeFolderIds = collectSubtreeFolderIds(
+    currentFolder?.id ?? null,
+    folders,
+    accessibleFolderIds,
+  );
+
+  // Folder browse stays local; tag filter includes the folder subtree so
+  // tags from lower paths remain useful.
+  const taskFolderIds = isRoot
+    ? [...accessibleFolderIds]
+    : tagFilter && currentFolder
+      ? tagScopeFolderIds
+      : currentFolder
+        ? [currentFolder.id]
+        : [];
+
+  let tasks =
+    taskFolderIds.length === 0
       ? []
       : await prisma.task.findMany({
           where: {
             workspaceId,
-            folderId: { in: [...accessibleFolderIds] },
+            folderId: { in: taskFolderIds },
           },
           include: {
             assignee: true,
@@ -171,18 +193,38 @@ export default async function WorkspacePage({
             lastUnclaimedBy: true,
             tags: { include: { tag: true } },
           },
-        })
-    : currentFolder
-      ? await prisma.task.findMany({
-          where: { folderId: currentFolder.id },
-          include: {
-            assignee: true,
-            folder: true,
-            lastUnclaimedBy: true,
-            tags: { include: { tag: true } },
+        });
+
+  const [publicTagsInScope, privateTagsForUser] = await Promise.all([
+    tagScopeFolderIds.length === 0
+      ? Promise.resolve([] as { name: string }[])
+      : prisma.tag.findMany({
+          where: {
+            workspaceId,
+            isPublic: true,
+            tasks: {
+              some: { task: { folderId: { in: tagScopeFolderIds } } },
+            },
           },
-        })
-      : [];
+          orderBy: { name: "asc" },
+          select: { name: true },
+        }),
+    prisma.tag.findMany({
+      where: {
+        workspaceId,
+        isPublic: false,
+        creatorId: user.id,
+      },
+      orderBy: { name: "asc" },
+      select: { name: true },
+    }),
+  ]);
+
+  const publicTagOptions = publicTagsInScope.map((t) => t.name);
+  const privateTagOptions = privateTagsForUser.map((t) => t.name);
+  const searchTagOptions = Array.from(
+    new Set([...publicTagOptions, ...privateTagOptions]),
+  ).sort((a, b) => a.localeCompare(b));
 
   tasks = tasks
     .map((t) => ({
@@ -195,8 +237,6 @@ export default async function WorkspacePage({
     }))
     .sort(compareTasksByUrgency);
 
-  const q = sp.q?.trim() ?? "";
-  const tagFilter = sp.tag?.trim().toLowerCase() ?? "";
   if (q || tagFilter) {
     tasks = tasks
       .map((t) => ({
@@ -336,12 +376,7 @@ export default async function WorkspacePage({
               placeholder="Search names…"
               className="tide-input min-w-[12rem]"
             />
-            <input
-              name="tag"
-              defaultValue={tagFilter}
-              placeholder="Tag filter"
-              className="tide-input w-32"
-            />
+            <TagFilterField tags={searchTagOptions} defaultValue={tagFilter} />
             <button type="submit" className="tide-btn-secondary text-sm">
               Search
             </button>
@@ -532,7 +567,7 @@ export default async function WorkspacePage({
               <p className="text-sm text-[#0A3D45]/60">
                 {isRoot
                   ? "Every task in this workspace, sorted by urgency (priority + due date)."
-                  : "Subfolders and tasks. Urgency edge rises with priority and due dates."}
+                  : "Subfolders and tasks grouped by status. Urgency edge rises with priority and due dates."}
               </p>
 
               {childFolders.length > 0 ? (
@@ -602,7 +637,15 @@ export default async function WorkspacePage({
                   <input type="hidden" name="workspaceId" value={workspaceId} />
                   <input type="hidden" name="folderId" value={currentFolder.id} />
                   <input name="name" required placeholder="Task name" className="tide-input" />
-                  <select name="priority" className="tide-input" defaultValue="MEDIUM">
+                  <select
+                    name="priority"
+                    required
+                    defaultValue=""
+                    className="tide-input text-[color-mix(in_srgb,var(--tide-ink)_45%,transparent)] valid:text-[var(--tide-ink)]"
+                  >
+                    <option value="" disabled>
+                      Priority level
+                    </option>
                     <option value="CRITICAL">Critical</option>
                     <option value="HIGH">High</option>
                     <option value="MEDIUM">Medium</option>
@@ -613,7 +656,7 @@ export default async function WorkspacePage({
                     placeholder="Description"
                     className="tide-input sm:col-span-2"
                   />
-                  <input name="dueDate" type="date" className="tide-input" />
+                  <DueDateField name="dueDate" />
                 </InlineActionForm>
               ) : null}
 
@@ -624,23 +667,36 @@ export default async function WorkspacePage({
               ) : null}
             </div>
 
-            <ul className="space-y-3">
-              {tasks.map((task) => (
-                <WorkspaceTaskRow
-                  key={task.id}
-                  workspaceId={workspaceId}
-                  userId={user.id}
-                  canEdit={canEdit}
-                  isRoot={isRoot}
-                  task={task}
-                />
-              ))}
-              {tasks.length === 0 ? (
-                <li className="text-sm text-[#0A3D45]/60">
-                  {isRoot ? "No tasks in this workspace yet." : "No tasks here yet."}
-                </li>
-              ) : null}
-            </ul>
+            {isRoot ? (
+              <ul className="space-y-3">
+                {tasks.map((task) => (
+                  <WorkspaceTaskRow
+                    key={task.id}
+                    workspaceId={workspaceId}
+                    userId={user.id}
+                    canEdit={canEdit}
+                    isRoot
+                    task={task}
+                    publicTagOptions={publicTagOptions}
+                    privateTagOptions={privateTagOptions}
+                  />
+                ))}
+                {tasks.length === 0 ? (
+                  <li className="text-sm text-[#0A3D45]/60">
+                    No tasks in this workspace yet.
+                  </li>
+                ) : null}
+              </ul>
+            ) : (
+              <TaskStatusSections
+                workspaceId={workspaceId}
+                userId={user.id}
+                canEdit={canEdit}
+                tasks={tasks}
+                publicTagOptions={publicTagOptions}
+                privateTagOptions={privateTagOptions}
+              />
+            )}
           </section>
         </div>
       </main>
