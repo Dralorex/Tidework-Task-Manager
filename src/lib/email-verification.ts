@@ -86,6 +86,7 @@ export async function issuePendingSignup(opts: {
   username: string;
   passwordHash: string;
   email: string;
+  nickname?: string | null;
   signInDuration?: string;
   forceResend?: boolean;
   pendingId?: string;
@@ -115,6 +116,8 @@ export async function issuePendingSignup(opts: {
   const now = new Date();
   const signInDuration =
     opts.signInDuration?.trim() || existing?.signInDuration || "session";
+  const nickname =
+    opts.nickname !== undefined ? opts.nickname : existing?.nickname ?? null;
 
   const pending = existing
     ? await prisma.pendingSignup.update({
@@ -122,6 +125,7 @@ export async function issuePendingSignup(opts: {
         data: {
           passwordHash: opts.passwordHash || existing.passwordHash,
           email,
+          nickname,
           code,
           expiresAt,
           ...(opts.signInDuration?.trim()
@@ -134,6 +138,7 @@ export async function issuePendingSignup(opts: {
           username: opts.username,
           passwordHash: opts.passwordHash,
           email,
+          nickname,
           code,
           expiresAt,
           signInDuration,
