@@ -191,6 +191,7 @@ export default async function WorkspacePage({
             assignee: true,
             folder: true,
             lastUnclaimedBy: true,
+            lastSentBackBy: true,
             tags: { include: { tag: true } },
           },
         });

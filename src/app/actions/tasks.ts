@@ -505,6 +505,8 @@ export async function completeTaskAction(
     data: {
       status: "IN_REVIEW",
       completionComment: comment,
+      lastSendBackReason: null,
+      lastSentBackById: null,
     },
   });
 
@@ -541,6 +543,7 @@ export async function reviewTaskAction(
   const workspaceId = String(formData.get("workspaceId") ?? "");
   const taskId = String(formData.get("taskId") ?? "");
   const decision = String(formData.get("decision") ?? "") as "approve" | "reopen";
+  const reason = String(formData.get("reason") ?? "").trim();
 
   const membership = await requireMembership(workspaceId, user.id);
   if (!canEditContent(membership.role)) {
@@ -560,11 +563,17 @@ export async function reviewTaskAction(
   );
   if (deniedReview) return deniedReview;
 
+  if (decision === "reopen" && !reason) {
+    return { ok: false, error: "Say why you’re sending this task back." };
+  }
+
   await prisma.task.update({
     where: { id: taskId },
     data: {
       status: decision === "approve" ? "DONE" : "CLAIMED",
       completionComment: decision === "approve" ? task.completionComment : null,
+      lastSendBackReason: decision === "reopen" ? reason : null,
+      lastSentBackById: decision === "reopen" ? user.id : null,
     },
   });
 
@@ -577,7 +586,7 @@ export async function reviewTaskAction(
         body:
           decision === "approve"
             ? `“${task.name}” was approved.`
-            : `“${task.name}” was sent back for more work.`,
+            : `“${task.name}” was sent back: ${reason}`,
         meta: JSON.stringify({
           workspaceId,
           taskId,
