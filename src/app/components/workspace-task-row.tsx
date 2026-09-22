@@ -376,6 +376,19 @@ export function WorkspaceTaskRow({
   const canAddPrivateTag = task.assigneeId === userId;
   const [expanded, setExpanded] = useState(false);
 
+  const existingPublic = new Set(
+    task.tags.filter((tt) => tt.tag.isPublic).map((tt) => tt.tag.name.toLowerCase()),
+  );
+  const existingPrivate = new Set(
+    task.tags.filter((tt) => !tt.tag.isPublic).map((tt) => tt.tag.name.toLowerCase()),
+  );
+  const availablePublicTags = publicTagOptions.filter(
+    (name) => !existingPublic.has(name.toLowerCase()),
+  );
+  const availablePrivateTags = privateTagOptions.filter(
+    (name) => !existingPrivate.has(name.toLowerCase()),
+  );
+
   useEffect(() => {
     setExpanded(false);
   }, [task.id, isClaimed]);
