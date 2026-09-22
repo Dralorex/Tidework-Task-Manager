@@ -1,0 +1,9 @@
+ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "lastSendBackReason" TEXT;
+ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "lastSentBackById" TEXT;
+
+DO $$ BEGIN
+  ALTER TABLE "Task" ADD CONSTRAINT "Task_lastSentBackById_fkey"
+    FOREIGN KEY ("lastSentBackById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
