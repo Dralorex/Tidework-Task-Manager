@@ -548,7 +548,7 @@ export function WorkspaceTaskRow({
                 <AddTaskTagsForm
                   workspaceId={workspaceId}
                   taskId={task.id}
-                  tags={privateTagOptions}
+                  tags={availablePrivateTags}
                   variant="private"
                 />
               ) : null}
@@ -557,7 +557,7 @@ export function WorkspaceTaskRow({
                 <AddTaskTagsForm
                   workspaceId={workspaceId}
                   taskId={task.id}
-                  tags={publicTagOptions}
+                  tags={availablePublicTags}
                   variant="public"
                 />
               ) : null}
