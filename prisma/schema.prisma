@@ -151,6 +151,8 @@ model PendingSignup {
   username       String   @unique
   passwordHash   String
   email          String
+  /** Optional display nickname applied when the account is created. */
+  nickname       String?
   code           String
   /** Parsed by parseSignInDuration — session | 7 | 30 | 180 | 365 | forever */
   signInDuration String   @default("session")

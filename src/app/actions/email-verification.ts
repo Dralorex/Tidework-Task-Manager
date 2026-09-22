@@ -107,6 +107,7 @@ export async function verifyEmailCodeAction(
         username: pending.username,
         passwordHash: pending.passwordHash,
         email: pending.email,
+        nickname: pending.nickname,
       },
     });
     await prisma.pendingSignup.delete({ where: { id: pending.id } });

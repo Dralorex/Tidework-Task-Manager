@@ -18,7 +18,7 @@ import {
   issuePendingSignup,
 } from "@/lib/email-verification";
 import { sendEmail } from "@/lib/mail";
-import { isValidEmail, isValidUsername, normalizeUsername } from "@/lib/utils";
+import { isValidEmail, isValidNickname, isValidUsername, normalizeNickname, normalizeUsername } from "@/lib/utils";
 
 export type ActionResult =
   | {
@@ -51,14 +51,23 @@ export async function signUpAction(
   const password = String(formData.get("password") ?? "");
   const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
   const emailRaw = String(formData.get("email") ?? "").trim();
+  const nicknameRaw = String(formData.get("nickname") ?? "");
   const noEmailAck = String(formData.get("noEmailAck") ?? "") === "true";
   const next = safeNextPath(formData.get("next"));
   const username = normalizeUsername(usernameRaw);
+  const nickname = normalizeNickname(nicknameRaw);
 
   if (!isValidUsername(usernameRaw.trim())) {
     return {
       ok: false,
       error: "Username must be 3–30 characters: letters, numbers, underscores.",
+    };
+  }
+  if (nicknameRaw.trim() && !isValidNickname(nickname)) {
+    return {
+      ok: false,
+      error:
+        "Nickname can use letters, numbers, and spaces (up to 40 characters).",
     };
   }
   if (password.length < 8) {
@@ -107,6 +116,7 @@ export async function signUpAction(
   const duration = parseSignInDuration(
     String(formData.get("signInDuration") ?? ""),
   );
+  const nicknameValue = nickname.length > 0 ? nickname : null;
 
   // With email: hold the signup until the code is verified — don't create the User yet.
   if (email) {
@@ -114,6 +124,7 @@ export async function signUpAction(
       username,
       passwordHash,
       email,
+      nickname: nicknameValue,
       signInDuration: String(duration),
     });
     if (!issued.ok) {
@@ -133,6 +144,7 @@ export async function signUpAction(
       username,
       passwordHash,
       email: null,
+      nickname: nicknameValue,
     },
   });
 

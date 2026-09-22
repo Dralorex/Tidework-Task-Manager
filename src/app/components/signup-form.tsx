@@ -84,6 +84,21 @@ export function SignUpForm({
             placeholder="tide_rider"
           />
         </label>
+        <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">
+          Nickname{" "}
+          <span className="font-normal text-[#0A3D45]/55">(optional)</span>
+          <input
+            name="nickname"
+            autoComplete="nickname"
+            className="tide-input"
+            placeholder="Display name"
+            maxLength={40}
+          />
+        </label>
+        <p className="text-xs leading-relaxed text-[#0A3D45]/60">
+          Shown instead of your username around the app. You can change it later in
+          profile settings.
+        </p>
         <PasswordFields />
         <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">
           Email{" "}
