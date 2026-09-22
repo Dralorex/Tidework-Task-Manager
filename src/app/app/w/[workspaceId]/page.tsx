@@ -8,6 +8,7 @@ import { WorkspaceTaskRow } from "@/app/components/workspace-task-row";
 import { TaskStatusSections } from "@/app/components/task-status-sections";
 import { DueDateField } from "@/app/components/due-date-field";
 import { PriorityField } from "@/app/components/priority-field";
+import { TagSuggestInput } from "@/app/components/tag-suggest-input";
 import {
   createFolderAction,
   createTaskAction,
@@ -618,6 +619,17 @@ export default async function WorkspacePage({
                     className="tide-input sm:col-span-2"
                   />
                   <DueDateField name="dueDate" />
+                  <div className="sm:col-span-2">
+                    <TagSuggestInput
+                      name="tags"
+                      tags={publicTagOptions}
+                      placeholder="add tags: example, test, help"
+                      hint="Optional. Separate multiple tags with commas — same as Add Public Tag on a task."
+                      emptyMessage="No public tags in this folder yet — type a new one"
+                      allowMultiple
+                      keepOpenOnPick
+                    />
+                  </div>
                 </InlineActionForm>
               ) : null}
 

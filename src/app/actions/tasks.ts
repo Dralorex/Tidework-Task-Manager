@@ -154,6 +154,7 @@ export async function createTaskAction(
   const description = String(formData.get("description") ?? "").trim();
   const priority = String(formData.get("priority") ?? "MEDIUM") as TaskPriority;
   const dueRaw = String(formData.get("dueDate") ?? "").trim();
+  const tagNames = parseTagNames(String(formData.get("tags") ?? ""));
 
   if (!name) return { ok: false, error: "Task needs a name." };
   if (!["CRITICAL", "HIGH", "MEDIUM", "LOW"].includes(priority)) {
@@ -172,7 +173,11 @@ export async function createTaskAction(
   });
   if (!access.ok) return access;
 
-  await prisma.task.create({
+  if (tagNames.length > 0 && !canCreatePublicTags(membership.role)) {
+    return { ok: false, error: "Only editors and above can add public tags." };
+  }
+
+  const task = await prisma.task.create({
     data: {
       workspaceId,
       folderId,
@@ -183,6 +188,27 @@ export async function createTaskAction(
       createdById: user.id,
     },
   });
+
+  for (const tagName of tagNames) {
+    let tag = await prisma.tag.findFirst({
+      where: { workspaceId, name: tagName, isPublic: true },
+    });
+    if (!tag) {
+      tag = await prisma.tag.create({
+        data: {
+          workspaceId,
+          name: tagName,
+          isPublic: true,
+          creatorId: user.id,
+        },
+      });
+    }
+    await prisma.taskTag.upsert({
+      where: { taskId_tagId: { taskId: task.id, tagId: tag.id } },
+      create: { taskId: task.id, tagId: tag.id },
+      update: {},
+    });
+  }
 
   revalidatePath(`/app/w/${workspaceId}`);
   return { ok: true };
