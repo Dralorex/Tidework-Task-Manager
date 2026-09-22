@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { InlineActionForm } from "@/app/components/forms";
 import { MenuSurface, menuItemClass } from "@/app/components/menu-surface";
 import { TaskUrgencyEdge, UrgencyTag } from "@/app/components/task-ui";
+import { TagSuggestInput } from "@/app/components/tag-suggest-input";
 import { SendBackTaskControl } from "@/app/components/send-back-task-control";
 import { UnclaimTaskControl } from "@/app/components/unclaim-task-control";
 import {
@@ -357,12 +358,16 @@ export function WorkspaceTaskRow({
   userId,
   canEdit,
   isRoot,
+  publicTagOptions = [],
+  privateTagOptions = [],
 }: {
   workspaceId: string;
   task: WorkspaceTaskData;
   userId: string;
   canEdit: boolean;
   isRoot: boolean;
+  publicTagOptions?: string[];
+  privateTagOptions?: string[];
 }) {
   const isClaimed = Boolean(task.assigneeId);
   const canClaim =
@@ -536,11 +541,15 @@ export function WorkspaceTaskRow({
                 >
                   <input type="hidden" name="workspaceId" value={workspaceId} />
                   <input type="hidden" name="taskId" value={task.id} />
-                  <input
+                  <TagSuggestInput
                     name="name"
                     required
-                    placeholder="my-focus"
-                    className="tide-input text-sm"
+                    tags={privateTagOptions}
+                    placeholder="add tags: example, test, help"
+                    hint="Separate multiple tags with commas."
+                    emptyMessage="No private tags yet — type a new one"
+                    allowMultiple
+                    submitOnPick
                   />
                 </InlineActionForm>
               ) : null}
@@ -553,11 +562,15 @@ export function WorkspaceTaskRow({
                 >
                   <input type="hidden" name="workspaceId" value={workspaceId} />
                   <input type="hidden" name="taskId" value={task.id} />
-                  <input
+                  <TagSuggestInput
                     name="name"
                     required
-                    placeholder="design"
-                    className="tide-input text-sm"
+                    tags={publicTagOptions}
+                    placeholder="add tags: example, test, help"
+                    hint="Separate multiple tags with commas."
+                    emptyMessage="No public tags in this folder yet — type a new one"
+                    allowMultiple
+                    submitOnPick
                   />
                 </InlineActionForm>
               ) : null}
