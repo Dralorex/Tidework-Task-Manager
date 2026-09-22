@@ -909,9 +909,9 @@ export function CalendarBoard({
                   key={key}
                   type="button"
                   onClick={() => focusDay(key, dayEvents)}
-                  className={`calendar-day-cell min-h-24 border-b border-r border-[#0A3D45]/10 p-2 text-left align-top transition hover:bg-[#3DBEAB]/10 ${
+                  className={`min-h-24 border-b border-r border-[#0A3D45]/10 p-2 text-left align-top transition hover:bg-[#3DBEAB]/10 ${
                     isSameMonth(day, month)
-                      ? "bg-white/25"
+                      ? "calendar-day-cell-current bg-white/25"
                       : "calendar-day-cell-muted bg-[#0A3D45]/[0.025]"
                   }`}
                 >
