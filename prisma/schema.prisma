@@ -77,6 +77,7 @@ model User {
   assignedTasks         Task[]               @relation("TaskAssignee")
   createdTasks          Task[]               @relation("TaskCreator")
   unclaimedTasks        Task[]               @relation("TaskUnclaimer")
+  sentBackTasks         Task[]               @relation("TaskSentBackBy")
   privateTags           Tag[]                @relation("TagCreator")
   rememberedPrivateTags RememberedPrivateTag[]
   calendarEvents        CalendarEvent[]
@@ -304,6 +305,8 @@ model Task {
   lastUnclaimReason String?
   lastUnclaimWorkNote String?
   lastUnclaimedById String?
+  lastSendBackReason String?
+  lastSentBackById String?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
@@ -312,6 +315,7 @@ model Task {
   assignee       User?           @relation("TaskAssignee", fields: [assigneeId], references: [id])
   createdBy      User            @relation("TaskCreator", fields: [createdById], references: [id])
   lastUnclaimedBy User?          @relation("TaskUnclaimer", fields: [lastUnclaimedById], references: [id])
+  lastSentBackBy  User?          @relation("TaskSentBackBy", fields: [lastSentBackById], references: [id])
   tags           TaskTag[]
   calendarEvents CalendarEvent[]
   rememberedPrivateTags RememberedPrivateTag[]

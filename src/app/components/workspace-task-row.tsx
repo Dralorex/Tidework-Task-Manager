@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { InlineActionForm } from "@/app/components/forms";
 import { MenuSurface, menuItemClass } from "@/app/components/menu-surface";
 import { TaskUrgencyEdge, UrgencyTag } from "@/app/components/task-ui";
+import { SendBackTaskControl } from "@/app/components/send-back-task-control";
 import { UnclaimTaskControl } from "@/app/components/unclaim-task-control";
 import {
   addPrivateTagAction,
@@ -44,8 +45,10 @@ export type WorkspaceTaskData = {
   completionComment: string | null;
   lastUnclaimReason: string | null;
   lastUnclaimWorkNote: string | null;
+  lastSendBackReason: string | null;
   assignee: Person | null;
   lastUnclaimedBy: Person | null;
+  lastSentBackBy: Person | null;
   folder: { id: string; name: string } | null;
   tags: TagLink[];
 };
@@ -450,6 +453,17 @@ export function WorkspaceTaskRow({
                   ) : null}
                 </div>
               ) : null}
+              {task.lastSendBackReason ? (
+                <div className="mt-2 rounded-md bg-[#9b2f22]/[0.06] px-2.5 py-2 text-xs text-[#0A3D45]/75">
+                  <p>
+                    <span className="font-semibold">Send-back reason:</span>{" "}
+                    {task.lastSendBackReason}
+                    {task.lastSentBackBy
+                      ? ` — ${personLabel(task.lastSentBackBy)}`
+                      : ""}
+                  </p>
+                </div>
+              ) : null}
               {task.completionComment ? (
                 <p className="mt-1 text-xs italic text-[#0A3D45]/65">
                   Review note: {task.completionComment}
@@ -563,19 +577,10 @@ export function WorkspaceTaskRow({
                     <input type="hidden" name="taskId" value={task.id} />
                     <input type="hidden" name="decision" value="approve" />
                   </InlineActionForm>
-                  <InlineActionForm
-                    className="flex flex-row items-center gap-2"
-                    action={reviewTaskAction}
-                    submitLabel="Send back"
-                  >
-                    <input
-                      type="hidden"
-                      name="workspaceId"
-                      value={workspaceId}
-                    />
-                    <input type="hidden" name="taskId" value={task.id} />
-                    <input type="hidden" name="decision" value="reopen" />
-                  </InlineActionForm>
+                  <SendBackTaskControl
+                    workspaceId={workspaceId}
+                    taskId={task.id}
+                  />
                 </div>
               ) : null}
 
