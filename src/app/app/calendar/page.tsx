@@ -74,6 +74,18 @@ export default async function CalendarPage({
       ? selectedWorkspaceIds
       : enabledWorkspaceIds;
 
+  const taskEventQuery =
+    scope === "personal" && enabledWorkspaceIds.length > 0
+      ? {
+          userId: user.id,
+          task: { workspaceId: { in: enabledWorkspaceIds } },
+        }
+      : scope === "workspace" && selectedWorkspaceIds.length > 0
+        ? {
+            task: { workspaceId: { in: selectedWorkspaceIds } },
+          }
+        : null;
+
   const [
     personalEvents,
     hiddenPersonalEvents,
@@ -101,17 +113,15 @@ export default async function CalendarPage({
           orderBy: { date: "asc" },
         })
       : [],
-    scope === "personal" && enabledWorkspaceIds.length > 0
+    taskEventQuery
       ? prisma.calendarEvent.findMany({
-          where: {
-            userId: user.id,
-            task: { workspaceId: { in: enabledWorkspaceIds } },
-          },
+          where: taskEventQuery,
           include: {
             task: {
               include: {
                 workspace: true,
                 folder: true,
+                assignee: true,
               },
             },
           },
@@ -177,7 +187,9 @@ export default async function CalendarPage({
       allDay: true,
       startAt: null,
       endAt: null,
-      sourceLabel: `${event.task.workspace.name} · ${event.task.folder.name}`,
+      sourceLabel: event.task.assignee
+        ? `${event.task.workspace.name} · ${event.task.folder.name} · ${personLabel(event.task.assignee)}`
+        : `${event.task.workspace.name} · ${event.task.folder.name}`,
       href: `/app/w/${event.task.workspaceId}?folder=${event.task.folderId}`,
     })),
   ];

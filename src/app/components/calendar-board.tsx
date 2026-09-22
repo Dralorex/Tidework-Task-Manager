@@ -405,7 +405,7 @@ function EventRow({
   return (
     <li
       id={`calendar-event-${event.id}`}
-      className={`tide-panel overflow-hidden transition ${
+      className={`tide-panel calendar-event-row overflow-hidden transition ${
         focused ? "ring-2 ring-[#3DBEAB]/60" : ""
       }`}
     >
@@ -909,8 +909,10 @@ export function CalendarBoard({
                   key={key}
                   type="button"
                   onClick={() => focusDay(key, dayEvents)}
-                  className={`min-h-24 border-b border-r border-[#0A3D45]/10 p-2 text-left align-top transition hover:bg-[#3DBEAB]/10 ${
-                    isSameMonth(day, month) ? "bg-white/25" : "bg-[#0A3D45]/[0.025]"
+                  className={`calendar-day-cell min-h-24 border-b border-r border-[#0A3D45]/10 p-2 text-left align-top transition hover:bg-[#3DBEAB]/10 ${
+                    isSameMonth(day, month)
+                      ? "bg-white/25"
+                      : "calendar-day-cell-muted bg-[#0A3D45]/[0.025]"
                   }`}
                 >
                   <span
@@ -926,7 +928,7 @@ export function CalendarBoard({
                     {dayEvents.slice(0, 3).map((event) => (
                       <span
                         key={event.id}
-                        className="block truncate rounded bg-[#0A3D45]/10 px-1.5 py-1 text-[10px] font-medium text-[#0A3D45]"
+                        className="calendar-event-chip block truncate rounded bg-[#0A3D45]/10 px-1.5 py-1 text-[10px] font-medium text-[#0A3D45]"
                       >
                         {event.title}
                       </span>

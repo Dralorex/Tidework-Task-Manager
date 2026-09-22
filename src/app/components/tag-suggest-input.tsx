@@ -3,6 +3,10 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 
+/** Approx. row height for suggestion buttons (py-1.5 + text-sm). */
+const SUGGESTION_ROW_REM = 2.25;
+const MAX_VISIBLE_SUGGESTIONS = 6;
+
 /** Text input with a clickable suggestion list of existing tags. */
 export function TagSuggestInput({
   tags,
@@ -17,6 +21,7 @@ export function TagSuggestInput({
   submitOnPick = false,
   clearOptionLabel,
   allowMultiple = false,
+  keepOpenOnPick = false,
 }: {
   tags: string[];
   name?: string;
@@ -33,6 +38,11 @@ export function TagSuggestInput({
   clearOptionLabel?: string;
   /** Allow comma-separated tags; suggestions match the last segment. */
   allowMultiple?: boolean;
+  /**
+   * When picking with allowMultiple, keep the menu open and append ", "
+   * so another tag can be typed. Closes only if the tag is already selected.
+   */
+  keepOpenOnPick?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(defaultValue);
@@ -94,9 +104,31 @@ export function TagSuggestInput({
       commit(tag, Boolean(submitOnPick));
       return;
     }
+
+    if (taken.has(tag.toLowerCase())) {
+      setOpen(false);
+      return;
+    }
+
+    if (keepOpenOnPick) {
+      const next = `${[...head, tag].join(", ")}, `;
+      setValue(next);
+      setOpen(true);
+      requestAnimationFrame(() => {
+        const el = inputRef.current;
+        if (!el) return;
+        el.focus();
+        const end = el.value.length;
+        el.setSelectionRange(end, end);
+      });
+      return;
+    }
+
     const next = [...head, tag].join(", ");
     commit(next, Boolean(submitOnPick));
   }
+
+  const listMaxHeight = `${MAX_VISIBLE_SUGGESTIONS * SUGGESTION_ROW_REM}rem`;
 
   return (
     <div className={className}>
@@ -123,7 +155,7 @@ export function TagSuggestInput({
           <div
             id={listId}
             role="listbox"
-            className="absolute left-0 right-0 top-[calc(100%+4px)] z-[80] max-h-56 overflow-y-auto rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--menu-bg)] py-1 shadow-lg"
+            className="absolute left-0 right-0 top-[calc(100%+4px)] z-[80] overflow-hidden rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--menu-bg)] py-1 shadow-lg"
           >
             {clearOptionLabel && value.trim() ? (
               <button
@@ -135,36 +167,38 @@ export function TagSuggestInput({
                 {clearOptionLabel}
               </button>
             ) : null}
-            {filtered.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-[#0A3D45]/55">
-                {tags.length === 0 ||
-                (tags.length > 0 && taken.size >= tags.length && !activeQuery)
-                  ? emptyMessage
-                  : activeQuery
-                    ? "No matching tags"
-                    : emptyMessage}
-              </p>
-            ) : (
-              filtered.map((tag) => {
-                const selected = tag.toLowerCase() === activeQuery;
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    role="option"
-                    aria-selected={selected}
-                    className={`block w-full px-3 py-1.5 text-left text-sm hover:bg-[#0A3D45]/[0.06] ${
-                      selected
-                        ? "font-semibold text-[#0A3D45]"
-                        : "text-[#0A3D45]/80"
-                    }`}
-                    onClick={() => pickSuggestion(tag)}
-                  >
-                    {tag}
-                  </button>
-                );
-              })
-            )}
+            <div className="overflow-y-auto" style={{ maxHeight: listMaxHeight }}>
+              {filtered.length === 0 ? (
+                <p className="px-3 py-2 text-xs text-[#0A3D45]/55">
+                  {tags.length === 0 ||
+                  (tags.length > 0 && taken.size >= tags.length && !activeQuery)
+                    ? emptyMessage
+                    : activeQuery
+                      ? "No matching tags"
+                      : emptyMessage}
+                </p>
+              ) : (
+                filtered.map((tag) => {
+                  const selected = tag.toLowerCase() === activeQuery;
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      className={`block w-full px-3 py-1.5 text-left text-sm hover:bg-[#0A3D45]/[0.06] ${
+                        selected
+                          ? "font-semibold text-[#0A3D45]"
+                          : "text-[#0A3D45]/80"
+                      }`}
+                      onClick={() => pickSuggestion(tag)}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })
+              )}
+            </div>
           </div>
         ) : null}
       </div>

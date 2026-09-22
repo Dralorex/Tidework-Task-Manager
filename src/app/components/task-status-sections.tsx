@@ -42,22 +42,22 @@ function TaskSection({
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <section className="space-y-2">
+    <section className="space-y-3">
       <button
         type="button"
-        className="flex w-full items-center justify-between gap-2 rounded-lg px-1 py-1.5 text-left transition hover:bg-[#0A3D45]/[0.03]"
+        className="flex w-full items-center justify-between gap-3 rounded-full border border-[#0A3D45]/12 bg-[#0A3D45]/[0.05] px-4 py-2.5 text-left transition hover:border-[#0A3D45]/20 hover:bg-[#0A3D45]/[0.08]"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        <span className="flex items-center gap-2">
+        <span className="flex min-w-0 items-center gap-2">
           <span className="font-[family-name:var(--font-display)] text-lg text-[#0A3D45]">
             {title}
           </span>
-          <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
+          <span className="rounded-full bg-[#0A3D45]/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
             {count}
           </span>
         </span>
-        <span className="text-sm text-[#0A3D45]/55" aria-hidden>
+        <span className="shrink-0 text-sm text-[#0A3D45]/55" aria-hidden>
           {open ? "▾" : "▸"}
         </span>
       </button>

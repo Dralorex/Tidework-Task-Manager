@@ -7,12 +7,10 @@ import { useRouter } from "next/navigation";
 import { InlineActionForm } from "@/app/components/forms";
 import { MenuSurface, menuItemClass } from "@/app/components/menu-surface";
 import { TaskUrgencyEdge, UrgencyTag } from "@/app/components/task-ui";
-import { TagSuggestInput } from "@/app/components/tag-suggest-input";
+import { AddTaskTagsForm } from "@/app/components/add-task-tags-form";
 import { SendBackTaskControl } from "@/app/components/send-back-task-control";
 import { UnclaimTaskControl } from "@/app/components/unclaim-task-control";
 import {
-  addPrivateTagAction,
-  addPublicTagAction,
   removeTaskTagAction,
   claimTaskAction,
   completeTaskAction,
@@ -378,6 +376,19 @@ export function WorkspaceTaskRow({
   const canAddPrivateTag = task.assigneeId === userId;
   const [expanded, setExpanded] = useState(false);
 
+  const existingPublic = new Set(
+    task.tags.filter((tt) => tt.tag.isPublic).map((tt) => tt.tag.name.toLowerCase()),
+  );
+  const existingPrivate = new Set(
+    task.tags.filter((tt) => !tt.tag.isPublic).map((tt) => tt.tag.name.toLowerCase()),
+  );
+  const availablePublicTags = publicTagOptions.filter(
+    (name) => !existingPublic.has(name.toLowerCase()),
+  );
+  const availablePrivateTags = privateTagOptions.filter(
+    (name) => !existingPrivate.has(name.toLowerCase()),
+  );
+
   useEffect(() => {
     setExpanded(false);
   }, [task.id, isClaimed]);
@@ -534,45 +545,21 @@ export function WorkspaceTaskRow({
               ) : null}
 
               {canAddPrivateTag ? (
-                <InlineActionForm
-                  className="flex flex-col gap-2"
-                  action={addPrivateTagAction}
-                  submitLabel="Private tag"
-                >
-                  <input type="hidden" name="workspaceId" value={workspaceId} />
-                  <input type="hidden" name="taskId" value={task.id} />
-                  <TagSuggestInput
-                    name="name"
-                    required
-                    tags={privateTagOptions}
-                    placeholder="add tags: example, test, help"
-                    hint="Separate multiple tags with commas."
-                    emptyMessage="No private tags yet — type a new one"
-                    allowMultiple
-                    submitOnPick
-                  />
-                </InlineActionForm>
+                <AddTaskTagsForm
+                  workspaceId={workspaceId}
+                  taskId={task.id}
+                  tags={availablePrivateTags}
+                  variant="private"
+                />
               ) : null}
 
               {canEdit ? (
-                <InlineActionForm
-                  className="flex flex-col gap-2"
-                  action={addPublicTagAction}
-                  submitLabel="Public tag"
-                >
-                  <input type="hidden" name="workspaceId" value={workspaceId} />
-                  <input type="hidden" name="taskId" value={task.id} />
-                  <TagSuggestInput
-                    name="name"
-                    required
-                    tags={publicTagOptions}
-                    placeholder="add tags: example, test, help"
-                    hint="Separate multiple tags with commas."
-                    emptyMessage="No public tags in this folder yet — type a new one"
-                    allowMultiple
-                    submitOnPick
-                  />
-                </InlineActionForm>
+                <AddTaskTagsForm
+                  workspaceId={workspaceId}
+                  taskId={task.id}
+                  tags={availablePublicTags}
+                  variant="public"
+                />
               ) : null}
 
               {task.status === "IN_REVIEW" && canEdit ? (
