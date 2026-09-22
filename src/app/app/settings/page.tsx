@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { DisplayThemeSettings } from "@/app/components/display-theme-settings";
 import { getCurrentUser } from "@/lib/auth";
-import { THEME_COOKIE, LEGACY_THEME_COOKIE, parseDisplayTheme } from "@/lib/theme";
+import { THEME_COOKIE, LEGACY_THEME_COOKIE, THEME_MIGRATION_COOKIE, parseDisplayTheme } from "@/lib/theme";
 import Link from "next/link";
 
 export default async function SettingsPage() {
@@ -12,6 +12,7 @@ export default async function SettingsPage() {
   const theme = parseDisplayTheme(
     cookieStore.get(THEME_COOKIE)?.value ??
       cookieStore.get(LEGACY_THEME_COOKIE)?.value,
+    { migratedV2: cookieStore.get(THEME_MIGRATION_COOKIE)?.value === "1" },
   );
 
   return (

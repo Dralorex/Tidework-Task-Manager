@@ -1,46 +1,123 @@
 export const THEME_COOKIE = "rowgon_theme";
 export const LEGACY_THEME_COOKIE = "tidework_theme";
+/** Once set, cookie value `burn` means dark-ember Burn (not the old soft theme). */
+export const THEME_MIGRATION_COOKIE = "rowgon_theme_v2";
+
+export type DisplayThemeGroup = "recommended" | "classic" | "fun";
+
+export const DISPLAY_THEME_GROUPS: {
+  id: DisplayThemeGroup;
+  label: string;
+  description: string;
+}[] = [
+  {
+    id: "recommended",
+    label: "Recommended",
+    description: "Core looks that fit everyday work.",
+  },
+  {
+    id: "classic",
+    label: "Classic",
+    description: "Clean neutrals — white, gray, and true dark.",
+  },
+  {
+    id: "fun",
+    label: "Fun",
+    description: "Beach, peach, and ember for a bolder vibe.",
+  },
+];
 
 export const DISPLAY_THEMES = [
   {
     id: "cool",
     label: "Cool mode",
     description: "Default teal foam — calm and coastal.",
-  },
-  {
-    id: "light",
-    label: "Light mode",
-    description: "Airy whites with soft ink.",
-  },
-  {
-    id: "bright",
-    label: "Bright mode",
-    description: "High-contrast daylight.",
-  },
-  {
-    id: "gray",
-    label: "Gray mode",
-    description: "Neutral slate workspace.",
+    group: "recommended",
   },
   {
     id: "dark",
     label: "Deep Ocean",
     description: "Low-light deep tide workspace.",
+    group: "recommended",
+  },
+  {
+    id: "light",
+    label: "Light mode",
+    description: "Pure white — no color washes.",
+    group: "classic",
+  },
+  {
+    id: "gray",
+    label: "Gray mode",
+    description: "Mid slate workspace.",
+    group: "classic",
+  },
+  {
+    id: "night",
+    label: "Dark mode",
+    description: "Classic flat dark — no accent washes.",
+    group: "classic",
+  },
+  {
+    id: "beach",
+    label: "Beach mode",
+    description: "Sky above, water mid, sand below.",
+    group: "fun",
+  },
+  {
+    id: "peach",
+    label: "Peach mode",
+    description: "Soft peach canvas with warm accents.",
+    group: "fun",
   },
   {
     id: "burn",
     label: "Burn mode",
-    description: "Warm ember accents.",
+    description: "Dark ember — red, yellow, and orange heat.",
+    group: "fun",
   },
 ] as const;
 
 export type DisplayThemeId = (typeof DISPLAY_THEMES)[number]["id"];
 
+const THEME_IDS = new Set<string>(DISPLAY_THEMES.map((t) => t.id));
+
+/** Legacy cookie values → current ids (before / without v2 migration). */
+const LEGACY_THEME_ALIASES: Record<string, DisplayThemeId> = {
+  bright: "beach",
+  /** Pre-v2 `burn` was the soft warm look; now Peach. */
+  burn: "peach",
+};
+
 export function isDisplayThemeId(value: string): value is DisplayThemeId {
-  return DISPLAY_THEMES.some((t) => t.id === value);
+  return THEME_IDS.has(value);
 }
 
-export function parseDisplayTheme(raw: string | undefined | null): DisplayThemeId {
-  if (raw && isDisplayThemeId(raw)) return raw;
+/**
+ * Resolve cookie → theme.
+ * - `bright` always → beach
+ * - `burn` → peach until v2 migration cookie is set; after that `burn` is dark ember
+ */
+export function parseDisplayTheme(
+  raw: string | undefined | null,
+  opts?: { migratedV2?: boolean },
+): DisplayThemeId {
+  if (!raw) return "cool";
+
+  if (raw === "bright") return "beach";
+
+  if (raw === "burn") {
+    return opts?.migratedV2 ? "burn" : "peach";
+  }
+
+  if (isDisplayThemeId(raw)) return raw;
+
+  const aliased = LEGACY_THEME_ALIASES[raw];
+  if (aliased) return aliased;
+
   return "cool";
+}
+
+export function themesInGroup(group: DisplayThemeGroup) {
+  return DISPLAY_THEMES.filter((t) => t.group === group);
 }

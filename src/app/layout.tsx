@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, Nunito } from "next/font/google";
 import { cookies } from "next/headers";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { THEME_COOKIE, LEGACY_THEME_COOKIE, parseDisplayTheme } from "@/lib/theme";
+import { THEME_COOKIE, LEGACY_THEME_COOKIE, THEME_MIGRATION_COOKIE, parseDisplayTheme } from "@/lib/theme";
 import "./globals.css";
 
 const display = Fraunces({
@@ -28,6 +28,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const theme = parseDisplayTheme(
     cookieStore.get(THEME_COOKIE)?.value ??
       cookieStore.get(LEGACY_THEME_COOKIE)?.value,
+    { migratedV2: cookieStore.get(THEME_MIGRATION_COOKIE)?.value === "1" },
   );
 
   return (
