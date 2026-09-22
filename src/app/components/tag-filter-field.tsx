@@ -21,9 +21,10 @@ export function TagFilterField({
       defaultValue={defaultValue}
       className={className}
       placeholder="Tag filter"
-      inputClassName="tide-input w-36"
+      inputClassName="tide-input min-w-[12rem] w-48"
       emptyMessage="No tags in this folder yet"
-      submitOnPick
+      allowMultiple
+      keepOpenOnPick
       clearOptionLabel="Clear tag filter"
     />
   );

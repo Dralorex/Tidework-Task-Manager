@@ -6,6 +6,7 @@ import { FolderCompletionStats } from "@/app/components/folder-completion-stats"
 import { WorkspaceTaskRow } from "@/app/components/workspace-task-row";
 import { TaskStatusSections } from "@/app/components/task-status-sections";
 import { DueDateField } from "@/app/components/due-date-field";
+import { PriorityField } from "@/app/components/priority-field";
 import {
   createFolderAction,
   createTaskAction,
@@ -31,6 +32,7 @@ import {
 import { canEditContent, canManagePeople } from "@/lib/permissions";
 import { compareTasksByUrgency } from "@/lib/urgency";
 import { personLabel, searchRelevance } from "@/lib/utils";
+import { parseTagNames } from "@/lib/tags";
 import { TagFilterField } from "@/app/components/tag-filter-field";
 
 export default async function WorkspacePage({
@@ -161,7 +163,8 @@ export default async function WorkspacePage({
     : null;
 
   const q = sp.q?.trim() ?? "";
-  const tagFilter = sp.tag?.trim().toLowerCase() ?? "";
+  const tagFilterRaw = sp.tag?.trim() ?? "";
+  const tagFilters = parseTagNames(tagFilterRaw);
 
   const tagScopeFolderIds = collectSubtreeFolderIds(
     currentFolder?.id ?? null,
@@ -173,7 +176,7 @@ export default async function WorkspacePage({
   // tags from lower paths remain useful.
   const taskFolderIds = isRoot
     ? [...accessibleFolderIds]
-    : tagFilter && currentFolder
+    : tagFilters.length > 0 && currentFolder
       ? tagScopeFolderIds
       : currentFolder
         ? [currentFolder.id]
@@ -238,7 +241,7 @@ export default async function WorkspacePage({
     }))
     .sort(compareTasksByUrgency);
 
-  if (q || tagFilter) {
+  if (q || tagFilters.length > 0) {
     tasks = tasks
       .map((t) => ({
         task: t,
@@ -246,9 +249,10 @@ export default async function WorkspacePage({
       }))
       .filter(({ task, relevance }) => {
         if (q && relevance <= 0) return false;
-        if (tagFilter) {
-          const has = task.tags.some((tt) => tt.tag.name === tagFilter);
-          if (!has) return false;
+        if (tagFilters.length > 0) {
+          const names = new Set(task.tags.map((tt) => tt.tag.name));
+          // All selected tags must be present (AND).
+          if (!tagFilters.every((tag) => names.has(tag))) return false;
         }
         return true;
       })
@@ -377,7 +381,7 @@ export default async function WorkspacePage({
               placeholder="Search names…"
               className="tide-input min-w-[12rem]"
             />
-            <TagFilterField tags={searchTagOptions} defaultValue={tagFilter} />
+            <TagFilterField tags={searchTagOptions} defaultValue={tagFilterRaw} />
             <button type="submit" className="tide-btn-secondary text-sm">
               Search
             </button>
@@ -638,20 +642,7 @@ export default async function WorkspacePage({
                   <input type="hidden" name="workspaceId" value={workspaceId} />
                   <input type="hidden" name="folderId" value={currentFolder.id} />
                   <input name="name" required placeholder="Task name" className="tide-input" />
-                  <select
-                    name="priority"
-                    required
-                    defaultValue=""
-                    className="tide-input text-[color-mix(in_srgb,var(--tide-ink)_45%,transparent)] valid:text-[var(--tide-ink)]"
-                  >
-                    <option value="" disabled>
-                      Priority level
-                    </option>
-                    <option value="CRITICAL">Critical</option>
-                    <option value="HIGH">High</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="LOW">Low</option>
-                  </select>
+                  <PriorityField />
                   <input
                     name="description"
                     placeholder="Description"
