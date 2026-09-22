@@ -61,23 +61,68 @@
   --background: #eef6fa;
   --foreground: var(--tide-ink);
   --header-bg: rgba(255, 250, 243, 0.9);
-  --wave-1: rgba(130, 198, 224, 0.42);
-  --wave-2: rgba(186, 220, 235, 0.35);
-  --wave-3: rgba(212, 163, 90, 0.55);
+  --wave-1: rgba(130, 198, 224, 0.5);
+  --wave-2: rgba(90, 180, 210, 0.4);
+  --wave-3: rgba(212, 163, 90, 0.62);
   --wave-base: linear-gradient(
     180deg,
     #fffaf3 0%,
-    #f3ebe0 18%,
-    #cfeaf5 48%,
-    #b5dcf0 68%,
-    #e8c089 88%,
-    #d4a35a 100%
+    #f7f0e4 12%,
+    #e4f3fa 28%,
+    #c5e6f5 45%,
+    #9fd4ec 58%,
+    #e8c089 78%,
+    #d4a35a 92%,
+    #c8944a 100%
   );
   --panel-bg: rgba(255, 252, 247, 0.82);
   --panel-border: #000000;
   --menu-bg: #fffaf3;
   --input-bg: rgba(255, 255, 255, 0.92);
   --btn-secondary-bg: rgba(255, 250, 243, 0.88);
+}
+
+/* Extra swell layers so Beach reads as rolling waves */
+[data-theme="beach"] .tide-wave-bg {
+  background:
+    radial-gradient(ellipse 140% 55% at 8% 42%, rgba(120, 198, 230, 0.45), transparent 58%),
+    radial-gradient(ellipse 120% 48% at 92% 38%, rgba(160, 215, 235, 0.4), transparent 55%),
+    radial-gradient(ellipse 110% 42% at 48% 52%, rgba(70, 170, 210, 0.28), transparent 60%),
+    radial-gradient(ellipse 130% 38% at 22% 68%, rgba(100, 190, 220, 0.32), transparent 62%),
+    radial-gradient(ellipse 125% 36% at 78% 72%, rgba(180, 210, 230, 0.3), transparent 60%),
+    radial-gradient(ellipse 150% 40% at 15% 90%, rgba(232, 192, 120, 0.55), transparent 58%),
+    radial-gradient(ellipse 140% 36% at 85% 94%, rgba(212, 163, 90, 0.6), transparent 55%),
+    radial-gradient(ellipse 100% 28% at 50% 98%, rgba(200, 148, 74, 0.5), transparent 50%),
+    var(--wave-base);
+  background-attachment: fixed;
+  animation: beach-wave-drift 14s ease-in-out infinite alternate;
+}
+
+@keyframes beach-wave-drift {
+  0% {
+    background-position:
+      0% 0%,
+      100% 0%,
+      50% 0%,
+      0% 0%,
+      100% 0%,
+      0% 0%,
+      100% 0%,
+      50% 0%,
+      0% 0%;
+  }
+  100% {
+    background-position:
+      6% 3%,
+      94% 2%,
+      46% 4%,
+      4% 2%,
+      96% 3%,
+      3% 1%,
+      97% 2%,
+      52% 1%,
+      0% 0%;
+  }
 }
 
 /* Classic — mid gray */
@@ -200,6 +245,30 @@
   --btn-secondary-bg: rgba(40, 18, 10, 0.92);
 }
 
+/* Owner's Choice — pure black + blood maroon */
+[data-theme="owners"] {
+  --tide-deep: #9b1c1c;
+  --tide-mid: #c43a3a;
+  --tide-foam: #000000;
+  --tide-sea: #8b1515;
+  --tide-coral: #b01010;
+  --tide-sand: #0a0000;
+  --tide-ink: #9b1c1c;
+  --tide-title: #b02020;
+  --background: #000000;
+  --foreground: #9b1c1c;
+  --header-bg: rgba(0, 0, 0, 0.96);
+  --wave-1: transparent;
+  --wave-2: transparent;
+  --wave-3: transparent;
+  --wave-base: #000000;
+  --panel-bg: rgba(8, 0, 0, 0.95);
+  --panel-border: #6b0f0f;
+  --menu-bg: #050000;
+  --input-bg: rgba(10, 0, 0, 0.98);
+  --btn-secondary-bg: rgba(12, 0, 0, 0.95);
+}
+
 /* ——— Shared dark-surface remaps (Deep Ocean, True Dark, Burn) ——— */
 [data-theme="dark"] body,
 [data-theme="night"] body,
@@ -319,6 +388,117 @@
   background: var(--background);
   border-color: rgba(255, 255, 255, 0.28);
   box-shadow: none;
+}
+
+/* ——— Owner's Choice: black ground, blood-maroon text & lines ——— */
+[data-theme="owners"] body {
+  color: #9b1c1c;
+}
+
+[data-theme="owners"] [class*="text-[#0A3D45]"] {
+  color: #9b1c1c;
+}
+
+[data-theme="owners"] [class*="text-[#0A3D45]/"] {
+  color: color-mix(in srgb, #9b1c1c 78%, transparent);
+}
+
+[data-theme="owners"] :is(h1, h2, h3, h4, h5, h6, legend),
+[data-theme="owners"] [class*="font-[family-name:var(--font-display)]"] {
+  color: #b02020;
+}
+
+[data-theme="owners"] .tide-btn-primary {
+  background: #8b1515;
+  color: #000000;
+}
+[data-theme="owners"] .tide-btn-primary:hover {
+  background: #c43a3a;
+  color: #000000;
+}
+
+[data-theme="owners"] .tide-btn-secondary {
+  border-color: #6b0f0f;
+  color: #9b1c1c;
+  background: #050000;
+}
+[data-theme="owners"] .tide-btn-secondary:hover {
+  background: #120000;
+  border-color: #9b1c1c;
+}
+
+[data-theme="owners"] .tide-input {
+  border-color: #6b0f0f;
+  color: #9b1c1c;
+  background: #050000;
+}
+[data-theme="owners"] .tide-input.tide-input-hint {
+  color: color-mix(in srgb, #9b1c1c 45%, transparent);
+}
+[data-theme="owners"] .tide-input option {
+  color: #9b1c1c;
+  background: #050000;
+}
+[data-theme="owners"] .tide-input:focus {
+  border-color: #c43a3a;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #8b1515 35%, transparent);
+}
+
+[data-theme="owners"] .tide-panel {
+  border-color: #6b0f0f;
+  background: rgba(8, 0, 0, 0.95);
+  box-shadow: 0 12px 40px rgba(80, 0, 0, 0.35);
+}
+
+[data-theme="owners"] [class*="border-[#0A3D45]"] {
+  border-color: #6b0f0f;
+}
+
+[data-theme="owners"] .calendar-day-cell-current {
+  background: #0a0000;
+  box-shadow: inset 0 0 0 1px #6b0f0f;
+}
+[data-theme="owners"] .calendar-day-cell-muted {
+  background: #050000;
+  opacity: 0.55;
+}
+[data-theme="owners"] .calendar-event-chip {
+  background: #050000;
+  color: #9b1c1c;
+  border: 1px solid #6b0f0f;
+}
+[data-theme="owners"] .calendar-event-row {
+  background: #050000;
+  border-color: #6b0f0f;
+  box-shadow: none;
+}
+
+[data-theme="owners"] .urgency-chip-neutral {
+  background: color-mix(in srgb, #9b1c1c 22%, transparent);
+  color: #c43a3a;
+}
+[data-theme="owners"] .urgency-chip-critical {
+  background: color-mix(in srgb, #b01010 45%, transparent);
+  color: #ff6b6b;
+}
+[data-theme="owners"] .urgency-chip-high {
+  background: color-mix(in srgb, #c43a3a 38%, transparent);
+  color: #e85a5a;
+}
+[data-theme="owners"] .urgency-chip-medium {
+  background: color-mix(in srgb, #8b1515 32%, transparent);
+  color: #d05050;
+}
+[data-theme="owners"] .urgency-chip-low {
+  background: color-mix(in srgb, #6b0f0f 28%, transparent);
+  color: #b04040;
+}
+[data-theme="owners"] .urgency-chip-calm {
+  background: color-mix(in srgb, #9b1c1c 14%, transparent);
+  color: #8b3030;
+}
+[data-theme="owners"] .urgency-chip-score {
+  opacity: 0.85;
 }
 
 /* Urgency chips — light defaults */
