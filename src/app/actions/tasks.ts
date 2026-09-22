@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import {
   canCreatePublicTags,
   canEditContent,
+  canManagePeople,
   requireMembership,
 } from "@/lib/permissions";
 import { assertCanAccessFolder } from "@/lib/folder-access";
@@ -54,12 +55,61 @@ export async function createFolderAction(
       workspaceId,
       folderId: parentId,
       membershipId: membership.id,
+      membershipRole: membership.role,
     });
     if (!access.ok) return access;
   }
 
+  const canSetAccess = canManagePeople(membership.role);
+  const hideFromUnauthorized =
+    canSetAccess && String(formData.get("hideFromUnauthorized") ?? "") === "1";
+  const alwaysVisible =
+    canSetAccess && String(formData.get("alwaysVisible") ?? "") === "1";
+
+  let roleIds: string[] = [];
+  if (canSetAccess) {
+    const roleNames = String(formData.get("roles") ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (roleNames.length > 0) {
+      const roles = await prisma.workspaceRole.findMany({
+        where: { workspaceId },
+        select: { id: true, name: true },
+      });
+      const byName = new Map(
+        roles.map((r) => [r.name.toLowerCase(), r.id] as const),
+      );
+      const unresolved: string[] = [];
+      for (const label of roleNames) {
+        const id = byName.get(label.toLowerCase());
+        if (!id) unresolved.push(label);
+        else if (!roleIds.includes(id)) roleIds.push(id);
+      }
+      if (unresolved.length > 0) {
+        return {
+          ok: false,
+          error: `Unknown role${unresolved.length === 1 ? "" : "s"}: ${unresolved.join(", ")}.`,
+        };
+      }
+    }
+  }
+
   await prisma.folder.create({
-    data: { workspaceId, parentId, name },
+    data: {
+      workspaceId,
+      parentId,
+      name,
+      hideFromUnauthorized,
+      alwaysVisible,
+      ...(roleIds.length > 0
+        ? {
+            requiredRoles: {
+              create: roleIds.map((roleId) => ({ roleId })),
+            },
+          }
+        : {}),
+    },
   });
 
   revalidatePath(`/app/w/${workspaceId}`);
