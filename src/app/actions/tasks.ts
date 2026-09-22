@@ -371,6 +371,39 @@ export async function updateTaskAction(
   return { ok: true };
 }
 
+export async function deleteTaskAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const taskId = String(formData.get("taskId") ?? "");
+
+  const membership = await requireMembership(workspaceId, user.id);
+  if (!canEditContent(membership.role)) {
+    return { ok: false, error: "Only editors and above can delete tasks." };
+  }
+
+  const task = await prisma.task.findFirst({
+    where: { id: taskId, workspaceId },
+  });
+  if (!task) return { ok: false, error: "Task not found." };
+
+  const denied = await requireTaskFolderAccess(
+    workspaceId,
+    membership.id,
+    task.folderId,
+  );
+  if (denied) return denied;
+
+  await prisma.task.delete({ where: { id: taskId } });
+
+  revalidatePath(`/app/w/${workspaceId}`);
+  revalidatePath("/app/calendar");
+  revalidatePath("/app", "layout");
+  return { ok: true };
+}
+
 /** Editor+ removes the current assignee and returns the task to OPEN. */
 export async function forceUnclaimTaskAction(
   _prev: ActionResult | null,
