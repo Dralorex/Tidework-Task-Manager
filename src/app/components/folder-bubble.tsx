@@ -9,6 +9,8 @@ type FolderActionsProps = {
   canManageRoles: boolean;
   workspaceRoles: { id: string; name: string }[];
   requiredRoleIds: string[];
+  hideFromUnauthorized?: boolean;
+  alwaysVisible?: boolean;
 };
 
 /** Folder card where empty space opens the folder; actions stay clickable. */

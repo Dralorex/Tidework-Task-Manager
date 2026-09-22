@@ -375,3 +375,27 @@ export async function kickMemberAction(
   revalidatePath(`/app/w/${workspaceId}`);
   return { ok: true };
 }
+
+export async function updateUrgencyChipPrefsAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const membership = await requireMembership(workspaceId, user.id);
+  if (!canManagePeople(membership.role)) {
+    return { ok: false, error: "Only owners and admins can change urgency chips." };
+  }
+
+  await prisma.workspace.update({
+    where: { id: workspaceId },
+    data: {
+      showUrgencyBase: String(formData.get("showUrgencyBase") ?? "0") === "1",
+      showUrgencyDate: String(formData.get("showUrgencyDate") ?? "0") === "1",
+      showUrgencyTotal: String(formData.get("showUrgencyTotal") ?? "0") === "1",
+    },
+  });
+
+  revalidatePath(`/app/w/${workspaceId}`);
+  return { ok: true };
+}

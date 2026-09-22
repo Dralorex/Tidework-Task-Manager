@@ -1,10 +1,18 @@
+import type { Role } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { canManagePeople } from "@/lib/permissions";
 
 export type FolderAccessRow = {
   id: string;
   parentId: string | null;
   name: string;
   requiredRoleIds: string[];
+  /** Hide from unauthorized members instead of showing locked. */
+  hideFromUnauthorized: boolean;
+  /** Always show in the tree; overrides hide rules. Does not grant access. */
+  alwaysVisible: boolean;
+  /** True when any required role has hideFolders enabled. */
+  roleHidesFolder: boolean;
 };
 
 export type FolderVisibility = {
@@ -12,11 +20,21 @@ export type FolderVisibility = {
   parentId: string | null;
   name: string;
   requiredRoleIds: string[];
+  hideFromUnauthorized: boolean;
+  alwaysVisible: boolean;
+  roleHidesFolder: boolean;
   /** User may open this folder and see its contents. */
   canAccess: boolean;
   /** User may see this folder in the tree (locked or open). */
   visible: boolean;
   locked: boolean;
+};
+
+export type FolderVisibilityOpts = {
+  /** Membership.role — Owner/Admin always see and access. */
+  membershipRole?: Role | null;
+  /** Role ids that have hideFolders=true (workspace-wide). */
+  hideFolderRoleIds?: ReadonlySet<string>;
 };
 
 /** Empty required roles (or explicit All) → open to everyone. */
@@ -32,15 +50,24 @@ export function userMatchesFolderRoles(
   return requiredRoleIds.some((id) => userRoleIds.has(id));
 }
 
+function isPrivilegedViewer(membershipRole?: Role | null) {
+  return Boolean(membershipRole && canManagePeople(membershipRole));
+}
+
 /**
  * Access requires matching roles on this folder AND every ancestor.
- * (Nested permissions — cannot skip a locked parent.)
+ * Owner/Admin bypass role gates.
  */
 export function canAccessFolder(
   folderId: string,
   foldersById: Map<string, FolderAccessRow>,
   userRoleIds: ReadonlySet<string>,
+  opts: FolderVisibilityOpts = {},
 ): boolean {
+  if (isPrivilegedViewer(opts.membershipRole)) {
+    return Boolean(foldersById.get(folderId));
+  }
+
   let current: FolderAccessRow | undefined = foldersById.get(folderId);
   const seen = new Set<string>();
   while (current) {
@@ -56,24 +83,38 @@ export function canAccessFolder(
   return Boolean(foldersById.get(folderId));
 }
 
+function shouldHideUnauthorized(folder: FolderAccessRow): boolean {
+  if (folder.alwaysVisible) return false;
+  return folder.hideFromUnauthorized || folder.roleHidesFolder;
+}
+
 /**
- * Visibility: show a folder if every *parent* is accessible.
- * Locked folders themselves remain visible; their descendants do not.
+ * Visibility:
+ * - Owner/Admin see everything they can reach (parents ok).
+ * - alwaysVisible forces show even when hide rules apply (still locked if no access).
+ * - hideFromUnauthorized or required-role hideFolders → omit unauthorized folders.
+ * - Otherwise locked folders remain visible; descendants of inaccessible parents do not.
  */
 export function buildFolderVisibility(
   folders: FolderAccessRow[],
   userRoleIds: ReadonlySet<string>,
+  opts: FolderVisibilityOpts = {},
 ): FolderVisibility[] {
   const byId = new Map(folders.map((f) => [f.id, f]));
+  const privileged = isPrivilegedViewer(opts.membershipRole);
   const result: FolderVisibility[] = [];
 
   for (const folder of folders) {
     const parentsOk = folder.parentId
-      ? canAccessFolder(folder.parentId, byId, userRoleIds)
+      ? canAccessFolder(folder.parentId, byId, userRoleIds, opts)
       : true;
     if (!parentsOk) continue;
 
-    const canAccess = canAccessFolder(folder.id, byId, userRoleIds);
+    const canAccess = canAccessFolder(folder.id, byId, userRoleIds, opts);
+    if (!canAccess && !privileged && shouldHideUnauthorized(folder)) {
+      continue;
+    }
+
     result.push({
       ...folder,
       canAccess,
@@ -91,13 +132,23 @@ export async function loadFolderAccessRows(
   const folders = await prisma.folder.findMany({
     where: { workspaceId },
     orderBy: { name: "asc" },
-    include: { requiredRoles: { select: { roleId: true } } },
+    include: {
+      requiredRoles: {
+        select: {
+          roleId: true,
+          role: { select: { hideFolders: true } },
+        },
+      },
+    },
   });
   return folders.map((f) => ({
     id: f.id,
     parentId: f.parentId,
     name: f.name,
     requiredRoleIds: f.requiredRoles.map((r) => r.roleId),
+    hideFromUnauthorized: f.hideFromUnauthorized,
+    alwaysVisible: f.alwaysVisible,
+    roleHidesFolder: f.requiredRoles.some((r) => r.role.hideFolders),
   }));
 }
 
@@ -115,7 +166,18 @@ export async function assertCanAccessFolder(opts: {
   workspaceId: string;
   folderId: string;
   membershipId: string;
+  membershipRole?: Role | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const membershipRole =
+    opts.membershipRole ??
+    (
+      await prisma.membership.findUnique({
+        where: { id: opts.membershipId },
+        select: { role: true },
+      })
+    )?.role ??
+    null;
+
   const [folders, userRoleIds] = await Promise.all([
     loadFolderAccessRows(opts.workspaceId),
     loadUserCustomRoleIds(opts.membershipId),
@@ -124,7 +186,9 @@ export async function assertCanAccessFolder(opts: {
   if (!byId.has(opts.folderId)) {
     return { ok: false, error: "Folder not found." };
   }
-  if (!canAccessFolder(opts.folderId, byId, userRoleIds)) {
+  if (
+    !canAccessFolder(opts.folderId, byId, userRoleIds, { membershipRole })
+  ) {
     return { ok: false, error: "You don’t have access to this folder." };
   }
   return { ok: true };

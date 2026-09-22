@@ -19,6 +19,8 @@ export function FolderActions({
   canManageRoles = false,
   workspaceRoles = [],
   requiredRoleIds = [],
+  hideFromUnauthorized = false,
+  alwaysVisible = false,
 }: {
   workspaceId: string;
   folderId: string;
@@ -26,6 +28,8 @@ export function FolderActions({
   canManageRoles?: boolean;
   workspaceRoles?: RoleOption[];
   requiredRoleIds?: string[];
+  hideFromUnauthorized?: boolean;
+  alwaysVisible?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -37,6 +41,8 @@ export function FolderActions({
   const [accessMode, setAccessMode] = useState<"all" | "roles">(
     requiredRoleIds.length === 0 ? "all" : "roles",
   );
+  const [hideUnauthorized, setHideUnauthorized] = useState(hideFromUnauthorized);
+  const [alwaysShow, setAlwaysShow] = useState(alwaysVisible);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -48,7 +54,9 @@ export function FolderActions({
   useEffect(() => {
     setSelected(new Set(requiredRoleIds));
     setAccessMode(requiredRoleIds.length === 0 ? "all" : "roles");
-  }, [requiredRoleIds]);
+    setHideUnauthorized(hideFromUnauthorized);
+    setAlwaysShow(alwaysVisible);
+  }, [requiredRoleIds, hideFromUnauthorized, alwaysVisible]);
 
   async function saveRename(e: React.FormEvent) {
     e.preventDefault();
@@ -92,6 +100,8 @@ export function FolderActions({
       if (accessMode === "roles") {
         for (const id of selected) fd.append("roleId", id);
       }
+      fd.set("hideFromUnauthorized", hideUnauthorized ? "1" : "0");
+      fd.set("alwaysVisible", alwaysShow ? "1" : "0");
       const result = await setFolderRolesAction(null, fd);
       if (result && !result.ok) {
         setError(result.error);
@@ -109,6 +119,8 @@ export function FolderActions({
     setError(null);
     setSelected(new Set(requiredRoleIds));
     setAccessMode(requiredRoleIds.length === 0 ? "all" : "roles");
+    setHideUnauthorized(hideFromUnauthorized);
+    setAlwaysShow(alwaysVisible);
   }
 
   return (
@@ -149,7 +161,7 @@ export function FolderActions({
         <MenuSurface
           open={open}
           onClose={close}
-          widthClass={panel === "access" ? "min-w-[14rem]" : "min-w-[10rem]"}
+          widthClass={panel === "access" ? "min-w-[16rem]" : "min-w-[10rem]"}
           trigger={({ ref }) => (
             <button
               ref={ref}
@@ -253,6 +265,38 @@ export function FolderActions({
                   ) : null}
                 </ul>
               ) : null}
+
+              <div className="space-y-2 border-t border-[color:var(--tide-deep)]/8 pt-2">
+                <label className="flex cursor-pointer items-start gap-2 rounded-md px-1 py-1 text-sm text-[color:var(--tide-deep)] hover:bg-[color:var(--tide-deep)]/8">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={hideUnauthorized}
+                    onChange={(e) => setHideUnauthorized(e.target.checked)}
+                  />
+                  <span>
+                    Hide from unauthorized
+                    <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--tide-deep)]/55">
+                      Don’t show a locked folder to people without access.
+                    </span>
+                  </span>
+                </label>
+                <label className="flex cursor-pointer items-start gap-2 rounded-md px-1 py-1 text-sm text-[color:var(--tide-deep)] hover:bg-[color:var(--tide-deep)]/8">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={alwaysShow}
+                    onChange={(e) => setAlwaysShow(e.target.checked)}
+                  />
+                  <span>
+                    Always show
+                    <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--tide-deep)]/55">
+                      Overrides hide rules — always visible in the tree (still locked without access).
+                    </span>
+                  </span>
+                </label>
+              </div>
+
               {error ? (
                 <p className="text-xs text-[color:var(--tide-coral)]">{error}</p>
               ) : null}

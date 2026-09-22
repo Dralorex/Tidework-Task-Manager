@@ -18,9 +18,13 @@ enum Role {
 
 enum TaskPriority {
   CRITICAL
+  URGENT
   HIGH
+  ELEVATED
   MEDIUM
+  NORMAL
   LOW
+  MINIMAL
 }
 
 enum TaskStatus {
@@ -161,6 +165,12 @@ model Workspace {
   id        String   @id @default(cuid())
   name      String
   ownerId   String
+  /** Show Base (manual priority) chip on task rows. */
+  showUrgencyBase  Boolean @default(false)
+  /** Show Date (due-pressure) chip on task rows. */
+  showUrgencyDate  Boolean @default(false)
+  /** Show Total (base + date) urgency chip on task rows. */
+  showUrgencyTotal Boolean @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -200,6 +210,8 @@ model WorkspaceRole {
   id          String   @id @default(cuid())
   workspaceId String
   name        String
+  /** When set, folders requiring this role are hidden from members who lack access (unless alwaysVisible). */
+  hideFolders Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -276,6 +288,10 @@ model Folder {
   workspaceId String
   parentId    String?
   name        String
+  /** Hide this folder from members who cannot access it (instead of showing locked). */
+  hideFromUnauthorized Boolean @default(false)
+  /** Always show in the tree regardless of role hide rules. Does not grant access. */
+  alwaysVisible        Boolean @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

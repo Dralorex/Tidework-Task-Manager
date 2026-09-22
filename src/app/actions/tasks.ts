@@ -14,16 +14,19 @@ import type { TaskPriority } from "@/generated/prisma/client";
 import type { ActionResult } from "@/app/actions/auth";
 import { personLabel } from "@/lib/utils";
 import { parseTagNames } from "@/lib/tags";
+import { isTaskPriority } from "@/lib/urgency";
 
 async function requireTaskFolderAccess(
   workspaceId: string,
   membershipId: string,
   folderId: string,
+  membershipRole?: Parameters<typeof assertCanAccessFolder>[0]["membershipRole"],
 ): Promise<ActionResult | null> {
   const access = await assertCanAccessFolder({
     workspaceId,
     folderId,
     membershipId,
+    membershipRole,
   });
   if (!access.ok) return access;
   return null;
@@ -157,7 +160,7 @@ export async function createTaskAction(
   const tagNames = parseTagNames(String(formData.get("tags") ?? ""));
 
   if (!name) return { ok: false, error: "Task needs a name." };
-  if (!["CRITICAL", "HIGH", "MEDIUM", "LOW"].includes(priority)) {
+  if (!isTaskPriority(priority)) {
     return { ok: false, error: "Pick a valid priority." };
   }
 
@@ -366,7 +369,7 @@ export async function updateTaskAction(
   const dueRaw = String(formData.get("dueDate") ?? "").trim();
 
   if (!name) return { ok: false, error: "Task needs a name." };
-  if (!["CRITICAL", "HIGH", "MEDIUM", "LOW"].includes(priority)) {
+  if (!isTaskPriority(priority)) {
     return { ok: false, error: "Pick a valid priority." };
   }
 

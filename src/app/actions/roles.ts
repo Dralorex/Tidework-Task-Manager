@@ -154,7 +154,43 @@ export async function setFolderRolesAction(
           }),
         ]
       : []),
+    prisma.folder.update({
+      where: { id: folderId },
+      data: {
+        hideFromUnauthorized:
+          String(formData.get("hideFromUnauthorized") ?? "0") === "1",
+        alwaysVisible: String(formData.get("alwaysVisible") ?? "0") === "1",
+      },
+    }),
   ]);
+
+  revalidatePath(`/app/w/${workspaceId}`);
+  return { ok: true };
+}
+
+export async function setWorkspaceRoleHideFoldersAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const roleId = String(formData.get("roleId") ?? "");
+  const membership = await requireMembership(workspaceId, user.id);
+  if (!canManagePeople(membership.role)) {
+    return { ok: false, error: "Only admins can update roles." };
+  }
+
+  const role = await prisma.workspaceRole.findFirst({
+    where: { id: roleId, workspaceId },
+  });
+  if (!role) return { ok: false, error: "Role not found." };
+
+  await prisma.workspaceRole.update({
+    where: { id: roleId },
+    data: {
+      hideFolders: String(formData.get("hideFolders") ?? "0") === "1",
+    },
+  });
 
   revalidatePath(`/app/w/${workspaceId}`);
   return { ok: true };

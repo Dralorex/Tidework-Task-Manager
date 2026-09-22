@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PRIORITY_LABELS, TASK_PRIORITIES } from "@/lib/urgency";
 
 /** Priority select that shows muted hint text until a level is chosen. */
 export function PriorityField({
@@ -29,10 +30,11 @@ export function PriorityField({
       <option value="" disabled>
         Priority Level
       </option>
-      <option value="CRITICAL">Critical</option>
-      <option value="HIGH">High</option>
-      <option value="MEDIUM">Medium</option>
-      <option value="LOW">Low</option>
+      {TASK_PRIORITIES.map((p) => (
+        <option key={p} value={p}>
+          {PRIORITY_LABELS[p]}
+        </option>
+      ))}
     </select>
   );
 }
