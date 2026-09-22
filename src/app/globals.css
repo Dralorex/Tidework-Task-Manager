@@ -48,7 +48,7 @@
   --btn-secondary-bg: #ffffff;
 }
 
-/* Fun — Beach: top tan/white, mid sky blue, bottom sand */
+/* Fun — Beach: sky → water → sand banks left-to-right */
 [data-theme="beach"] {
   --tide-deep: #0c3d4a;
   --tide-mid: #1a7a8a;
@@ -61,18 +61,18 @@
   --background: #eef6fa;
   --foreground: var(--tide-ink);
   --header-bg: rgba(255, 250, 243, 0.9);
-  --wave-1: rgba(130, 198, 224, 0.5);
-  --wave-2: rgba(90, 180, 210, 0.4);
-  --wave-3: rgba(212, 163, 90, 0.62);
+  --wave-1: transparent;
+  --wave-2: transparent;
+  --wave-3: transparent;
   --wave-base: linear-gradient(
     180deg,
     #fffaf3 0%,
-    #f7f0e4 12%,
-    #e4f3fa 28%,
-    #c5e6f5 45%,
-    #9fd4ec 58%,
+    #f4eee4 14%,
+    #d7eef8 32%,
+    #9fd4ec 52%,
+    #7ec4e0 62%,
     #e8c089 78%,
-    #d4a35a 92%,
+    #d4a35a 90%,
     #c8944a 100%
   );
   --panel-bg: rgba(255, 252, 247, 0.82);
@@ -82,46 +82,66 @@
   --btn-secondary-bg: rgba(255, 250, 243, 0.88);
 }
 
-/* Extra swell layers so Beach reads as rolling waves */
+/*
+  Horizontal shoreline bands: SVG ripples tile left→right like wet sand banks.
+  Multiple layers at different heights drift at different speeds.
+*/
 [data-theme="beach"] .tide-wave-bg {
-  background:
-    radial-gradient(ellipse 140% 55% at 8% 42%, rgba(120, 198, 230, 0.45), transparent 58%),
-    radial-gradient(ellipse 120% 48% at 92% 38%, rgba(160, 215, 235, 0.4), transparent 55%),
-    radial-gradient(ellipse 110% 42% at 48% 52%, rgba(70, 170, 210, 0.28), transparent 60%),
-    radial-gradient(ellipse 130% 38% at 22% 68%, rgba(100, 190, 220, 0.32), transparent 62%),
-    radial-gradient(ellipse 125% 36% at 78% 72%, rgba(180, 210, 230, 0.3), transparent 60%),
-    radial-gradient(ellipse 150% 40% at 15% 90%, rgba(232, 192, 120, 0.55), transparent 58%),
-    radial-gradient(ellipse 140% 36% at 85% 94%, rgba(212, 163, 90, 0.6), transparent 55%),
-    radial-gradient(ellipse 100% 28% at 50% 98%, rgba(200, 148, 74, 0.5), transparent 50%),
+  --beach-wave-water: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 80' preserveAspectRatio='none'%3E%3Cpath fill='%2370b8d8' fill-opacity='0.35' d='M0 40c120-28 240 28 360 0s240-28 360 0 240 28 360 0 240-28 360 0v40H0z'/%3E%3Cpath fill='%239fd4ec' fill-opacity='0.4' d='M0 52c100-20 200 20 300 0s200-20 300 0 200 20 300 0 200-20 300 0 140 12 240 0v28H0z'/%3E%3C/svg%3E");
+  --beach-wave-foam: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 64' preserveAspectRatio='none'%3E%3Cpath fill='%23ffffff' fill-opacity='0.45' d='M0 36c110-22 220 22 330 0s220-22 330 0 220 22 330 0 220-22 330 0 72 8 120 0v28H0z'/%3E%3Cpath fill='%23e8f6fb' fill-opacity='0.35' d='M0 48c90-14 180 14 270 0s180-14 270 0 180 14 270 0 180-14 270 0 120 8 180 0v16H0z'/%3E%3C/svg%3E");
+  --beach-wave-sand: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 72' preserveAspectRatio='none'%3E%3Cpath fill='%23d4a35a' fill-opacity='0.55' d='M0 28c130-24 260 24 390 0s260-24 390 0 260 24 390 0 130-12 270 0v44H0z'/%3E%3Cpath fill='%23c8944a' fill-opacity='0.5' d='M0 44c110-18 220 18 330 0s220-18 330 0 220 18 330 0 220-18 330 0 72 6 120 0v28H0z'/%3E%3C/svg%3E");
+  --beach-wave-sand-soft: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 56' preserveAspectRatio='none'%3E%3Cpath fill='%23e8c089' fill-opacity='0.4' d='M0 22c140-20 280 20 420 0s280-20 420 0 280 20 420 0 90-8 180 0v34H0z'/%3E%3C/svg%3E");
+
+  background-color: #eef6fa;
+  background-image:
+    var(--beach-wave-foam),
+    var(--beach-wave-water),
+    var(--beach-wave-water),
+    var(--beach-wave-sand-soft),
+    var(--beach-wave-sand),
+    var(--beach-wave-sand),
     var(--wave-base);
+  background-repeat: repeat-x;
+  background-size:
+    1440px 64px,
+    1600px 80px,
+    1200px 70px,
+    1500px 56px,
+    1700px 72px,
+    1300px 60px,
+    100% 100%;
+  background-position:
+    0 38%,
+    0 48%,
+    200px 56%,
+    0 72%,
+    0 84%,
+    180px 92%,
+    0 0;
   background-attachment: fixed;
-  animation: beach-wave-drift 14s ease-in-out infinite alternate;
+  animation: beach-sandbank-drift 22s linear infinite;
 }
 
-@keyframes beach-wave-drift {
-  0% {
+@keyframes beach-sandbank-drift {
+  from {
     background-position:
-      0% 0%,
-      100% 0%,
-      50% 0%,
-      0% 0%,
-      100% 0%,
-      0% 0%,
-      100% 0%,
-      50% 0%,
-      0% 0%;
+      0 38%,
+      0 48%,
+      200px 56%,
+      0 72%,
+      0 84%,
+      180px 92%,
+      0 0;
   }
-  100% {
+  to {
     background-position:
-      6% 3%,
-      94% 2%,
-      46% 4%,
-      4% 2%,
-      96% 3%,
-      3% 1%,
-      97% 2%,
-      52% 1%,
-      0% 0%;
+      -1440px 38%,
+      -1600px 48%,
+      -1000px 56%,
+      -1500px 72%,
+      -1700px 84%,
+      -1120px 92%,
+      0 0;
   }
 }
 
