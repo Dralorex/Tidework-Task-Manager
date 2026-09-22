@@ -24,8 +24,8 @@ export const DISPLAY_THEMES = [
   },
   {
     id: "dark",
-    label: "Dark mode",
-    description: "Low-light deep tide.",
+    label: "Deep Ocean",
+    description: "Low-light deep tide workspace.",
   },
   {
     id: "burn",
