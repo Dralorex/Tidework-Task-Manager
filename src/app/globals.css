@@ -183,6 +183,64 @@
   box-shadow: none;
 }
 
+/* Urgency chips (Base / Date / Total) — light defaults */
+.urgency-chip-neutral {
+  background: color-mix(in srgb, #0a3d45 8%, transparent);
+  color: color-mix(in srgb, #0a3d45 75%, transparent);
+}
+.urgency-chip-critical {
+  background: color-mix(in srgb, #e85d4c 15%, transparent);
+  color: #9b2f22;
+}
+.urgency-chip-high {
+  background: color-mix(in srgb, #f0a202 18%, transparent);
+  color: #8a5a00;
+}
+.urgency-chip-medium {
+  background: color-mix(in srgb, #3dbeab 15%, transparent);
+  color: #0a3d45;
+}
+.urgency-chip-low {
+  background: color-mix(in srgb, #4a90a4 15%, transparent);
+  color: #0a3d45;
+}
+.urgency-chip-calm {
+  background: color-mix(in srgb, #0a3d45 8%, transparent);
+  color: color-mix(in srgb, #0a3d45 65%, transparent);
+}
+.urgency-chip-score {
+  opacity: 0.7;
+}
+
+/* Deep Ocean: brighter chip fills + clearer label contrast */
+[data-theme="dark"] .urgency-chip-neutral {
+  background: color-mix(in srgb, #9fd8d1 32%, transparent);
+  color: #f2fffc;
+}
+[data-theme="dark"] .urgency-chip-critical {
+  background: color-mix(in srgb, #e85d4c 42%, transparent);
+  color: #ffe4df;
+}
+[data-theme="dark"] .urgency-chip-high {
+  background: color-mix(in srgb, #f0a202 40%, transparent);
+  color: #fff3d6;
+}
+[data-theme="dark"] .urgency-chip-medium {
+  background: color-mix(in srgb, #3dbeab 38%, transparent);
+  color: #e8fffa;
+}
+[data-theme="dark"] .urgency-chip-low {
+  background: color-mix(in srgb, #7eb8c9 36%, transparent);
+  color: #eaf6fa;
+}
+[data-theme="dark"] .urgency-chip-calm {
+  background: color-mix(in srgb, #ffffff 18%, transparent);
+  color: #f5f8f9;
+}
+[data-theme="dark"] .urgency-chip-score {
+  opacity: 0.85;
+}
+
 [data-theme="burn"] {
   --tide-deep: #3b1d14;
   --tide-mid: #a34528;

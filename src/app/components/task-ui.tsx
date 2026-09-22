@@ -40,22 +40,22 @@ export function TaskUrgencyEdge({
 
 export function PriorityBadge({ priority }: { priority: TaskPriority }) {
   return (
-    <span className="rounded-md bg-[#0A3D45]/8 px-2 py-0.5 text-xs font-medium text-[#0A3D45]">
+    <span className="urgency-chip urgency-chip-neutral rounded-md px-2 py-0.5 text-xs font-medium">
       {PRIORITY_LABELS[priority]}
     </span>
   );
 }
 
 const TAG_STYLES: Record<UrgencyLevel, string> = {
-  critical: "bg-[#E85D4C]/15 text-[#9b2f22]",
-  high: "bg-[#F0A202]/18 text-[#8a5a00]",
-  medium: "bg-[#3DBEAB]/15 text-[#0A3D45]",
-  low: "bg-[#4A90A4]/15 text-[#0A3D45]",
-  calm: "bg-[#0A3D45]/8 text-[#0A3D45]/65",
+  critical: "urgency-chip-critical",
+  high: "urgency-chip-high",
+  medium: "urgency-chip-medium",
+  low: "urgency-chip-low",
+  calm: "urgency-chip-calm",
 };
 
-const CHIP_NEUTRAL =
-  "rounded-md bg-[#0A3D45]/8 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#0A3D45]/75";
+const CHIP_BASE =
+  "urgency-chip rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide";
 
 /** Live urgency chip (Low / Med / High / Critical) — recomputes as time passes. */
 export function UrgencyTag({
@@ -76,7 +76,7 @@ export function UrgencyTag({
   const level = urgencyLevel(score);
   return (
     <span
-      className={`rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${TAG_STYLES[level]}`}
+      className={`${CHIP_BASE} ${TAG_STYLES[level]}`}
       title={`${urgencyLabel(level)} · score ${score}`}
     >
       {urgencyTag(level)}
@@ -118,24 +118,27 @@ export function UrgencyChips({
     <span className="inline-flex flex-wrap items-center gap-1.5">
       {showBase ? (
         <span
-          className={CHIP_NEUTRAL}
+          className={`${CHIP_BASE} urgency-chip-neutral`}
           title={`${PRIORITY_LABELS[priority]} · base ${base}`}
         >
           Base {base}
         </span>
       ) : null}
       {showDate ? (
-        <span className={CHIP_NEUTRAL} title={`Due pressure · date ${date}`}>
+        <span
+          className={`${CHIP_BASE} urgency-chip-neutral`}
+          title={`Due pressure · date ${date}`}
+        >
           Date {date}
         </span>
       ) : null}
       {showTotal ? (
         <span
-          className={`rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${TAG_STYLES[level]}`}
+          className={`${CHIP_BASE} ${TAG_STYLES[level]}`}
           title={`${urgencyLabel(level)} · total ${total}`}
         >
           {urgencyTag(level)}
-          <span className="ml-1 font-medium normal-case tracking-normal opacity-70">
+          <span className="urgency-chip-score ml-1 font-medium normal-case tracking-normal">
             {total}
           </span>
         </span>

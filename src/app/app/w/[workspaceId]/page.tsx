@@ -3,14 +3,13 @@ import Link from "next/link";
 import { InlineActionForm } from "@/app/components/forms";
 import { FolderActions } from "@/app/components/folder-actions";
 import { FolderBubble } from "@/app/components/folder-bubble";
-import { FolderCompletionStats } from "@/app/components/folder-completion-stats";
+import { CreateFolderForm } from "@/app/components/create-folder-form";
 import { WorkspaceTaskRow } from "@/app/components/workspace-task-row";
 import { TaskStatusSections } from "@/app/components/task-status-sections";
 import { DueDateField } from "@/app/components/due-date-field";
 import { PriorityField } from "@/app/components/priority-field";
 import { TagSuggestInput } from "@/app/components/tag-suggest-input";
 import {
-  createFolderAction,
   createTaskAction,
 } from "@/app/actions/tasks";
 import { inviteMemberAction } from "@/app/actions/workspaces";
@@ -132,10 +131,6 @@ export default async function WorkspacePage({
   ]);
   const directTotalCounts = new Map(
     totalCountRows.map((r) => [r.folderId, r._count._all]),
-  );
-  const allTasksCount = [...accessibleFolderIds].reduce(
-    (sum, id) => sum + (directTotalCounts.get(id) ?? 0),
-    0,
   );
   const folderDoneCounts = computeFolderTaskCounts(
     folders,
@@ -363,8 +358,6 @@ export default async function WorkspacePage({
     requestPending: pendingFriendIds.has(m.userId),
   }));
 
-  const rootFolders = visibleFolders.filter((f) => !f.parentId);
-
   function folderActionsProps(folderId: string, folderName: string) {
     const row = foldersById.get(folderId);
     return {
@@ -433,97 +426,23 @@ export default async function WorkspacePage({
         <div className="mt-8 grid gap-6 lg:grid-cols-[240px_1fr]">
           <aside className="space-y-4">
             <div className="tide-panel p-4">
-              <ChatSidebarSection title="Folders">
-                <ul className="space-y-1 text-sm">
-                  <li>
-                    <Link
-                      href={`/app/w/${workspaceId}`}
-                      className={`inline-flex items-center gap-1.5 ${
-                        !currentFolder
-                          ? "font-semibold text-[#0A3D45]"
-                          : "text-[#0A3D45]/70"
-                      }`}
-                    >
-                      All Tasks
-                      <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
-                        {allTasksCount}
-                      </span>
-                    </Link>
-                  </li>
-                  {rootFolders.map((f) => (
-                      <li key={f.id}>
-                        <div className="group relative flex items-start justify-between gap-1 rounded-md px-1 py-1 transition hover:bg-[#0A3D45]/[0.04]">
-                          {!f.locked ? (
-                            <Link
-                              href={`/app/w/${workspaceId}?folder=${f.id}`}
-                              className="absolute inset-0 z-0 rounded-md"
-                              aria-label={`Open folder ${f.name}`}
-                            />
-                          ) : null}
-                          <div className="relative z-[1] min-w-0 flex-1 pointer-events-none">
-                            {f.locked ? (
-                              <span
-                                className="inline-flex min-w-0 cursor-not-allowed items-center gap-1.5 text-[#0A3D45]/45"
-                                title="You don’t have a required role for this folder"
-                                aria-disabled="true"
-                              >
-                                <span className="truncate">{f.name}</span>
-                                <span aria-hidden>🔒</span>
-                              </span>
-                            ) : (
-                              <span
-                                className={`inline-flex min-w-0 items-center gap-1.5 ${
-                                  currentFolder?.id === f.id
-                                    ? "font-semibold text-[#0A3D45]"
-                                    : "text-[#0A3D45]/70"
-                                }`}
-                              >
-                                <span className="truncate">{f.name}</span>
-                                {f.requiredRoleIds.length > 0 ? (
-                                  <span className="text-[10px] text-[#0A3D45]/40" title="Role-restricted">
-                                    ●
-                                  </span>
-                                ) : null}
-                              </span>
-                            )}
-                            <FolderCompletionStats
-                              done={folderDoneCounts.get(f.id) ?? 0}
-                              total={folderTotalCounts.get(f.id) ?? 0}
-                              unclaimed={folderCounts.get(f.id) ?? 0}
-                            />
-                          </div>
-                          {canEdit && f.canAccess ? (
-                            <div className="relative z-[1] shrink-0 pointer-events-auto">
-                              <FolderActions {...folderActionsProps(f.id, f.name)} />
-                            </div>
-                          ) : null}
-                        </div>
-                      </li>
-                    ))}
-                </ul>
-
+              <ChatSidebarSection
+                title="Add Folders"
+                description="Create a folder here. Browse folders from the main panel."
+              >
                 {canEdit ? (
-                  <InlineActionForm
-                    className="mt-4 flex flex-col gap-2"
-                    action={createFolderAction}
-                    submitLabel="New folder"
-                  >
-                    <input type="hidden" name="workspaceId" value={workspaceId} />
-                    {currentFolder ? (
-                      <input
-                        type="hidden"
-                        name="parentId"
-                        value={currentFolder.id}
-                      />
-                    ) : null}
-                    <input
-                      name="name"
-                      required
-                      placeholder="Folder name"
-                      className="tide-input text-sm"
-                    />
-                  </InlineActionForm>
-                ) : null}
+                  <CreateFolderForm
+                    workspaceId={workspaceId}
+                    parentId={currentFolder?.id ?? null}
+                    parentName={currentFolder?.name ?? null}
+                    roleNames={roleOptions.map((r) => r.name)}
+                    canSetAccess={canManageRoles}
+                  />
+                ) : (
+                  <p className="text-xs text-[color:var(--tide-deep)]/55">
+                    Editors and above can add folders.
+                  </p>
+                )}
               </ChatSidebarSection>
             </div>
 
