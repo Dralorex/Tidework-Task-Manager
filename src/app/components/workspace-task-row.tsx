@@ -14,11 +14,13 @@ import {
   removeTaskTagAction,
   claimTaskAction,
   completeTaskAction,
+  deleteTaskAction,
   forceUnclaimTaskAction,
   reviewTaskAction,
   updateTaskAction,
 } from "@/app/actions/tasks";
 import { personLabel } from "@/lib/utils";
+import { confirmDelete } from "@/lib/confirm";
 import type { TaskPriority, TaskStatus } from "@/generated/prisma/client";
 
 type Person = {
@@ -131,6 +133,23 @@ function TaskEditorMenu({
     });
   }
 
+  function removeTask() {
+    if (!confirmDelete(`task “${task.name}”`)) return;
+    setError(null);
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.set("workspaceId", workspaceId);
+      fd.set("taskId", task.id);
+      const result = await deleteTaskAction(null, fd);
+      if (result && !result.ok) {
+        setError(result.error);
+        return;
+      }
+      close();
+      router.refresh();
+    });
+  }
+
   return (
     <MenuSurface
       open={open}
@@ -172,6 +191,18 @@ function TaskEditorMenu({
             >
               Force unclaim
             </button>
+          ) : null}
+          <button
+            type="button"
+            role="menuitem"
+            className={menuItemClass(true)}
+            disabled={pending}
+            onClick={removeTask}
+          >
+            Delete
+          </button>
+          {error ? (
+            <p className="px-3 py-2 text-xs text-[#9b2f22]">{error}</p>
           ) : null}
         </>
       ) : null}
