@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
-import { flushSync } from "react-dom";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { createPortal, flushSync } from "react-dom";
 
 /** Approx. row height for suggestion buttons (py-1.5 + text-sm). */
 const SUGGESTION_ROW_REM = 2.25;
@@ -46,8 +53,15 @@ export function TagSuggestInput({
 }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(defaultValue);
+  const [mounted, setMounted] = useState(false);
+  const [coords, setCoords] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const listId = useId();
 
   const segments = allowMultiple ? value.split(",") : [value];
@@ -68,14 +82,55 @@ export function TagSuggestInput({
   });
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     setValue(defaultValue);
   }, [defaultValue]);
+
+  const place = useCallback(() => {
+    const input = inputRef.current;
+    const panel = panelRef.current;
+    if (!input || !panel) return;
+    const rect = input.getBoundingClientRect();
+    const panelHeight = panel.offsetHeight || 0;
+    const gap = 4;
+    let top = rect.bottom + gap;
+    if (
+      top + panelHeight > window.innerHeight - 8 &&
+      rect.top > panelHeight + gap
+    ) {
+      top = rect.top - panelHeight - gap;
+    }
+    setCoords({
+      top,
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8)),
+      width: rect.width,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setCoords(null);
+      return;
+    }
+    place();
+    const onReposition = () => place();
+    window.addEventListener("resize", onReposition);
+    window.addEventListener("scroll", onReposition, true);
+    return () => {
+      window.removeEventListener("resize", onReposition);
+      window.removeEventListener("scroll", onReposition, true);
+    };
+  }, [open, place, filtered.length, value, clearOptionLabel]);
 
   useEffect(() => {
     if (!open) return;
     function onDoc(e: MouseEvent) {
       const t = e.target as Node;
       if (wrapRef.current?.contains(t)) return;
+      if (panelRef.current?.contains(t)) return;
       setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
@@ -120,6 +175,7 @@ export function TagSuggestInput({
         el.focus();
         const end = el.value.length;
         el.setSelectionRange(end, end);
+        place();
       });
       return;
     }
@@ -130,32 +186,20 @@ export function TagSuggestInput({
 
   const listMaxHeight = `${MAX_VISIBLE_SUGGESTIONS * SUGGESTION_ROW_REM}rem`;
 
-  return (
-    <div className={className}>
-      <div ref={wrapRef} className="relative">
-        <input
-          ref={inputRef}
-          name={name}
-          value={value}
-          required={required}
-          autoComplete="off"
-          aria-autocomplete="list"
-          aria-expanded={open}
-          aria-controls={listId}
-          placeholder={placeholder}
-          className={inputClassName}
-          onChange={(e) => {
-            setValue(e.target.value);
-            setOpen(true);
-          }}
-          onFocus={() => setOpen(true)}
-          onClick={() => setOpen(true)}
-        />
-        {open ? (
+  const dropdown =
+    mounted && open
+      ? createPortal(
           <div
+            ref={panelRef}
             id={listId}
             role="listbox"
-            className="absolute left-0 right-0 top-[calc(100%+4px)] z-[80] overflow-hidden rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--menu-bg)] py-1 shadow-lg"
+            className="fixed z-[200] overflow-hidden rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--menu-bg)] py-1 shadow-lg"
+            style={{
+              top: coords?.top ?? 0,
+              left: coords?.left ?? 0,
+              width: coords?.width ?? undefined,
+              visibility: coords ? "visible" : "hidden",
+            }}
           >
             {clearOptionLabel && value.trim() ? (
               <button
@@ -199,12 +243,37 @@ export function TagSuggestInput({
                 })
               )}
             </div>
-          </div>
-        ) : null}
+          </div>,
+          document.body,
+        )
+      : null;
+
+  return (
+    <div className={className}>
+      <div ref={wrapRef} className="relative">
+        <input
+          ref={inputRef}
+          name={name}
+          value={value}
+          required={required}
+          autoComplete="off"
+          aria-autocomplete="list"
+          aria-expanded={open}
+          aria-controls={listId}
+          placeholder={placeholder}
+          className={inputClassName}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onClick={() => setOpen(true)}
+        />
       </div>
       {hint ? (
         <p className="mt-1 text-[11px] leading-snug text-[#0A3D45]/55">{hint}</p>
       ) : null}
+      {dropdown}
     </div>
   );
 }
