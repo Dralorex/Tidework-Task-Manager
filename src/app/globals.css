@@ -274,12 +274,25 @@ body {
 }
 
 .tide-input-hint {
-  color: color-mix(in srgb, var(--tide-ink) 45%, transparent);
+  color: color-mix(in srgb, var(--tide-ink) 42%, transparent);
+}
+
+/* Deep Ocean / dark overrides full-white input text for placeholder state */
+[data-theme="dark"] .tide-input.tide-input-hint {
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .tide-input option {
   color: var(--tide-ink);
   background: var(--input-bg);
+}
+
+[data-theme="dark"] .tide-input option {
+  color: #ffffff;
+}
+
+.tide-input-hint option[value=""] {
+  color: color-mix(in srgb, var(--tide-ink) 42%, transparent);
 }
 
 .tide-input:focus {
