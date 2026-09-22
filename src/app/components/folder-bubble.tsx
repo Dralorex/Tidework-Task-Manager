@@ -1,0 +1,97 @@
+import Link from "next/link";
+import { FolderActions } from "@/app/components/folder-actions";
+import { FolderCompletionStats } from "@/app/components/folder-completion-stats";
+
+type FolderActionsProps = {
+  workspaceId: string;
+  folderId: string;
+  folderName: string;
+  canManageRoles: boolean;
+  workspaceRoles: { id: string; name: string }[];
+  requiredRoleIds: string[];
+};
+
+/** Folder card where empty space opens the folder; actions stay clickable. */
+export function FolderBubble({
+  workspaceId,
+  folderId,
+  name,
+  locked,
+  restricted,
+  count,
+  done,
+  total,
+  unclaimed,
+  showActions,
+  folderActions,
+}: {
+  workspaceId: string;
+  folderId: string;
+  name: string;
+  locked: boolean;
+  restricted: boolean;
+  count: number;
+  done: number;
+  total: number;
+  unclaimed: number;
+  showActions: boolean;
+  folderActions: FolderActionsProps;
+}) {
+  const href = `/app/w/${workspaceId}?folder=${folderId}`;
+
+  return (
+    <div
+      className={`group relative flex items-start justify-between gap-2 rounded-lg border px-3 py-2.5 transition ${
+        locked
+          ? "cursor-not-allowed border-[#0A3D45]/8 bg-[#0A3D45]/[0.015] opacity-80"
+          : "border-[#0A3D45]/10 bg-[#0A3D45]/[0.02] hover:border-[#0A3D45]/20 hover:bg-[#0A3D45]/[0.05]"
+      }`}
+    >
+      {!locked ? (
+        <Link
+          href={href}
+          className="absolute inset-0 z-0 rounded-lg"
+          aria-label={`Open folder ${name}`}
+        />
+      ) : null}
+
+      <div className="relative z-[1] min-w-0 flex-1 pointer-events-none">
+        {locked ? (
+          <span
+            className="flex min-w-0 items-center gap-2 text-sm font-semibold text-[#0A3D45]/45"
+            title="You don’t have a required role for this folder"
+            aria-disabled="true"
+          >
+            <span className="truncate">{name}</span>
+            <span aria-hidden>🔒</span>
+            <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/55">
+              {count}
+            </span>
+          </span>
+        ) : (
+          <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-[#0A3D45]">
+            <span className="truncate">{name}</span>
+            {restricted ? (
+              <span
+                className="text-[10px] text-[#0A3D45]/40"
+                title="Role-restricted"
+              >
+                ●
+              </span>
+            ) : null}
+            <span className="rounded-md bg-[#0A3D45]/8 px-1.5 text-[11px] font-semibold tabular-nums text-[#0A3D45]/70">
+              {count}
+            </span>
+          </span>
+        )}
+        <FolderCompletionStats done={done} total={total} unclaimed={unclaimed} />
+      </div>
+
+      {showActions ? (
+        <div className="relative z-[1] shrink-0 pointer-events-auto">
+          <FolderActions {...folderActions} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
