@@ -64,8 +64,8 @@ export async function verifyEmailCodeAction(
   const next =
     nextRaw.startsWith("/") && !nextRaw.startsWith("//") ? nextRaw : "/app";
 
-  if (!/^\d{4}$/.test(code)) {
-    return { ok: false, error: "Enter the 4-digit code from your email." };
+  if (!/^\d{6}$/.test(code)) {
+    return { ok: false, error: "Enter the 6-digit code from your email." };
   }
 
   // New signup with email: create the User only after the code matches.
@@ -83,7 +83,15 @@ export async function verifyEmailCodeAction(
       await prisma.pendingSignup.delete({ where: { id: pending.id } }).catch(() => null);
       return { ok: false, error: "That code expired. Resend a new one." };
     }
+    if (pending.attempts >= 5) {
+      await prisma.pendingSignup.delete({ where: { id: pending.id } }).catch(() => null);
+      return { ok: false, error: "Too many incorrect attempts. Start signup again." };
+    }
     if (pending.code !== code) {
+      await prisma.pendingSignup.update({
+        where: { id: pending.id },
+        data: { attempts: { increment: 1 } },
+      });
       return { ok: false, error: "That code doesn’t match. Try again." };
     }
 
@@ -142,7 +150,15 @@ export async function verifyEmailCodeAction(
   if (pending.expiresAt < new Date()) {
     return { ok: false, error: "That code expired. Resend a new one." };
   }
+  if (pending.attempts >= 5) {
+    await prisma.emailVerification.delete({ where: { id: pending.id } });
+    return { ok: false, error: "Too many incorrect attempts. Request a new code." };
+  }
   if (pending.code !== code) {
+    await prisma.emailVerification.update({
+      where: { id: pending.id },
+      data: { attempts: { increment: 1 } },
+    });
     return { ok: false, error: "That code doesn’t match. Try again." };
   }
 

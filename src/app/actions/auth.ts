@@ -24,7 +24,7 @@ export type ActionResult =
   | {
       ok: true;
       resetUrl?: string;
-      /** Dev-only: 4-digit password reset code when email is mocked. */
+      /** Dev-only: 6-digit password reset code when email is mocked. */
       resetCode?: string;
       emailed?: boolean;
       needsEmailVerification?: boolean;
@@ -234,7 +234,9 @@ export async function requestPasswordResetAction(
   }
 
   // In local/dev without RESEND_API_KEY, surface the code so resets still work.
-  if (sent.mocked) {
+  // Never leak it outside non-production, even if RESEND_API_KEY is
+  // accidentally missing on a live deploy.
+  if (sent.mocked && process.env.NODE_ENV !== "production") {
     return { ok: true, emailed: false, resetCode: code };
   }
 
@@ -253,8 +255,8 @@ export async function resetPasswordAction(
   if (!identifier) {
     return { ok: false, error: "Enter the username or email you used to request a reset." };
   }
-  if (!/^\d{4}$/.test(code)) {
-    return { ok: false, error: "Enter the 4-digit code from your email." };
+  if (!/^\d{6}$/.test(code)) {
+    return { ok: false, error: "Enter the 6-digit code from your email."};
   }
   if (password.length < 8) {
     return { ok: false, error: "Password must be at least 8 characters." };
@@ -278,14 +280,29 @@ export async function resetPasswordAction(
     return { ok: false, error: "This reset code is invalid or expired." };
   }
 
-  const record = await prisma.passwordResetToken.findFirst({
-    where: {
-      userId: user.id,
-      token: code,
-      expiresAt: { gt: new Date() },
-    },
+  const pending = await prisma.passwordResetToken.findFirst({
+    where: { userId: user.id, expiresAt: { gt: new Date() } },
   });
+
+  if (!pending) {
+    return { ok: false, error: "This reset code is invalid or expired." };
+  }
+
+  if (pending.attempts >= 5) {
+    await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
+    return {
+      ok: false,
+      error: "Too many incorrect attempts. Request a new reset code.",
+    };
+  }
+
+  const record = pending.token === code ? pending : null;
+
   if (!record) {
+    await prisma.passwordResetToken.update({
+      where: { id: pending.id },
+      data: { attempts: { increment: 1 } },
+    });
     return { ok: false, error: "This reset code is invalid or expired." };
   }
 
