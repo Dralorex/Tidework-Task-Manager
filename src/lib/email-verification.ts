@@ -1,12 +1,13 @@
 import { prisma } from "@/lib/db";
 import { emailVerificationCodeEmail } from "@/lib/email-templates";
 import { sendEmail } from "@/lib/mail";
+import { randomInt } from "crypto";
 
 export const EMAIL_CODE_TTL_MS = 1000 * 60 * 15;
 export const EMAIL_RESEND_COOLDOWN_MS = 1000 * 30;
 
 export function generateEmailCode() {
-  return String(Math.floor(1000 + Math.random() * 9000));
+  return String(randomInt(0, 1_000_000)).padStart(6, "0");
 }
 
 export async function issueEmailVerification(opts: {
