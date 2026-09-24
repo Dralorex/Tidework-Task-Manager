@@ -30,7 +30,7 @@ export function WorkspacePulseStrip({
   ) => (
     <Link
       href={href}
-      className={`inline-flex min-h-10 items-center justify-center rounded-full px-3 py-2 text-sm font-semibold transition ${
+      className={`inline-flex min-h-9 items-center justify-center rounded-full px-3 py-1.5 text-sm font-semibold transition ${
         active
           ? "bg-[#0A3D45] text-[#E8F7F6]"
           : "bg-white/50 text-[#0A3D45]/75 hover:bg-white/80"
@@ -46,48 +46,41 @@ export function WorkspacePulseStrip({
   return (
     <div className="mt-6 space-y-3">
       {counts ? (
-        <div className="tide-panel p-4 sm:p-5">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="font-[family-name:var(--font-display)] text-lg text-[#0A3D45] sm:text-xl">
-                Workspace pulse
-              </h2>
-              <p className="text-xs text-[#0A3D45]/55 sm:text-sm">
-                Claim / review health at a glance
-              </p>
-            </div>
-            {canReview && counts.inReview > 0 ? (
-              <Link
-                href={`${base}?inbox=review`}
-                className="tide-btn-secondary min-h-10 text-sm"
-              >
-                Needs your review · {counts.inReview}
-              </Link>
-            ) : null}
-          </div>
-          <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div className="tide-panel flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 sm:px-4">
+          <h2 className="shrink-0 font-[family-name:var(--font-display)] text-base text-[#0A3D45] sm:text-lg">
+            Pulse
+          </h2>
+          <dl className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 sm:gap-2">
             {(
               [
                 ["Open", counts.open],
                 ["Claimed", counts.claimed],
-                ["In review", counts.inReview],
+                ["Review", counts.inReview],
                 ["Overdue", counts.overdue],
                 ["Done", counts.done],
               ] as const
             ).map(([label, value]) => (
               <div
                 key={label}
-                className="rounded-xl bg-[#0A3D45]/5 px-3 py-2 text-center"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#0A3D45]/6 px-2.5 py-1"
               >
-                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#0A3D45]/55">
+                <dt className="text-[10px] font-semibold uppercase tracking-wide text-[#0A3D45]/55">
                   {label}
                 </dt>
-                <dd className="mt-0.5 font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
+                <dd className="text-sm font-semibold tabular-nums text-[#0A3D45]">
                   {value}
                 </dd>
               </div>
             ))}
           </dl>
+          {canReview && counts.inReview > 0 ? (
+            <Link
+              href={`${base}?inbox=review`}
+              className="shrink-0 text-xs font-semibold text-[#1a7a82] underline-offset-2 hover:underline"
+            >
+              Review · {counts.inReview}
+            </Link>
+          ) : null}
         </div>
       ) : null}
 

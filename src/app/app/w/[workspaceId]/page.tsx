@@ -304,9 +304,18 @@ export default async function WorkspacePage({
                 </span>
               ) : null}
             </h1>
-            <p className="text-sm capitalize text-[#0A3D45]/60">
-              You’re {membership.role.toLowerCase()}
-            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <p className="text-sm capitalize text-[#0A3D45]/60">
+                You’re {membership.role.toLowerCase()}
+              </p>
+              {canArchive && !workspaceArchived ? (
+                <ArchiveWorkspacePanel
+                  workspaceId={workspaceId}
+                  isArchived={false}
+                  members={archiveMembers}
+                />
+              ) : null}
+            </div>
           </div>
 
           <form className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap" action={`/app/w/${workspaceId}`} method="get">
@@ -332,17 +341,19 @@ export default async function WorkspacePage({
           </form>
         </div>
 
-        {canArchive ? (
-          <div className="mt-6">
-            <ArchiveWorkspacePanel
-              workspaceId={workspaceId}
-              isArchived={workspaceArchived}
-              members={archiveMembers}
-            />
-          </div>
-        ) : workspaceArchived ? (
-          <div className="mt-6 tide-panel border border-[#E85D4C]/25 bg-[#E85D4C]/8 p-4 text-sm text-[#0A3D45]/80">
-            This workspace is archived. History stays visible; new work is paused.
+        {workspaceArchived ? (
+          <div className="mt-4">
+            {canArchive ? (
+              <ArchiveWorkspacePanel
+                workspaceId={workspaceId}
+                isArchived
+                members={archiveMembers}
+              />
+            ) : (
+              <div className="rounded-xl border border-[#E85D4C]/25 bg-[#E85D4C]/8 px-3 py-2.5 text-sm text-[#0A3D45]/80">
+                This workspace is archived. History stays visible; new work is paused.
+              </div>
+            )}
           </div>
         ) : null}
 
@@ -497,14 +508,25 @@ export default async function WorkspacePage({
 
           <section className="space-y-6">
             <div className="tide-panel p-5">
-              <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
-                {sectionTitle}
-                {folderArchived ? (
-                  <span className="ml-2 align-middle text-sm font-sans font-semibold uppercase tracking-wide text-[#E85D4C]">
-                    Archived
-                  </span>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
+                  {sectionTitle}
+                  {folderArchived ? (
+                    <span className="ml-2 align-middle text-sm font-sans font-semibold uppercase tracking-wide text-[#E85D4C]">
+                      Archived
+                    </span>
+                  ) : null}
+                </h2>
+                {!inbox && canArchive && currentFolder && !workspaceArchived && !folderArchived ? (
+                  <ArchiveFolderControls
+                    workspaceId={workspaceId}
+                    folderId={currentFolder.id}
+                    folderName={currentFolder.name}
+                    isArchived={false}
+                    members={archiveMembers}
+                  />
                 ) : null}
-              </h2>
+              </div>
               <p className="text-sm text-[#0A3D45]/60">
                 {inbox === "mine"
                   ? "Tasks you’ve claimed across every folder."
@@ -530,12 +552,12 @@ export default async function WorkspacePage({
                 </ul>
               ) : null}
 
-              {!inbox && canArchive && currentFolder && !workspaceArchived ? (
+              {!inbox && canArchive && currentFolder && !workspaceArchived && folderArchived ? (
                 <ArchiveFolderControls
                   workspaceId={workspaceId}
                   folderId={currentFolder.id}
                   folderName={currentFolder.name}
-                  isArchived={isArchived(currentFolder)}
+                  isArchived
                   members={archiveMembers}
                 />
               ) : null}
