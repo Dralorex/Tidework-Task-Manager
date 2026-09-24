@@ -4,6 +4,7 @@ import {
   ChatComposer,
   ChatMessageBody,
 } from "@/app/components/chat-composer";
+import { ChatPresenceStrip } from "@/app/components/chat-presence";
 import {
   createGroupChatAction,
   requestWorkspaceDmAction,
@@ -294,9 +295,13 @@ export default async function ChatPage({
             <h1 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
               {active.name}
             </h1>
-            <p className="text-xs text-[#0A3D45]/55">
-              {active.members.map((m) => m.user.username).join(", ")}
-            </p>
+            <ChatPresenceStrip
+              groupId={active.id}
+              memberUsernames={active.members.map((m) => ({
+                userId: m.userId,
+                username: m.user.username,
+              }))}
+            />
             <div className="mt-4 flex-1 space-y-3 overflow-y-auto">
               {active.messages.map((msg) => (
                 <div key={msg.id} className="text-sm">

@@ -320,6 +320,11 @@ export async function sendMessageAction(
   });
   if (!member) return { ok: false, error: "You’re not in this chat." };
 
+  await prisma.chatMember.update({
+    where: { id: member.id },
+    data: { typingAt: null, lastSeenAt: new Date() },
+  });
+
   const group = member.group;
   const chatMembers = group.members;
   const memberByUsername = new Map(
@@ -514,4 +519,59 @@ export async function touchChatSeenAction(
 
   revalidatePath("/app", "layout");
   return { ok: true };
+}
+
+export async function setTypingAction(groupId: string): Promise<ActionResult> {
+  const user = await requireUser();
+  const member = await prisma.chatMember.findUnique({
+    where: { groupId_userId: { groupId, userId: user.id } },
+  });
+  if (!member) return { ok: false, error: "You’re not in this chat." };
+
+  const now = new Date();
+  await prisma.chatMember.update({
+    where: { id: member.id },
+    data: { typingAt: now, lastSeenAt: now },
+  });
+  return { ok: true };
+}
+
+export async function clearTypingAction(groupId: string): Promise<ActionResult> {
+  const user = await requireUser();
+  const member = await prisma.chatMember.findUnique({
+    where: { groupId_userId: { groupId, userId: user.id } },
+  });
+  if (!member) return { ok: false, error: "You’re not in this chat." };
+
+  await prisma.chatMember.update({
+    where: { id: member.id },
+    data: { typingAt: null },
+  });
+  return { ok: true };
+}
+
+export async function fetchChatPresence(groupId: string) {
+  const user = await requireUser();
+  const member = await prisma.chatMember.findUnique({
+    where: { groupId_userId: { groupId, userId: user.id } },
+  });
+  if (!member) return { ok: false as const, error: "You’re not in this chat." };
+
+  const members = await prisma.chatMember.findMany({
+    where: { groupId },
+    include: { user: { select: { id: true, username: true } } },
+  });
+
+  const { derivePresence } = await import("@/lib/chat-presence");
+  const presence = derivePresence(
+    members.map((m) => ({
+      userId: m.userId,
+      username: m.user.username,
+      lastSeenAt: m.lastSeenAt,
+      typingAt: m.typingAt,
+    })),
+    user.id,
+  );
+
+  return { ok: true as const, presence, selfId: user.id };
 }

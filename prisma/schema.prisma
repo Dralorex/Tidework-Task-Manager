@@ -414,6 +414,8 @@ model ChatMember {
   userId     String
   notifyMode ChatNotifyMode @default(ALL)
   lastSeenAt DateTime?
+  /** Last keystroke in this chat — cleared after a few seconds of idle */
+  typingAt   DateTime?
   joinedAt   DateTime       @default(now())
 
   group ChatGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)

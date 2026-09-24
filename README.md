@@ -17,6 +17,7 @@ Collaborative task management where urgency rises with due dates — nested fold
 - **Calendar** — list/month views; drag personal, task, and workspace items between days
 - **Weekly digest** — optional email summary of overdue / due soon / reviews (Alerts → send preview)
 - **Chat task links** — type `#` in chat to attach a task; messages render deep links into the folder
+- **Presence** — online dots and “is typing…” in chat (polled; no websocket required)
 - **Social** — friends; DMs (friends free; workspace DMs need accept); Admin+ group chats
 
 ## Stack

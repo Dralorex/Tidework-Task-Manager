@@ -7,8 +7,10 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import type { ActionResult } from "@/app/actions/auth";
 import {
+  clearTypingAction,
   sendMessageAction,
   setChatNotifyModeAction,
+  setTypingAction,
   touchChatSeenAction,
 } from "@/app/actions/social";
 import { highlightMessageParts, type TaskLinkInfo } from "@/lib/task-links";
@@ -93,12 +95,15 @@ export function ChatComposer({
   const [picker, setPicker] = useState<"mention" | "task" | null>(null);
   const [filter, setFilter] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimer = useRef<number | null>(null);
+  const lastTypingSent = useRef(0);
   const [state, formAction] = useActionState(
     async (prev: ActionResult | null, formData: FormData) => {
       const result = await sendMessageAction(prev, formData);
       if (result?.ok) {
         setBody("");
         setPicker(null);
+        void clearTypingAction(groupId);
         router.refresh();
       }
       return result;
@@ -141,29 +146,47 @@ export function ChatComposer({
     if (triggerAt < 0) {
       setPicker(null);
       setFilter("");
-      return;
-    }
-    const token = before.slice(triggerAt + 1);
-    if (/\s/.test(token)) {
-      setPicker(null);
-      setFilter("");
-      return;
-    }
-    // Prefer the later trigger
-    if (hash > at) {
-      // Don't open task picker mid #task:id
-      if (token.toLowerCase().startsWith("task:")) {
+    } else {
+      const token = before.slice(triggerAt + 1);
+      if (/\s/.test(token)) {
         setPicker(null);
         setFilter("");
-        return;
+      } else if (hash > at) {
+        if (token.toLowerCase().startsWith("task:")) {
+          setPicker(null);
+          setFilter("");
+        } else {
+          setFilter(token);
+          setPicker(taskOptions.length ? "task" : null);
+        }
+      } else {
+        setFilter(token);
+        setPicker("mention");
       }
-      setFilter(token);
-      setPicker(taskOptions.length ? "task" : null);
+    }
+
+    // Typing heartbeat (throttle ~2s)
+    if (value.trim()) {
+      const now = Date.now();
+      if (now - lastTypingSent.current > 2000) {
+        lastTypingSent.current = now;
+        void setTypingAction(groupId);
+      }
+      if (typingTimer.current) window.clearTimeout(typingTimer.current);
+      typingTimer.current = window.setTimeout(() => {
+        void clearTypingAction(groupId);
+      }, 3500);
     } else {
-      setFilter(token);
-      setPicker("mention");
+      void clearTypingAction(groupId);
     }
   }
+
+  useEffect(() => {
+    return () => {
+      if (typingTimer.current) window.clearTimeout(typingTimer.current);
+      void clearTypingAction(groupId);
+    };
+  }, [groupId]);
 
   function insertToken(insert: string, trigger: "#" | "@") {
     const el = inputRef.current;
