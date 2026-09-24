@@ -14,7 +14,7 @@ const TABS: {
   /** Phone strip label (kept short) */
   shortLabel: string;
 }[] = [
-  { href: "/app", key: "home", label: "Workspaces", shortLabel: "Spaces" },
+  { href: "/app", key: "home", label: "Workspaces", shortLabel: "Workspace" },
   {
     href: "/app/calendar",
     key: "calendar",
