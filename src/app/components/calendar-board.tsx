@@ -14,7 +14,7 @@ import {
   startOfWeek,
   subMonths,
 } from "date-fns";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { InlineActionForm } from "@/app/components/forms";
 import {
@@ -22,6 +22,7 @@ import {
   createWorkspaceEventAction,
   deletePersonalEventAction,
   deleteWorkspaceEventAction,
+  moveCalendarItemAction,
   setBirthdayAction,
   setCalendarWorkspaceFilterAction,
   setShowBirthdaysAction,
@@ -39,6 +40,7 @@ export type CalendarBoardEvent = {
   sourceLabel: string;
   href?: string;
   canDelete?: boolean;
+  canMove?: boolean;
 };
 
 type WorkspaceOption = {
@@ -100,6 +102,16 @@ export function CalendarBoard({
   const searchParams = useSearchParams();
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()));
   const [composer, setComposer] = useState<"personal" | "workspace" | null>(null);
+  const [localEvents, setLocalEvents] = useState(events);
+  const [dragOverDay, setDragOverDay] = useState<string | null>(null);
+  const [dragError, setDragError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  // Keep local copy in sync when server props refresh
+  const eventsKey = events.map((e) => `${e.id}:${e.date}`).join("|");
+  useEffect(() => {
+    setLocalEvents(events);
+  }, [events, eventsKey]);
 
   const kindsParam = searchParams.get("kinds");
   const activeKinds: CalendarKind[] = kindsParam
@@ -119,9 +131,38 @@ export function CalendarBoard({
     router.push(`${pathname}?${next.toString()}`);
   }
 
+  function moveEvent(eventId: string, toDay: string) {
+    const event = localEvents.find((e) => e.id === eventId);
+    if (!event || !event.canMove) return;
+    if (event.kind === "birthday") return;
+    const fromDay = format(parseISO(event.date), "yyyy-MM-dd");
+    if (fromDay === toDay) return;
+
+    const prev = localEvents;
+    const nextDate = new Date(`${toDay}T12:00:00`).toISOString();
+    setDragError(null);
+    setLocalEvents((list) =>
+      list.map((e) => (e.id === eventId ? { ...e, date: nextDate } : e)),
+    );
+
+    startTransition(async () => {
+      const result = await moveCalendarItemAction(
+        event.kind as "personal" | "task" | "workspace",
+        event.recordId,
+        toDay,
+      );
+      if (!result.ok) {
+        setLocalEvents(prev);
+        setDragError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
   const filtered = useMemo(
-    () => events.filter((e) => activeKinds.includes(e.kind)),
-    [events, activeKinds],
+    () => localEvents.filter((e) => activeKinds.includes(e.kind)),
+    [localEvents, activeKinds],
   );
 
   const byDay = useMemo(() => {
@@ -387,6 +428,13 @@ export function CalendarBoard({
               Next
             </button>
           </div>
+          <p className="mb-2 text-xs text-[#0A3D45]/55">
+            Drag personal, task, or workspace items onto another day
+            {pending ? " · Saving…" : ""}.
+          </p>
+          {dragError ? (
+            <p className="mb-2 text-xs text-[#9b2f22]">{dragError}</p>
+          ) : null}
           <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase tracking-wide text-[#0A3D45]/45 sm:text-xs">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
               <div key={d} className="py-1">
@@ -401,12 +449,29 @@ export function CalendarBoard({
                 isSameDay(parseISO(e.date), day),
               );
               const inMonth = isSameMonth(day, monthCursor);
+              const isOver = dragOverDay === key;
               return (
                 <div
                   key={key}
-                  className={`min-h-[4.5rem] rounded-lg border border-[#0A3D45]/8 p-1 sm:min-h-[5.5rem] sm:p-1.5 ${
-                    inMonth ? "bg-white/50" : "bg-white/20 opacity-50"
-                  }`}
+                  data-day={key}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOverDay(key);
+                  }}
+                  onDragLeave={() => {
+                    setDragOverDay((cur) => (cur === key ? null : cur));
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOverDay(null);
+                    const eventId = e.dataTransfer.getData("text/calendar-event");
+                    if (eventId) moveEvent(eventId, key);
+                  }}
+                  className={`min-h-[4.5rem] rounded-lg border p-1 sm:min-h-[5.5rem] sm:p-1.5 ${
+                    isOver
+                      ? "border-[#1a7a82] bg-[#3DBEAB]/20"
+                      : "border-[#0A3D45]/8"
+                  } ${inMonth ? "bg-white/50" : "bg-white/20 opacity-50"}`}
                 >
                   <p className="text-[11px] font-semibold text-[#0A3D45]/70">
                     {format(day, "d")}
@@ -415,8 +480,21 @@ export function CalendarBoard({
                     {dayEvents.slice(0, 3).map((event) => (
                       <li
                         key={event.id}
-                        className={`truncate rounded px-1 py-0.5 text-[10px] font-semibold leading-tight ${KIND_META[event.kind].chip}`}
-                        title={`${KIND_META[event.kind].label} · ${event.sourceLabel} · ${event.title}`}
+                        data-event-id={event.id}
+                        draggable={Boolean(event.canMove)}
+                        onDragStart={(e) => {
+                          if (!event.canMove) return;
+                          e.dataTransfer.setData("text/calendar-event", event.id);
+                          e.dataTransfer.effectAllowed = "move";
+                        }}
+                        className={`truncate rounded px-1 py-0.5 text-[10px] font-semibold leading-tight ${KIND_META[event.kind].chip} ${
+                          event.canMove
+                            ? "cursor-grab active:cursor-grabbing"
+                            : "cursor-default"
+                        }`}
+                        title={`${KIND_META[event.kind].label} · ${event.sourceLabel} · ${event.title}${
+                          event.canMove ? " · drag to move" : ""
+                        }`}
                       >
                         {event.title}
                       </li>

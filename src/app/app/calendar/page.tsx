@@ -100,6 +100,7 @@ export default async function CalendarPage() {
       date: event.date.toISOString(),
       sourceLabel: "Personal",
       canDelete: true,
+      canMove: true,
     });
   }
 
@@ -107,6 +108,7 @@ export default async function CalendarPage() {
     const membership = activeMemberships.find(
       (m) => m.workspaceId === event.workspaceId,
     );
+    const canEdit = membership ? canEditContent(membership.role) : false;
     events.push({
       id: `workspace:${event.id}`,
       recordId: event.id,
@@ -116,7 +118,8 @@ export default async function CalendarPage() {
       date: event.date.toISOString(),
       sourceLabel: `Workspace · ${event.workspace.name}`,
       href: `/app/w/${event.workspaceId}`,
-      canDelete: membership ? canEditContent(membership.role) : false,
+      canDelete: canEdit,
+      canMove: canEdit,
     });
   }
 
@@ -124,6 +127,11 @@ export default async function CalendarPage() {
     if (isArchived(event.task.folder) || isArchived(event.task.workspace)) {
       continue;
     }
+    const membership = activeMemberships.find(
+      (m) => m.workspaceId === event.task.workspaceId,
+    );
+    const canEdit = membership ? canEditContent(membership.role) : false;
+    const isAssignee = event.task.assigneeId === user.id;
     events.push({
       id: `task:${event.id}`,
       recordId: event.id,
@@ -133,6 +141,7 @@ export default async function CalendarPage() {
       date: event.dueDate.toISOString(),
       sourceLabel: `Task · ${event.task.workspace.name}`,
       href: `/app/w/${event.task.workspaceId}?folder=${event.task.folderId}`,
+      canMove: isAssignee || canEdit,
     });
   }
 
