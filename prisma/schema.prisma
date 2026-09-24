@@ -137,6 +137,7 @@ model Workspace {
   chatGroups  ChatGroup[]
   calendarEvents WorkspaceCalendarEvent[]
   calendarFilters CalendarWorkspaceFilter[]
+  folderTemplates FolderTemplate[]
 
   @@index([ownerId])
   @@index([archivedAt])
@@ -198,6 +199,21 @@ model Folder {
   @@index([workspaceId])
   @@index([parentId])
   @@index([archivedAt])
+}
+
+/** Saved folder name-trees for a workspace (no tasks). */
+model FolderTemplate {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  /** JSON array of { name, children? } nodes */
+  treeJson    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
 }
 
 model Task {

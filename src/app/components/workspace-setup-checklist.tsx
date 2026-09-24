@@ -65,7 +65,7 @@ export function WorkspaceSetupChecklist({
     {
       done: hasFolder,
       label: "Create a folder",
-      hint: "Topic bucket, e.g. General — not a status like In Progress",
+      hint: "Topic bucket, e.g. General — or use Templates in the sidebar",
     },
     {
       done: hasTask,

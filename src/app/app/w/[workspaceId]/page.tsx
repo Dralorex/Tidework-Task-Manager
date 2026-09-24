@@ -4,6 +4,7 @@ import {
   ArchiveFolderControls,
   ArchiveWorkspacePanel,
 } from "@/app/components/archive-controls";
+import { FolderTemplatesPanel } from "@/app/components/folder-templates-panel";
 import { InlineActionForm } from "@/app/components/forms";
 import { WorkspacePulseStrip } from "@/app/components/workspace-pulse-strip";
 import { WorkspaceSetupChecklist } from "@/app/components/workspace-setup-checklist";
@@ -140,6 +141,12 @@ export default async function WorkspacePage({
   const currentFolder = currentFolderId
     ? (folders.find((f) => f.id === currentFolderId) ?? null)
     : null;
+  /** Only nest templates under a folder when the URL explicitly selected one */
+  const explicitFolderId = inbox ? null : (sp.folder ?? null);
+  const templateParentFolder =
+    explicitFolderId
+      ? (folders.find((f) => f.id === explicitFolderId && !isArchived(f)) ?? null)
+      : null;
 
   if (currentFolder && !canViewArchived(user.id, membership.role, currentFolder)) {
     redirect(`/app/w/${workspaceId}`);
@@ -165,6 +172,12 @@ export default async function WorkspacePage({
         orderBy: { createdAt: "desc" },
       })
     : [];
+
+  const savedTemplates = await prisma.folderTemplate.findMany({
+    where: { workspaceId },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, treeJson: true },
+  });
 
   const allWorkspaceTasks = await prisma.task.findMany({
     where: { workspaceId },
@@ -464,6 +477,26 @@ export default async function WorkspacePage({
                     className="tide-input min-h-11 text-sm"
                   />
                 </InlineActionForm>
+              ) : null}
+
+              {!workspaceArchived ? (
+                <FolderTemplatesPanel
+                  workspaceId={workspaceId}
+                  parentId={templateParentFolder?.id ?? null}
+                  currentFolderId={
+                    currentFolder && !isArchived(currentFolder)
+                      ? currentFolder.id
+                      : null
+                  }
+                  currentFolderName={
+                    currentFolder && !isArchived(currentFolder)
+                      ? currentFolder.name
+                      : null
+                  }
+                  canEdit={canEditContent(membership.role)}
+                  canSave={canArchive}
+                  savedTemplates={savedTemplates}
+                />
               ) : null}
             </div>
 

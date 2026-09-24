@@ -13,6 +13,7 @@ Collaborative task management where urgency rises with due dates — nested fold
 - **Search** — name relevance + tag filters in the current folder area
 - **Invites** — Owner/Admin invite by username or email
 - **Archive** — Admin+ soft-delete workspaces/folders with visibility (everyone / by role / specific people); history preserved
+- **Folder templates** — starter trees (Simple / Project / Team) plus save/reuse workspace folder layouts
 - **Social** — friends; DMs (friends free; workspace DMs need accept); Admin+ group chats
 
 ## Stack
