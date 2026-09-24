@@ -59,6 +59,7 @@ export async function createTaskAction(
   const description = String(formData.get("description") ?? "").trim();
   const priority = String(formData.get("priority") ?? "MEDIUM") as TaskPriority;
   const dueRaw = String(formData.get("dueDate") ?? "").trim();
+  const assignTo = String(formData.get("assignTo") ?? "").trim();
 
   if (!name) return { ok: false, error: "Task needs a name." };
   if (!["CRITICAL", "HIGH", "MEDIUM", "LOW"].includes(priority)) {
@@ -70,6 +71,20 @@ export async function createTaskAction(
   });
   if (!folder) return { ok: false, error: "Folder not found." };
 
+  let assignedUserId: string | null = null;
+  let assignedUsername: string | null = null;
+  if (assignTo) {
+    const targetMembership = await prisma.membership.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId: assignTo } },
+      include: { user: true },
+    });
+    if (!targetMembership) {
+      return { ok: false, error: "Assignee must be a workspace member." };
+    }
+    assignedUserId = targetMembership.userId;
+    assignedUsername = targetMembership.user.username;
+  }
+
   const task = await prisma.task.create({
     data: {
       workspaceId,
@@ -79,6 +94,8 @@ export async function createTaskAction(
       priority,
       dueDate: dueRaw ? new Date(dueRaw) : null,
       createdById: user.id,
+      assigneeId: assignedUserId,
+      status: "OPEN",
     },
   });
 
@@ -86,10 +103,103 @@ export async function createTaskAction(
     taskId: task.id,
     actorId: user.id,
     type: "created",
-    message: `${user.username} created this task`,
+    message: assignedUsername
+      ? `${user.username} created this task · Assigned to ${assignedUsername}`
+      : `${user.username} created this task`,
+  });
+
+  if (assignedUserId && assignedUsername) {
+    await prisma.notification.create({
+      data: {
+        userId: assignedUserId,
+        type: "TASK_ASSIGNED",
+        title: "Task assigned to you",
+        body: `${user.username} assigned you “${name}”.`,
+        meta: JSON.stringify({ workspaceId, taskId: task.id, folderId }),
+      },
+    });
+  }
+
+  revalidateWorkspace(workspaceId);
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
+  return { ok: true };
+}
+
+export async function assignTaskAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const taskId = String(formData.get("taskId") ?? "");
+  const assignTo = String(formData.get("assignTo") ?? "").trim();
+
+  const membership = await requireMembership(workspaceId, user.id);
+  if (!canEditContent(membership.role)) {
+    return { ok: false, error: "Only editors and above can auto-assign." };
+  }
+
+  const task = await prisma.task.findFirst({
+    where: { id: taskId, workspaceId },
+  });
+  if (!task) return { ok: false, error: "Task not found." };
+  if (task.status !== "OPEN") {
+    return { ok: false, error: "Only open tasks can be auto-assigned." };
+  }
+
+  if (!assignTo) {
+    await prisma.task.update({
+      where: { id: taskId },
+      data: { assigneeId: null },
+    });
+    await recordTaskActivity({
+      taskId,
+      actorId: user.id,
+      type: "assignment_cleared",
+      message: `${user.username} cleared the assignment`,
+    });
+    revalidateWorkspace(workspaceId);
+    return { ok: true };
+  }
+
+  const targetMembership = await prisma.membership.findUnique({
+    where: { workspaceId_userId: { workspaceId, userId: assignTo } },
+    include: { user: true },
+  });
+  if (!targetMembership) {
+    return { ok: false, error: "Assignee must be a workspace member." };
+  }
+
+  await prisma.task.update({
+    where: { id: taskId },
+    data: { assigneeId: targetMembership.userId, status: "OPEN" },
+  });
+
+  await recordTaskActivity({
+    taskId,
+    actorId: user.id,
+    type: "assigned",
+    message: `${user.username} assigned this to ${targetMembership.user.username}`,
+  });
+
+  await prisma.notification.create({
+    data: {
+      userId: targetMembership.userId,
+      type: "TASK_ASSIGNED",
+      title: "Task assigned to you",
+      body: `${user.username} assigned you “${task.name}”.`,
+      meta: JSON.stringify({
+        workspaceId,
+        taskId,
+        folderId: task.folderId,
+      }),
+    },
   });
 
   revalidateWorkspace(workspaceId);
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
 
@@ -107,7 +217,10 @@ export async function claimTaskAction(
   });
   if (!task) return { ok: false, error: "Task not found." };
   if (task.assigneeId && task.assigneeId !== user.id) {
-    return { ok: false, error: "Someone else already claimed this task." };
+    return {
+      ok: false,
+      error: "This task is assigned to someone else — you can’t claim it.",
+    };
   }
   if (task.status !== "OPEN" && !(task.status === "CLAIMED" && !task.assigneeId)) {
     return { ok: false, error: "This task isn’t open to claim." };

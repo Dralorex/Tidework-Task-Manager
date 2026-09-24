@@ -157,8 +157,21 @@ export default async function WorkspacePage({
       }
     : null;
 
+  const workspaceMembers = await prisma.membership.findMany({
+    where: { workspaceId },
+    include: { user: { select: { id: true, username: true } } },
+    orderBy: { user: { username: "asc" } },
+  });
+  // Folder ACL not on this scaffold yet — assignable = all members (Editor+ UI only)
+  const assignableMembers = workspaceMembers.map((m) => ({
+    id: m.user.id,
+    username: m.user.username,
+  }));
+
   const myClaimedCount = allWorkspaceTasks.filter(
-    (t) => t.assigneeId === user.id && t.status === "CLAIMED",
+    (t) =>
+      t.assigneeId === user.id &&
+      (t.status === "CLAIMED" || t.status === "OPEN"),
   ).length;
   const needsReviewCount = allWorkspaceTasks.filter(
     (t) => t.status === "IN_REVIEW",
@@ -170,7 +183,7 @@ export default async function WorkspacePage({
           where: {
             workspaceId,
             assigneeId: user.id,
-            status: { in: ["CLAIMED", "IN_REVIEW"] },
+            status: { in: ["OPEN", "CLAIMED", "IN_REVIEW"] },
           },
           include: taskInclude,
         })
@@ -457,9 +470,18 @@ export default async function WorkspacePage({
                       className="tide-input min-h-11 sm:col-span-2"
                     />
                     <input name="dueDate" type="date" className="tide-input min-h-11" />
+                    <select name="assignTo" className="tide-input min-h-11" defaultValue="">
+                      <option value="">Claim pool (anyone)</option>
+                      {assignableMembers.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          Assign @{m.username}
+                        </option>
+                      ))}
+                    </select>
                   </InlineActionForm>
                   <p className="mt-2 text-xs text-[#0A3D45]/55">
-                    Members claim tasks. Editors+ review when someone marks them complete.
+                    Members claim tasks. Editors+ can auto-assign; others can’t claim over an
+                    assignment. Unclaim returns the task to the pool.
                   </p>
                 </>
               ) : null}
@@ -481,6 +503,7 @@ export default async function WorkspacePage({
                   userId={user.id}
                   canEdit={canEdit}
                   showFolder={Boolean(inbox)}
+                  assignableMembers={assignableMembers}
                 />
               ))}
               {tasks.length === 0 ? (

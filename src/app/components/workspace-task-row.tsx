@@ -8,6 +8,7 @@ import {
   addChecklistItemAction,
   addPrivateTagAction,
   addPublicTagAction,
+  assignTaskAction,
   claimTaskAction,
   completeTaskAction,
   reviewTaskAction,
@@ -33,30 +34,50 @@ export type WorkspaceTaskRowData = {
   activities: { id: string; message: string; createdAt: string; type: string }[];
 };
 
+export type AssignableMember = {
+  id: string;
+  username: string;
+};
+
 export function WorkspaceTaskRow({
   task,
   workspaceId,
   userId,
   canEdit,
   showFolder,
+  assignableMembers = [],
 }: {
   task: WorkspaceTaskRowData;
   workspaceId: string;
   userId: string;
   canEdit: boolean;
   showFolder?: boolean;
+  assignableMembers?: AssignableMember[];
 }) {
   const [approveOpen, setApproveOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const isAssignee = task.assigneeId === userId;
+  const isOpenAssigned = task.status === "OPEN" && Boolean(task.assigneeId);
+  const assignedToOther =
+    task.status === "OPEN" &&
+    Boolean(task.assigneeId) &&
+    task.assigneeId !== userId;
   const canClaim =
-    task.status === "OPEN" || (task.status === "CLAIMED" && !task.assigneeId);
+    !assignedToOther &&
+    (task.status === "OPEN" || (task.status === "CLAIMED" && !task.assigneeId));
   const canComplete =
     isAssignee && (task.status === "CLAIMED" || task.status === "OPEN");
   const canChecklist = isAssignee && task.status === "CLAIMED";
   const dueLabel = task.dueDate
     ? `Due ${format(new Date(task.dueDate), "MMM d, yyyy")}`
     : "No due date";
+
+  const claimLabel = isOpenAssigned && isAssignee ? "Claim assignment" : "Claim";
+  const ownerLine = isOpenAssigned
+    ? `Assigned to @${task.assigneeUsername}`
+    : task.assigneeUsername
+      ? `claimed by @${task.assigneeUsername}`
+      : "unclaimed";
 
   return (
     <li className="tide-panel relative overflow-hidden p-4 pl-5 sm:p-5 sm:pl-6">
@@ -83,9 +104,10 @@ export function WorkspaceTaskRow({
 
           <p className="mt-2 text-xs text-[#0A3D45]/55 sm:text-sm">
             {dueLabel}
-            {task.assigneeUsername
-              ? ` · claimed by @${task.assigneeUsername}`
-              : " · unclaimed"}
+            {" · "}
+            <span className={isOpenAssigned ? "font-semibold text-[#0A3D45]" : ""}>
+              {ownerLine}
+            </span>
           </p>
 
           {task.completionComment ? (
@@ -212,13 +234,43 @@ export function WorkspaceTaskRow({
           {canClaim ? (
             <InlineActionForm
               action={claimTaskAction}
-              submitLabel="Claim"
+              submitLabel={claimLabel}
               submitVariant="primary"
               submitClassName="w-full min-h-11"
               className="flex flex-col gap-2"
             >
               <input type="hidden" name="workspaceId" value={workspaceId} />
               <input type="hidden" name="taskId" value={task.id} />
+            </InlineActionForm>
+          ) : null}
+
+          {assignedToOther ? (
+            <p className="rounded-xl bg-[#0A3D45]/6 px-3 py-2 text-center text-xs font-semibold text-[#0A3D45]/70">
+              Assigned to @{task.assigneeUsername} — claim locked
+            </p>
+          ) : null}
+
+          {canEdit && task.status === "OPEN" && assignableMembers.length > 0 ? (
+            <InlineActionForm
+              action={assignTaskAction}
+              submitLabel={task.assigneeId ? "Update assign" : "Auto-assign"}
+              submitClassName="w-full min-h-11"
+              className="flex flex-col gap-2"
+            >
+              <input type="hidden" name="workspaceId" value={workspaceId} />
+              <input type="hidden" name="taskId" value={task.id} />
+              <select
+                name="assignTo"
+                className="tide-input min-h-11 text-sm"
+                defaultValue={task.assigneeId ?? ""}
+              >
+                <option value="">Claim pool (anyone)</option>
+                {assignableMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    @{m.username}
+                  </option>
+                ))}
+              </select>
             </InlineActionForm>
           ) : null}
 
