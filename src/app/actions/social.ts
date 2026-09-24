@@ -35,24 +35,22 @@ export async function sendFriendRequestAction(
     return { ok: false, error: "A friend request is already pending." };
   }
 
-  if (existing) {
-    await prisma.friendship.update({
-      where: { id: existing.id },
-      data: {
-        requesterId: user.id,
-        addresseeId: other.id,
-        status: "PENDING",
-      },
-    });
-  } else {
-    await prisma.friendship.create({
-      data: {
-        requesterId: user.id,
-        addresseeId: other.id,
-        status: "PENDING",
-      },
-    });
-  }
+  const friendship = existing
+    ? await prisma.friendship.update({
+        where: { id: existing.id },
+        data: {
+          requesterId: user.id,
+          addresseeId: other.id,
+          status: "PENDING",
+        },
+      })
+    : await prisma.friendship.create({
+        data: {
+          requesterId: user.id,
+          addresseeId: other.id,
+          status: "PENDING",
+        },
+      });
 
   await prisma.notification.create({
     data: {
@@ -60,11 +58,16 @@ export async function sendFriendRequestAction(
       type: "FRIEND_REQUEST",
       title: "Friend request",
       body: `${user.username} wants to be friends on Tidework.`,
-      meta: JSON.stringify({ fromUserId: user.id }),
+      meta: JSON.stringify({
+        fromUserId: user.id,
+        friendshipId: friendship.id,
+      }),
     },
   });
 
   revalidatePath("/app/social");
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
 
@@ -90,6 +93,8 @@ export async function respondFriendRequestAction(
 
   revalidatePath("/app/social");
   revalidatePath("/app/chat");
+  revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
 

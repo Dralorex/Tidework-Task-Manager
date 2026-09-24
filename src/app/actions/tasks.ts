@@ -225,7 +225,7 @@ export async function completeTaskAction(
       type: "TASK_REVIEW",
       title: "Ready for review",
       body: `${user.username} finished “${task.name}”: ${comment}`,
-      meta: JSON.stringify({ workspaceId, taskId }),
+      meta: JSON.stringify({ workspaceId, taskId, folderId: task.folderId }),
     })),
   });
 
@@ -302,7 +302,7 @@ export async function reviewTaskAction(
               ? `“${task.name}” was approved: ${approveComment}`
               : `“${task.name}” was approved.`
             : `“${task.name}” was sent back: ${reason}`,
-        meta: JSON.stringify({ workspaceId, taskId }),
+        meta: JSON.stringify({ workspaceId, taskId, folderId: task.folderId }),
       },
     });
   }

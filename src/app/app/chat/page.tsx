@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { AppNav } from "@/app/components/app-nav";
 import { InlineActionForm } from "@/app/components/forms";
 import {
   createGroupChatAction,
@@ -56,9 +55,7 @@ export default async function ChatPage({
   });
 
   return (
-    <div className="tide-wave-bg min-h-screen">
-      <AppNav username={user.username} active="chat" />
-      <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[260px_1fr]">
+    <><main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[260px_1fr]">
         <aside className="space-y-4">
           <div className="tide-panel p-4">
             <h2 className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
@@ -223,6 +220,6 @@ export default async function ChatPage({
           )}
         </section>
       </main>
-    </div>
+    </>
   );
 }

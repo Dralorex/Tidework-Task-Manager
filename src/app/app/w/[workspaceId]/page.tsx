@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { AppNav } from "@/app/components/app-nav";
 import { InlineActionForm } from "@/app/components/forms";
 import { WorkspacePulseStrip } from "@/app/components/workspace-pulse-strip";
 import { WorkspaceSetupChecklist } from "@/app/components/workspace-setup-checklist";
@@ -237,9 +236,7 @@ export default async function WorkspacePage({
           : "Root";
 
   return (
-    <div className="tide-wave-bg min-h-screen">
-      <AppNav username={user.username} active="home" />
-      <main className="mx-auto max-w-6xl px-4 py-8">
+    <><main className="mx-auto max-w-6xl px-4 py-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <Link href="/app" className="text-sm text-[#0A3D45]/60 hover:underline">
@@ -501,6 +498,6 @@ export default async function WorkspacePage({
           </section>
         </div>
       </main>
-    </div>
+    </>
   );
 }
