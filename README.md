@@ -16,6 +16,7 @@ Collaborative task management where urgency rises with due dates — nested fold
 - **Folder templates** — starter trees (Simple / Project / Team) plus save/reuse workspace folder layouts
 - **Calendar** — list/month views; drag personal, task, and workspace items between days
 - **Weekly digest** — optional email summary of overdue / due soon / reviews (Alerts → send preview)
+- **Chat task links** — type `#` in chat to attach a task; messages render deep links into the folder
 - **Social** — friends; DMs (friends free; workspace DMs need accept); Admin+ group chats
 
 ## Stack

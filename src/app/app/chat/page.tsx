@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { InlineActionForm } from "@/app/components/forms";
-import { ChatComposer, ChatMessageBody } from "@/app/components/chat-composer";
+import {
+  ChatComposer,
+  ChatMessageBody,
+} from "@/app/components/chat-composer";
 import {
   createGroupChatAction,
   requestWorkspaceDmAction,
@@ -9,6 +12,11 @@ import {
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { canManagePeople } from "@/lib/permissions";
+import {
+  parseTaskLinkIds,
+  toTaskOption,
+  type TaskLinkInfo,
+} from "@/lib/task-links";
 import { format } from "date-fns";
 
 export default async function ChatPage({
@@ -104,6 +112,56 @@ export default async function ChatPage({
           : []),
       ]
     : [];
+
+  const linkableWorkspaceIds = active?.workspaceId
+    ? [active.workspaceId]
+    : allWorkspaces.map((m) => m.workspaceId);
+
+  const linkableTasks =
+    linkableWorkspaceIds.length > 0
+      ? await prisma.task.findMany({
+          where: {
+            workspaceId: { in: linkableWorkspaceIds },
+            folder: { archivedAt: null },
+            workspace: { archivedAt: null },
+          },
+          include: { workspace: true },
+          orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
+          take: 50,
+        })
+      : [];
+
+  const taskOptions = linkableTasks.map(toTaskOption);
+
+  const referencedIds = new Set<string>();
+  if (active) {
+    for (const msg of active.messages) {
+      for (const id of parseTaskLinkIds(msg.body)) referencedIds.add(id);
+    }
+  }
+  for (const t of linkableTasks) referencedIds.add(t.id);
+
+  const referencedTasks =
+    referencedIds.size > 0
+      ? await prisma.task.findMany({
+          where: { id: { in: [...referencedIds] } },
+          select: {
+            id: true,
+            name: true,
+            folderId: true,
+            workspaceId: true,
+          },
+        })
+      : [];
+
+  const taskMap: Record<string, TaskLinkInfo> = {};
+  for (const t of referencedTasks) {
+    taskMap[t.id] = {
+      id: t.id,
+      name: t.name,
+      href: `/app/w/${t.workspaceId}?folder=${t.folderId}`,
+    };
+  }
 
   return (
     <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[260px_1fr]">
@@ -248,13 +306,14 @@ export default async function ChatPage({
                   <span className="text-xs text-[#0A3D45]/45">
                     {format(msg.createdAt, "MMM d · HH:mm")}
                   </span>
-                  <ChatMessageBody body={msg.body} />
+                  <ChatMessageBody body={msg.body} taskMap={taskMap} />
                 </div>
               ))}
             </div>
             <ChatComposer
               groupId={active.id}
               options={mentionOptions}
+              taskOptions={taskOptions}
               notifyMode={myMembership.notifyMode}
             />
           </>

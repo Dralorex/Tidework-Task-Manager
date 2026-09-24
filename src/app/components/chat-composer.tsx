@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
@@ -10,12 +11,19 @@ import {
   setChatNotifyModeAction,
   touchChatSeenAction,
 } from "@/app/actions/social";
-import { highlightMentions } from "@/lib/mentions";
+import { highlightMessageParts, type TaskLinkInfo } from "@/lib/task-links";
 
 type MentionOption =
   | { kind: "user"; label: string; insert: string }
   | { kind: "everyone"; label: string; insert: string }
   | { kind: "role"; label: string; insert: string };
+
+type TaskOption = {
+  id: string;
+  name: string;
+  workspaceName: string;
+  insert: string;
+};
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -26,19 +34,45 @@ function SubmitButton() {
   );
 }
 
-export function ChatMessageBody({ body }: { body: string }) {
-  const parts = highlightMentions(body);
+export function ChatMessageBody({
+  body,
+  taskMap,
+}: {
+  body: string;
+  taskMap?: Record<string, TaskLinkInfo>;
+}) {
+  const parts = highlightMessageParts(body, taskMap);
   return (
     <p className="text-[#0A3D45]/80">
-      {parts.map((part, i) =>
-        part.isMention ? (
-          <span key={i} className="font-semibold text-[#1a7a82]">
-            {part.text}
-          </span>
-        ) : (
-          <span key={i}>{part.text}</span>
-        ),
-      )}
+      {parts.map((part, i) => {
+        if (part.type === "mention") {
+          return (
+            <span key={i} className="font-semibold text-[#1a7a82]">
+              {part.text}
+            </span>
+          );
+        }
+        if (part.type === "task") {
+          if (part.href) {
+            return (
+              <Link
+                key={i}
+                href={part.href}
+                className="inline-flex items-center rounded-md bg-[#E85D4C]/12 px-1.5 py-0.5 font-semibold text-[#9b2f22] underline-offset-2 hover:underline"
+                title={part.name ?? part.taskId}
+              >
+                {part.text}
+              </Link>
+            );
+          }
+          return (
+            <span key={i} className="font-semibold text-[#9b2f22]/80">
+              {part.text}
+            </span>
+          );
+        }
+        return <span key={i}>{part.text}</span>;
+      })}
     </p>
   );
 }
@@ -46,15 +80,17 @@ export function ChatMessageBody({ body }: { body: string }) {
 export function ChatComposer({
   groupId,
   options,
+  taskOptions = [],
   notifyMode,
 }: {
   groupId: string;
   options: MentionOption[];
+  taskOptions?: TaskOption[];
   notifyMode: "ALL" | "MENTIONS" | "MUTE";
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [picker, setPicker] = useState<"mention" | "task" | null>(null);
   const [filter, setFilter] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [state, formAction] = useActionState(
@@ -62,7 +98,7 @@ export function ChatComposer({
       const result = await sendMessageAction(prev, formData);
       if (result?.ok) {
         setBody("");
-        setPickerOpen(false);
+        setPicker(null);
         router.refresh();
       }
       return result;
@@ -70,10 +106,19 @@ export function ChatComposer({
     null,
   );
 
-  const filtered = useMemo(() => {
+  const filteredMentions = useMemo(() => {
     const q = filter.toLowerCase();
     return options.filter((o) => o.label.toLowerCase().includes(q));
   }, [options, filter]);
+
+  const filteredTasks = useMemo(() => {
+    const q = filter.toLowerCase();
+    return taskOptions.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        t.workspaceName.toLowerCase().includes(q),
+    );
+  }, [taskOptions, filter]);
 
   useEffect(() => {
     const form = new FormData();
@@ -89,26 +134,47 @@ export function ChatComposer({
     setBody(value);
     const cursor = inputRef.current?.selectionStart ?? value.length;
     const before = value.slice(0, cursor);
+
+    const hash = before.lastIndexOf("#");
     const at = before.lastIndexOf("@");
-    if (at >= 0 && !/\s/.test(before.slice(at + 1))) {
-      setFilter(before.slice(at + 1));
-      setPickerOpen(true);
-    } else {
-      setPickerOpen(false);
+    const triggerAt = Math.max(hash, at);
+    if (triggerAt < 0) {
+      setPicker(null);
       setFilter("");
+      return;
+    }
+    const token = before.slice(triggerAt + 1);
+    if (/\s/.test(token)) {
+      setPicker(null);
+      setFilter("");
+      return;
+    }
+    // Prefer the later trigger
+    if (hash > at) {
+      // Don't open task picker mid #task:id
+      if (token.toLowerCase().startsWith("task:")) {
+        setPicker(null);
+        setFilter("");
+        return;
+      }
+      setFilter(token);
+      setPicker(taskOptions.length ? "task" : null);
+    } else {
+      setFilter(token);
+      setPicker("mention");
     }
   }
 
-  function insertMention(insert: string) {
+  function insertToken(insert: string, trigger: "#" | "@") {
     const el = inputRef.current;
     const cursor = el?.selectionStart ?? body.length;
     const before = body.slice(0, cursor);
     const after = body.slice(cursor);
-    const at = before.lastIndexOf("@");
+    const at = before.lastIndexOf(trigger);
     if (at < 0) return;
     const next = `${before.slice(0, at)}${insert} ${after}`;
     setBody(next);
-    setPickerOpen(false);
+    setPicker(null);
     requestAnimationFrame(() => {
       el?.focus();
       const pos = at + insert.length + 1;
@@ -137,22 +203,47 @@ export function ChatComposer({
             rows={2}
             value={body}
             onChange={(e) => onChange(e.target.value)}
-            placeholder="Write a message… use @ to mention"
+            placeholder={
+              taskOptions.length
+                ? "Write a message… @ mention · # link a task"
+                : "Write a message… use @ to mention"
+            }
             className="tide-input min-h-[3.25rem] w-full"
           />
-          {pickerOpen && filtered.length > 0 ? (
+          {picker === "mention" && filteredMentions.length > 0 ? (
             <ul className="absolute bottom-full left-0 z-10 mb-1 max-h-40 w-full overflow-y-auto rounded-xl border border-[#0A3D45]/15 bg-white p-1 shadow-lg">
-              {filtered.map((opt) => (
+              {filteredMentions.map((opt) => (
                 <li key={`${opt.kind}:${opt.insert}`}>
                   <button
                     type="button"
                     className="w-full rounded-lg px-3 py-2 text-left text-sm text-[#0A3D45] hover:bg-[#0A3D45]/8"
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      insertMention(opt.insert);
+                      insertToken(opt.insert, "@");
                     }}
                   >
                     {opt.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {picker === "task" && filteredTasks.length > 0 ? (
+            <ul className="absolute bottom-full left-0 z-10 mb-1 max-h-48 w-full overflow-y-auto rounded-xl border border-[#0A3D45]/15 bg-white p-1 shadow-lg">
+              {filteredTasks.map((t) => (
+                <li key={t.id}>
+                  <button
+                    type="button"
+                    className="w-full rounded-lg px-3 py-2 text-left text-sm text-[#0A3D45] hover:bg-[#0A3D45]/8"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      insertToken(t.insert, "#");
+                    }}
+                  >
+                    <span className="font-semibold">{t.name}</span>
+                    <span className="mt-0.5 block text-xs text-[#0A3D45]/55">
+                      {t.workspaceName}
+                    </span>
                   </button>
                 </li>
               ))}
