@@ -68,7 +68,7 @@ export default async function AppHomePage() {
                 href="/app/notifications"
                 className="font-semibold underline-offset-2 hover:underline"
               >
-                Notifications
+                Alerts
               </Link>
               .
             </p>
@@ -105,11 +105,11 @@ export default async function AppHomePage() {
               href="/app/notifications"
               className="text-sm font-semibold text-[#1a7a82] underline-offset-2 hover:underline"
             >
-              Open notifications · {unreadCount}
+              Open alerts · {unreadCount}
             </Link>
           </div>
           <p className="mt-2 text-sm text-[#0A3D45]/60">
-            Invites, reviews, and other alerts live on the Notifications tab.
+            Invites, reviews, and other updates live on the Alerts tab.
           </p>
         </section>
       ) : null}
