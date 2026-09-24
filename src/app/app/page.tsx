@@ -56,9 +56,20 @@ export default async function AppHomePage() {
 
         <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {memberships.length === 0 ? (
-            <p className="text-[#0A3D45]/65 sm:col-span-2">
-              No workspaces yet — create one or wait for an invite.
-            </p>
+            <div className="tide-panel sm:col-span-2 lg:col-span-3 max-w-xl p-6 animate-tide-rise">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
+                Start here
+              </h2>
+              <p className="mt-2 text-[#0A3D45]/75">
+                Create a workspace to hold folders and claimable tasks.
+              </p>
+              <p className="mt-4 text-sm text-[#0A3D45]/60">
+                Waiting on an invite? You’ll see it here and under Incoming once it lands.
+              </p>
+              <p className="mt-5 text-sm font-medium text-[#0A3D45]">
+                Use <span className="text-[#1a7a82]">New workspace</span> above to create one.
+              </p>
+            </div>
           ) : (
             memberships.map((m, i) => (
               <Link

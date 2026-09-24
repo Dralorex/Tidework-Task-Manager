@@ -18,6 +18,11 @@ export async function createWorkspaceAction(
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "Give your workspace a name." };
 
+  const existingCount = await prisma.membership.count({
+    where: { userId: user.id },
+  });
+  const isFirstWorkspace = existingCount === 0;
+
   const workspace = await prisma.workspace.create({
     data: {
       name,
@@ -28,7 +33,11 @@ export async function createWorkspaceAction(
     },
   });
 
-  redirect(`/app/w/${workspace.id}`);
+  redirect(
+    isFirstWorkspace
+      ? `/app/w/${workspace.id}?setup=1`
+      : `/app/w/${workspace.id}`,
+  );
 }
 
 export async function inviteMemberAction(

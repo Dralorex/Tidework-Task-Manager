@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { AppNav } from "@/app/components/app-nav";
 import { InlineActionForm } from "@/app/components/forms";
 import { PriorityBadge, TaskUrgencyEdge } from "@/app/components/task-ui";
+import { WorkspaceSetupChecklist } from "@/app/components/workspace-setup-checklist";
 import {
   addPrivateTagAction,
   addPublicTagAction,
@@ -25,13 +26,14 @@ export default async function WorkspacePage({
   searchParams,
 }: {
   params: Promise<{ workspaceId: string }>;
-  searchParams: Promise<{ folder?: string; q?: string; tag?: string }>;
+  searchParams: Promise<{ folder?: string; q?: string; tag?: string; setup?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   const { workspaceId } = await params;
   const sp = await searchParams;
+  const showSetup = sp.setup === "1";
 
   const membership = await prisma.membership.findUnique({
     where: { workspaceId_userId: { workspaceId, userId: user.id } },
@@ -103,6 +105,14 @@ export default async function WorkspacePage({
       })
     : [];
 
+  const taskCount = await prisma.task.count({
+    where: { folder: { workspaceId } },
+  });
+  const memberCount = await prisma.membership.count({ where: { workspaceId } });
+  const hasInviteActivity = pendingInvites.length > 0 || memberCount > 1;
+  const rootFolderCount = folders.filter((f) => !f.parentId).length;
+  const firstFolderId = folders[0]?.id ?? null;
+
   return (
     <div className="tide-wave-bg min-h-screen">
       <AppNav username={user.username} active="home" />
@@ -142,12 +152,29 @@ export default async function WorkspacePage({
           </form>
         </div>
 
+        <WorkspaceSetupChecklist
+          workspaceId={workspaceId}
+          forceShow={showSetup}
+          hasFolder={folders.length > 0}
+          hasTask={taskCount > 0}
+          hasInvite={hasInviteActivity}
+          canInvite={canInvite}
+          canEdit={canEdit}
+          firstFolderId={firstFolderId}
+        />
+
         <div className="mt-8 grid gap-6 lg:grid-cols-[240px_1fr]">
           <aside className="space-y-4">
             <div className="tide-panel p-4">
               <h2 className="font-[family-name:var(--font-display)] text-lg text-[#0A3D45]">
                 Folders
               </h2>
+              {rootFolderCount === 0 ? (
+                <p className="mt-3 text-sm text-[#0A3D45]/65">
+                  Folders group kinds of work. Status (open / claimed / review / done) is handled
+                  automatically on tasks.
+                </p>
+              ) : null}
               <ul className="mt-3 space-y-1 text-sm">
                 <li>
                   <Link
@@ -188,7 +215,7 @@ export default async function WorkspacePage({
                   <input
                     name="name"
                     required
-                    placeholder="Folder name"
+                    placeholder="e.g. General"
                     className="tide-input text-sm"
                   />
                 </InlineActionForm>
@@ -258,32 +285,38 @@ export default async function WorkspacePage({
               ) : null}
 
               {canEdit && currentFolder ? (
-                <InlineActionForm
-                  className="mt-5 grid gap-2 sm:grid-cols-2"
-                  action={createTaskAction}
-                  submitLabel="Add task"
-                >
-                  <input type="hidden" name="workspaceId" value={workspaceId} />
-                  <input type="hidden" name="folderId" value={currentFolder.id} />
-                  <input name="name" required placeholder="Task name" className="tide-input" />
-                  <select name="priority" className="tide-input" defaultValue="MEDIUM">
-                    <option value="CRITICAL">Critical</option>
-                    <option value="HIGH">High</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="LOW">Low</option>
-                  </select>
-                  <input
-                    name="description"
-                    placeholder="Description"
-                    className="tide-input sm:col-span-2"
-                  />
-                  <input name="dueDate" type="date" className="tide-input" />
-                </InlineActionForm>
+                <>
+                  <InlineActionForm
+                    className="mt-5 grid gap-2 sm:grid-cols-2"
+                    action={createTaskAction}
+                    submitLabel="Add task"
+                  >
+                    <input type="hidden" name="workspaceId" value={workspaceId} />
+                    <input type="hidden" name="folderId" value={currentFolder.id} />
+                    <input name="name" required placeholder="Task name" className="tide-input" />
+                    <select name="priority" className="tide-input" defaultValue="MEDIUM">
+                      <option value="CRITICAL">Critical</option>
+                      <option value="HIGH">High</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="LOW">Low</option>
+                    </select>
+                    <input
+                      name="description"
+                      placeholder="Description"
+                      className="tide-input sm:col-span-2"
+                    />
+                    <input name="dueDate" type="date" className="tide-input" />
+                  </InlineActionForm>
+                  <p className="mt-2 text-xs text-[#0A3D45]/55">
+                    Members claim tasks. Editors+ review when someone marks them complete.
+                  </p>
+                </>
               ) : null}
 
               {!currentFolder && canEdit ? (
                 <p className="mt-4 text-sm text-[#0A3D45]/65">
-                  Create a folder (name required) to start adding tasks inside it.
+                  Create a folder (topic bucket, e.g. General) to start adding claimable tasks.
+                  Status stays on the task — not the folder.
                 </p>
               ) : null}
             </div>
@@ -418,7 +451,10 @@ export default async function WorkspacePage({
                 </li>
               ))}
               {currentFolder && tasks.length === 0 ? (
-                <li className="text-sm text-[#0A3D45]/60">No tasks here yet.</li>
+                <li className="tide-panel p-4 text-sm text-[#0A3D45]/70">
+                  Add a task people can claim. When they’re done, it goes to review — status moves
+                  on the task automatically.
+                </li>
               ) : null}
             </ul>
           </section>
