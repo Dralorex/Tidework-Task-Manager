@@ -3,6 +3,7 @@ import Link from "next/link";
 import { InlineActionForm } from "@/app/components/forms";
 import { WorkspacePulseStrip } from "@/app/components/workspace-pulse-strip";
 import { WorkspaceSetupChecklist } from "@/app/components/workspace-setup-checklist";
+import { RecurrenceFields } from "@/app/components/recurrence-fields";
 import {
   WorkspaceTaskRow,
   type WorkspaceTaskRowData,
@@ -15,6 +16,7 @@ import { inviteMemberAction } from "@/app/actions/workspaces";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { canEditContent, canManagePeople } from "@/lib/permissions";
+import { syncDueRecurrences } from "@/lib/recurrence";
 import { compareTasksByUrgency } from "@/lib/urgency";
 import { searchRelevance } from "@/lib/utils";
 
@@ -31,6 +33,7 @@ function toRowData(
     folderId: string;
     assignee: { username: string } | null;
     folder: { name: string };
+    recurrenceCadence: string | null;
     tags: { tagId: string; tag: { name: string; isPublic: boolean } }[];
     checklistItems: { id: string; label: string; done: boolean }[];
     activities: { id: string; message: string; createdAt: Date; type: string }[];
@@ -48,6 +51,7 @@ function toRowData(
     assigneeUsername: task.assignee?.username ?? null,
     folderId: task.folderId,
     folderName: task.folder.name,
+    recurrenceCadence: task.recurrenceCadence ?? null,
     tags: task.tags.map((tt) => ({
       tagId: tt.tagId,
       name: tt.tag.name,
@@ -101,6 +105,8 @@ export default async function WorkspacePage({
     where: { workspaceId_userId: { workspaceId, userId: user.id } },
   });
   if (!membership) redirect("/app");
+
+  await syncDueRecurrences(workspaceId);
 
   const workspace = await prisma.workspace.findUniqueOrThrow({
     where: { id: workspaceId },
@@ -478,6 +484,7 @@ export default async function WorkspacePage({
                         </option>
                       ))}
                     </select>
+                    <RecurrenceFields />
                   </InlineActionForm>
                   <p className="mt-2 text-xs text-[#0A3D45]/55">
                     Members claim tasks. Editors+ can auto-assign; others can’t claim over an

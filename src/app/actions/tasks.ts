@@ -85,6 +85,46 @@ export async function createTaskAction(
     assignedUsername = targetMembership.user.username;
   }
 
+  const cadenceRaw = String(formData.get("recurrenceCadence") ?? "").trim();
+  const cadence =
+    cadenceRaw === "daily" || cadenceRaw === "weekly" || cadenceRaw === "monthly"
+      ? cadenceRaw
+      : null;
+  const weekDays = String(formData.get("recurrenceWeekDays") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(",");
+  const monthDays = String(formData.get("recurrenceMonthDays") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(",");
+  const spawnModeRaw = String(formData.get("recurrenceSpawnMode") ?? "complete").trim();
+  const spawnMode =
+    spawnModeRaw === "due" || spawnModeRaw === "both" || spawnModeRaw === "complete"
+      ? spawnModeRaw
+      : "complete";
+  const nextAssigneeRaw = String(
+    formData.get("recurrenceNextAssignee") ?? "pool",
+  ).trim();
+  const nextAssignee =
+    nextAssigneeRaw === "same" ||
+    nextAssigneeRaw === "clear" ||
+    nextAssigneeRaw === "pool"
+      ? nextAssigneeRaw
+      : "pool";
+
+  if (cadence === "weekly" && !weekDays) {
+    return { ok: false, error: "Pick at least one weekday for weekly recurrence." };
+  }
+  if (cadence === "monthly" && !monthDays) {
+    return { ok: false, error: "Pick at least one month day for monthly recurrence." };
+  }
+  if (cadence && !dueRaw) {
+    return { ok: false, error: "Recurring tasks need a first due date." };
+  }
+
   const task = await prisma.task.create({
     data: {
       workspaceId,
@@ -96,8 +136,20 @@ export async function createTaskAction(
       createdById: user.id,
       assigneeId: assignedUserId,
       status: "OPEN",
+      recurrenceCadence: cadence,
+      recurrenceWeekDays: cadence === "weekly" ? weekDays : cadence === "daily" ? "0,1,2,3,4,5,6" : null,
+      recurrenceMonthDays: cadence === "monthly" ? monthDays : null,
+      recurrenceSpawnMode: cadence ? spawnMode : null,
+      recurrenceNextAssignee: cadence ? nextAssignee : null,
     },
   });
+
+  if (cadence) {
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { recurrenceSeriesId: task.id },
+    });
+  }
 
   await recordTaskActivity({
     taskId: task.id,
@@ -394,6 +446,8 @@ export async function reviewTaskAction(
         ? `${user.username} approved: ${approveComment}`
         : `${user.username} approved this task`,
     });
+    const { spawnNextRecurringTask } = await import("@/lib/recurrence");
+    await spawnNextRecurringTask(taskId, "complete");
   } else {
     await recordTaskActivity({
       taskId,

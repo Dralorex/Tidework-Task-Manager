@@ -29,6 +29,7 @@ export type WorkspaceTaskRowData = {
   assigneeUsername: string | null;
   folderId: string;
   folderName: string;
+  recurrenceCadence: string | null;
   tags: { tagId: string; name: string; isPublic: boolean }[];
   checklist: { id: string; label: string; done: boolean }[];
   activities: { id: string; message: string; createdAt: string; type: string }[];
@@ -95,6 +96,11 @@ export function WorkspaceTaskRow({
             </span>
             {showFolder ? (
               <span className="text-xs text-[#0A3D45]/55">{task.folderName}</span>
+            ) : null}
+            {task.recurrenceCadence ? (
+              <span className="rounded-md bg-[#1a7a82]/12 px-2 py-0.5 text-[11px] font-semibold capitalize text-[#0A3D45]">
+                Repeats {task.recurrenceCadence}
+              </span>
             ) : null}
           </div>
 

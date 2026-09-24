@@ -196,6 +196,17 @@ model Task {
   createdById       String
   completionComment String?
   claimedAt         DateTime?
+  /** daily | weekly | monthly — null means one-off */
+  recurrenceCadence String?
+  /** CSV of weekday ints 0–6 (Sun–Sat) for weekly */
+  recurrenceWeekDays String?
+  /** CSV of month days 1–31 for monthly */
+  recurrenceMonthDays String?
+  /** complete | due | both */
+  recurrenceSpawnMode String?
+  /** same | pool | clear */
+  recurrenceNextAssignee String?
+  recurrenceSeriesId String?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
@@ -212,6 +223,7 @@ model Task {
   @@index([folderId])
   @@index([assigneeId])
   @@index([status])
+  @@index([recurrenceSeriesId])
 }
 
 model TaskActivity {
