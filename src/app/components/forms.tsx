@@ -68,13 +68,19 @@ export function InlineActionForm({
   submitLabel,
   children,
   className,
+  submitVariant = "secondary",
+  submitClassName,
 }: {
   action: FormAction;
   submitLabel: string;
   children: React.ReactNode;
   className?: string;
+  submitVariant?: "primary" | "secondary";
+  submitClassName?: string;
 }) {
   const [state, formAction] = useActionState(action, null);
+  const base =
+    submitVariant === "primary" ? "tide-btn-primary text-sm" : "tide-btn-secondary text-sm";
 
   return (
     <form className={className ?? "flex flex-col gap-3"} action={formAction}>
@@ -82,7 +88,10 @@ export function InlineActionForm({
       {state && !state.ok ? (
         <p className="text-sm text-[#9b2f22]">{state.error}</p>
       ) : null}
-      <SubmitButton label={submitLabel} className="tide-btn-secondary text-sm" />
+      <SubmitButton
+        label={submitLabel}
+        className={`${base} ${submitClassName ?? ""}`.trim()}
+      />
     </form>
   );
 }

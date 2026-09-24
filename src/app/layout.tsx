@@ -19,7 +19,11 @@ export const metadata: Metadata = {
     "Claim work as the tide rises. Nested folders, urgency that pulls due tasks up, friends, and private chats.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="en"

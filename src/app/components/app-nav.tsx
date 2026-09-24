@@ -27,7 +27,7 @@ export function AppNav({
         <Link href="/app" className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
           Tidework
         </Link>
-        <nav className="flex flex-wrap items-center gap-1">
+        <nav className="flex max-w-[55%] flex-wrap items-center justify-end gap-1 sm:max-w-none">
           {link("/app", "home", "Workspaces")}
           {link("/app/calendar", "calendar", "Calendar")}
           {link("/app/chat", "chat", "Chat")}

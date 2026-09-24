@@ -74,6 +74,7 @@ model User {
   dmRequestsReceived    DmRequest[]          @relation("DmTo")
   notifications         Notification[]
   groupsCreated         ChatGroup[]          @relation("GroupCreator")
+  taskActivities        TaskActivity[]       @relation("TaskActivityActor")
 }
 
 model Session {
@@ -183,17 +184,47 @@ model Task {
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
-  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  folder         Folder          @relation(fields: [folderId], references: [id], onDelete: Cascade)
-  assignee       User?           @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  createdBy      User            @relation("TaskCreator", fields: [createdById], references: [id])
+  workspace      Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  folder         Folder               @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  assignee       User?                @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdBy      User                 @relation("TaskCreator", fields: [createdById], references: [id])
   tags           TaskTag[]
   calendarEvents CalendarEvent[]
+  activities     TaskActivity[]
+  checklistItems TaskChecklistItem[]
 
   @@index([workspaceId])
   @@index([folderId])
   @@index([assigneeId])
   @@index([status])
+}
+
+model TaskActivity {
+  id        String   @id @default(cuid())
+  taskId    String
+  actorId   String?
+  type      String
+  message   String
+  createdAt DateTime @default(now())
+
+  task  Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actor User? @relation("TaskActivityActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, createdAt])
+}
+
+model TaskChecklistItem {
+  id        String   @id @default(cuid())
+  taskId    String
+  label     String
+  done      Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
 }
 
 model Tag {

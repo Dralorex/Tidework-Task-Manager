@@ -9,8 +9,13 @@ import {
   canEditContent,
   requireMembership,
 } from "@/lib/permissions";
+import { recordTaskActivity } from "@/lib/task-activity";
 import type { TaskPriority } from "@/generated/prisma/client";
 import type { ActionResult } from "@/app/actions/auth";
+
+function revalidateWorkspace(workspaceId: string) {
+  revalidatePath(`/app/w/${workspaceId}`);
+}
 
 export async function createFolderAction(
   _prev: ActionResult | null,
@@ -33,7 +38,7 @@ export async function createFolderAction(
     data: { workspaceId, parentId, name },
   });
 
-  revalidatePath(`/app/w/${workspaceId}`);
+  revalidateWorkspace(workspaceId);
   return { ok: true };
 }
 
@@ -65,7 +70,7 @@ export async function createTaskAction(
   });
   if (!folder) return { ok: false, error: "Folder not found." };
 
-  await prisma.task.create({
+  const task = await prisma.task.create({
     data: {
       workspaceId,
       folderId,
@@ -77,7 +82,14 @@ export async function createTaskAction(
     },
   });
 
-  revalidatePath(`/app/w/${workspaceId}`);
+  await recordTaskActivity({
+    taskId: task.id,
+    actorId: user.id,
+    type: "created",
+    message: `${user.username} created this task`,
+  });
+
+  revalidateWorkspace(workspaceId);
   return { ok: true };
 }
 
@@ -97,6 +109,9 @@ export async function claimTaskAction(
   if (task.assigneeId && task.assigneeId !== user.id) {
     return { ok: false, error: "Someone else already claimed this task." };
   }
+  if (task.status !== "OPEN" && !(task.status === "CLAIMED" && !task.assigneeId)) {
+    return { ok: false, error: "This task isn’t open to claim." };
+  }
 
   await prisma.task.update({
     where: { id: taskId },
@@ -107,8 +122,56 @@ export async function claimTaskAction(
     },
   });
 
+  await recordTaskActivity({
+    taskId,
+    actorId: user.id,
+    type: "claimed",
+    message: `${user.username} claimed this task`,
+  });
+
   await syncCalendarForTask(taskId);
-  revalidatePath(`/app/w/${workspaceId}`);
+  revalidateWorkspace(workspaceId);
+  return { ok: true };
+}
+
+export async function unclaimTaskAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const taskId = String(formData.get("taskId") ?? "");
+  await requireMembership(workspaceId, user.id);
+
+  const task = await prisma.task.findFirst({
+    where: { id: taskId, workspaceId },
+  });
+  if (!task) return { ok: false, error: "Task not found." };
+  if (task.assigneeId !== user.id) {
+    return { ok: false, error: "Only the assignee can unclaim." };
+  }
+  if (task.status !== "CLAIMED") {
+    return { ok: false, error: "Only claimed tasks can be unclaimed." };
+  }
+
+  await prisma.task.update({
+    where: { id: taskId },
+    data: {
+      assigneeId: null,
+      status: "OPEN",
+      claimedAt: null,
+    },
+  });
+
+  await recordTaskActivity({
+    taskId,
+    actorId: user.id,
+    type: "unclaimed",
+    message: `${user.username} unclaimed this task`,
+  });
+
+  await syncCalendarForTask(taskId);
+  revalidateWorkspace(workspaceId);
   return { ok: true };
 }
 
@@ -133,6 +196,9 @@ export async function completeTaskAction(
   if (task.assigneeId !== user.id) {
     return { ok: false, error: "Only the assignee can mark this ready for review." };
   }
+  if (task.status !== "CLAIMED" && task.status !== "OPEN") {
+    return { ok: false, error: "This task isn’t ready to submit." };
+  }
 
   await prisma.task.update({
     where: { id: taskId },
@@ -140,6 +206,13 @@ export async function completeTaskAction(
       status: "IN_REVIEW",
       completionComment: comment,
     },
+  });
+
+  await recordTaskActivity({
+    taskId,
+    actorId: user.id,
+    type: "submitted_review",
+    message: `${user.username} submitted for review: ${comment}`,
   });
 
   const ownersAndAdmins = await prisma.membership.findMany({
@@ -157,7 +230,7 @@ export async function completeTaskAction(
   });
 
   await syncCalendarForTask(taskId);
-  revalidatePath(`/app/w/${workspaceId}`);
+  revalidateWorkspace(workspaceId);
   return { ok: true };
 }
 
@@ -169,10 +242,19 @@ export async function reviewTaskAction(
   const workspaceId = String(formData.get("workspaceId") ?? "");
   const taskId = String(formData.get("taskId") ?? "");
   const decision = String(formData.get("decision") ?? "") as "approve" | "reopen";
+  const reason = String(formData.get("reason") ?? "").trim();
+  const approveComment = String(formData.get("approveComment") ?? "").trim();
 
   const membership = await requireMembership(workspaceId, user.id);
   if (!canEditContent(membership.role)) {
     return { ok: false, error: "Only editors and above can review tasks." };
+  }
+
+  if (decision !== "approve" && decision !== "reopen") {
+    return { ok: false, error: "Pick approve or send back." };
+  }
+  if (decision === "reopen" && !reason) {
+    return { ok: false, error: "Add a short reason when sending back." };
   }
 
   const task = await prisma.task.findFirst({
@@ -190,6 +272,24 @@ export async function reviewTaskAction(
     },
   });
 
+  if (decision === "approve") {
+    await recordTaskActivity({
+      taskId,
+      actorId: user.id,
+      type: "approved",
+      message: approveComment
+        ? `${user.username} approved: ${approveComment}`
+        : `${user.username} approved this task`,
+    });
+  } else {
+    await recordTaskActivity({
+      taskId,
+      actorId: user.id,
+      type: "sent_back",
+      message: `${user.username} sent back: ${reason}`,
+    });
+  }
+
   if (task.assigneeId) {
     await prisma.notification.create({
       data: {
@@ -198,15 +298,94 @@ export async function reviewTaskAction(
         title: decision === "approve" ? "Task approved" : "Needs more work",
         body:
           decision === "approve"
-            ? `“${task.name}” was approved.`
-            : `“${task.name}” was sent back for more work.`,
+            ? approveComment
+              ? `“${task.name}” was approved: ${approveComment}`
+              : `“${task.name}” was approved.`
+            : `“${task.name}” was sent back: ${reason}`,
         meta: JSON.stringify({ workspaceId, taskId }),
       },
     });
   }
 
   await syncCalendarForTask(taskId);
-  revalidatePath(`/app/w/${workspaceId}`);
+  revalidateWorkspace(workspaceId);
+  return { ok: true };
+}
+
+export async function addChecklistItemAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const taskId = String(formData.get("taskId") ?? "");
+  await requireMembership(workspaceId, user.id);
+
+  const label = String(formData.get("label") ?? "").trim();
+  if (!label) return { ok: false, error: "Checklist item needs a label." };
+
+  const task = await prisma.task.findFirst({
+    where: { id: taskId, workspaceId },
+  });
+  if (!task) return { ok: false, error: "Task not found." };
+  if (task.assigneeId !== user.id || task.status !== "CLAIMED") {
+    return { ok: false, error: "Only the claimant can add checklist items while claimed." };
+  }
+
+  const count = await prisma.taskChecklistItem.count({ where: { taskId } });
+  await prisma.taskChecklistItem.create({
+    data: { taskId, label, sortOrder: count },
+  });
+
+  await recordTaskActivity({
+    taskId,
+    actorId: user.id,
+    type: "checklist_added",
+    message: `${user.username} added checklist item “${label}”`,
+  });
+
+  revalidateWorkspace(workspaceId);
+  return { ok: true };
+}
+
+export async function toggleChecklistItemAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return toggleChecklistItemCore(formData);
+}
+
+export async function toggleChecklistItemForm(formData: FormData): Promise<void> {
+  await toggleChecklistItemCore(formData);
+}
+
+async function toggleChecklistItemCore(formData: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const taskId = String(formData.get("taskId") ?? "");
+  const itemId = String(formData.get("itemId") ?? "");
+  await requireMembership(workspaceId, user.id);
+
+  const task = await prisma.task.findFirst({
+    where: { id: taskId, workspaceId },
+  });
+  if (!task) return { ok: false, error: "Task not found." };
+  if (task.assigneeId !== user.id || task.status !== "CLAIMED") {
+    return { ok: false, error: "Only the claimant can check items off while claimed." };
+  }
+
+  const item = await prisma.taskChecklistItem.findFirst({
+    where: { id: itemId, taskId },
+  });
+  if (!item) return { ok: false, error: "Checklist item not found." };
+
+  await prisma.taskChecklistItem.update({
+    where: { id: itemId },
+    data: { done: !item.done },
+  });
+
+  // Local checkmarks only — no admin notifications
+  revalidateWorkspace(workspaceId);
   return { ok: true };
 }
 
@@ -255,7 +434,7 @@ export async function addPrivateTagAction(
     update: {},
   });
 
-  revalidatePath(`/app/w/${workspaceId}`);
+  revalidateWorkspace(workspaceId);
   return { ok: true };
 }
 
@@ -289,6 +468,6 @@ export async function addPublicTagAction(
     update: {},
   });
 
-  revalidatePath(`/app/w/${workspaceId}`);
+  revalidateWorkspace(workspaceId);
   return { ok: true };
 }

@@ -1,18 +1,16 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { format } from "date-fns";
 import { AppNav } from "@/app/components/app-nav";
 import { InlineActionForm } from "@/app/components/forms";
-import { PriorityBadge, TaskUrgencyEdge } from "@/app/components/task-ui";
+import { WorkspacePulseStrip } from "@/app/components/workspace-pulse-strip";
 import { WorkspaceSetupChecklist } from "@/app/components/workspace-setup-checklist";
 import {
-  addPrivateTagAction,
-  addPublicTagAction,
-  claimTaskAction,
-  completeTaskAction,
+  WorkspaceTaskRow,
+  type WorkspaceTaskRowData,
+} from "@/app/components/workspace-task-row";
+import {
   createFolderAction,
   createTaskAction,
-  reviewTaskAction,
 } from "@/app/actions/tasks";
 import { inviteMemberAction } from "@/app/actions/workspaces";
 import { getCurrentUser } from "@/lib/auth";
@@ -21,12 +19,75 @@ import { canEditContent, canManagePeople } from "@/lib/permissions";
 import { compareTasksByUrgency } from "@/lib/urgency";
 import { searchRelevance } from "@/lib/utils";
 
+function toRowData(
+  task: {
+    id: string;
+    name: string;
+    description: string;
+    priority: WorkspaceTaskRowData["priority"];
+    status: WorkspaceTaskRowData["status"];
+    dueDate: Date | null;
+    completionComment: string | null;
+    assigneeId: string | null;
+    folderId: string;
+    assignee: { username: string } | null;
+    folder: { name: string };
+    tags: { tagId: string; tag: { name: string; isPublic: boolean } }[];
+    checklistItems: { id: string; label: string; done: boolean }[];
+    activities: { id: string; message: string; createdAt: Date; type: string }[];
+  },
+): WorkspaceTaskRowData {
+  return {
+    id: task.id,
+    name: task.name,
+    description: task.description,
+    priority: task.priority,
+    status: task.status,
+    dueDate: task.dueDate ? task.dueDate.toISOString() : null,
+    completionComment: task.completionComment,
+    assigneeId: task.assigneeId,
+    assigneeUsername: task.assignee?.username ?? null,
+    folderId: task.folderId,
+    folderName: task.folder.name,
+    tags: task.tags.map((tt) => ({
+      tagId: tt.tagId,
+      name: tt.tag.name,
+      isPublic: tt.tag.isPublic,
+    })),
+    checklist: task.checklistItems.map((c) => ({
+      id: c.id,
+      label: c.label,
+      done: c.done,
+    })),
+    activities: task.activities.map((a) => ({
+      id: a.id,
+      message: a.message,
+      createdAt: a.createdAt.toISOString(),
+      type: a.type,
+    })),
+  };
+}
+
+const taskInclude = {
+  assignee: true,
+  folder: true,
+  tags: { include: { tag: true } },
+  checklistItems: { orderBy: { sortOrder: "asc" as const } },
+  activities: { orderBy: { createdAt: "desc" as const }, take: 40 },
+};
+
 export default async function WorkspacePage({
   params,
   searchParams,
 }: {
   params: Promise<{ workspaceId: string }>;
-  searchParams: Promise<{ folder?: string; q?: string; tag?: string; setup?: string }>;
+  searchParams: Promise<{
+    folder?: string;
+    q?: string;
+    tag?: string;
+    setup?: string;
+    inbox?: string;
+  }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -34,6 +95,8 @@ export default async function WorkspacePage({
   const { workspaceId } = await params;
   const sp = await searchParams;
   const showSetup = sp.setup === "1";
+  const inbox =
+    sp.inbox === "mine" ? "mine" : sp.inbox === "review" ? "review" : null;
 
   const membership = await prisma.membership.findUnique({
     where: { workspaceId_userId: { workspaceId, userId: user.id } },
@@ -49,24 +112,82 @@ export default async function WorkspacePage({
     orderBy: { name: "asc" },
   });
 
-  const currentFolderId = sp.folder ?? folders[0]?.id ?? null;
+  const currentFolderId = inbox ? null : (sp.folder ?? folders[0]?.id ?? null);
   const currentFolder = currentFolderId
-    ? folders.find((f) => f.id === currentFolderId) ?? null
+    ? (folders.find((f) => f.id === currentFolderId) ?? null)
     : null;
 
-  const childFolders = folders.filter((f) => f.parentId === (currentFolder?.id ?? null));
+  const childFolders = currentFolder
+    ? folders.filter((f) => f.parentId === currentFolder.id)
+    : [];
 
-  let tasks = currentFolder
-    ? await prisma.task.findMany({
-        where: { folderId: currentFolder.id },
-        include: {
-          assignee: true,
-          tags: { include: { tag: true } },
-        },
+  const canEdit = canEditContent(membership.role);
+  const canInvite = canManagePeople(membership.role);
+  const showPulse = canManagePeople(membership.role);
+
+  const pendingInvites = canInvite
+    ? await prisma.invite.findMany({
+        where: { workspaceId, status: "PENDING" },
+        orderBy: { createdAt: "desc" },
       })
     : [];
 
-  tasks = tasks
+  const allWorkspaceTasks = await prisma.task.findMany({
+    where: { workspaceId },
+    select: {
+      id: true,
+      status: true,
+      dueDate: true,
+      assigneeId: true,
+    },
+  });
+
+  const now = new Date();
+  const counts = showPulse
+    ? {
+        open: allWorkspaceTasks.filter((t) => t.status === "OPEN").length,
+        claimed: allWorkspaceTasks.filter((t) => t.status === "CLAIMED").length,
+        inReview: allWorkspaceTasks.filter((t) => t.status === "IN_REVIEW").length,
+        overdue: allWorkspaceTasks.filter(
+          (t) =>
+            t.dueDate &&
+            t.dueDate < now &&
+            t.status !== "DONE",
+        ).length,
+        done: allWorkspaceTasks.filter((t) => t.status === "DONE").length,
+      }
+    : null;
+
+  const myClaimedCount = allWorkspaceTasks.filter(
+    (t) => t.assigneeId === user.id && t.status === "CLAIMED",
+  ).length;
+  const needsReviewCount = allWorkspaceTasks.filter(
+    (t) => t.status === "IN_REVIEW",
+  ).length;
+
+  let tasksRaw =
+    inbox === "mine"
+      ? await prisma.task.findMany({
+          where: {
+            workspaceId,
+            assigneeId: user.id,
+            status: { in: ["CLAIMED", "IN_REVIEW"] },
+          },
+          include: taskInclude,
+        })
+      : inbox === "review"
+        ? await prisma.task.findMany({
+            where: { workspaceId, status: "IN_REVIEW" },
+            include: taskInclude,
+          })
+        : currentFolder
+          ? await prisma.task.findMany({
+              where: { folderId: currentFolder.id },
+              include: taskInclude,
+            })
+          : [];
+
+  tasksRaw = tasksRaw
     .map((t) => ({
       ...t,
       tags: t.tags.filter(
@@ -78,7 +199,7 @@ export default async function WorkspacePage({
   const q = sp.q?.trim() ?? "";
   const tagFilter = sp.tag?.trim().toLowerCase() ?? "";
   if (q || tagFilter) {
-    tasks = tasks
+    tasksRaw = tasksRaw
       .map((t) => ({
         task: t,
         relevance: q ? searchRelevance(q, t.name) : 1,
@@ -91,27 +212,29 @@ export default async function WorkspacePage({
         }
         return true;
       })
-      .sort((a, b) => b.relevance - a.relevance || compareTasksByUrgency(a.task, b.task))
+      .sort(
+        (a, b) =>
+          b.relevance - a.relevance || compareTasksByUrgency(a.task, b.task),
+      )
       .map(({ task }) => task);
   }
 
-  const canEdit = canEditContent(membership.role);
-  const canInvite = canManagePeople(membership.role);
+  const tasks = tasksRaw.map(toRowData);
 
-  const pendingInvites = canInvite
-    ? await prisma.invite.findMany({
-        where: { workspaceId, status: "PENDING" },
-        orderBy: { createdAt: "desc" },
-      })
-    : [];
-
-  const taskCount = await prisma.task.count({
-    where: { folder: { workspaceId } },
-  });
+  const taskCount = allWorkspaceTasks.length;
   const memberCount = await prisma.membership.count({ where: { workspaceId } });
   const hasInviteActivity = pendingInvites.length > 0 || memberCount > 1;
   const rootFolderCount = folders.filter((f) => !f.parentId).length;
   const firstFolderId = folders[0]?.id ?? null;
+
+  const sectionTitle =
+    inbox === "mine"
+      ? "My claimed"
+      : inbox === "review"
+        ? "Needs review"
+        : currentFolder
+          ? currentFolder.name
+          : "Root";
 
   return (
     <div className="tide-wave-bg min-h-screen">
@@ -130,23 +253,24 @@ export default async function WorkspacePage({
             </p>
           </div>
 
-          <form className="flex flex-wrap gap-2" action={`/app/w/${workspaceId}`} method="get">
+          <form className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap" action={`/app/w/${workspaceId}`} method="get">
             {currentFolder ? (
               <input type="hidden" name="folder" value={currentFolder.id} />
             ) : null}
+            {inbox ? <input type="hidden" name="inbox" value={inbox} /> : null}
             <input
               name="q"
               defaultValue={q}
               placeholder="Search names…"
-              className="tide-input min-w-[12rem]"
+              className="tide-input min-h-11 min-w-0 sm:min-w-[12rem]"
             />
             <input
               name="tag"
               defaultValue={tagFilter}
               placeholder="Tag filter"
-              className="tide-input w-32"
+              className="tide-input min-h-11 w-full sm:w-32"
             />
-            <button type="submit" className="tide-btn-secondary text-sm">
+            <button type="submit" className="tide-btn-secondary min-h-11 text-sm">
               Search
             </button>
           </form>
@@ -163,8 +287,17 @@ export default async function WorkspacePage({
           firstFolderId={firstFolderId}
         />
 
+        <WorkspacePulseStrip
+          workspaceId={workspaceId}
+          counts={counts}
+          canReview={canEdit}
+          inbox={inbox}
+          myClaimedCount={myClaimedCount}
+          needsReviewCount={needsReviewCount}
+        />
+
         <div className="mt-8 grid gap-6 lg:grid-cols-[240px_1fr]">
-          <aside className="space-y-4">
+          <aside className={`space-y-4 ${inbox ? "hidden lg:block" : ""}`}>
             <div className="tide-panel p-4">
               <h2 className="font-[family-name:var(--font-display)] text-lg text-[#0A3D45]">
                 Folders
@@ -179,7 +312,11 @@ export default async function WorkspacePage({
                 <li>
                   <Link
                     href={`/app/w/${workspaceId}`}
-                    className={!currentFolder ? "font-semibold text-[#0A3D45]" : "text-[#0A3D45]/70"}
+                    className={
+                      !currentFolder && !inbox
+                        ? "font-semibold text-[#0A3D45]"
+                        : "text-[#0A3D45]/70"
+                    }
                   >
                     Root
                   </Link>
@@ -207,6 +344,7 @@ export default async function WorkspacePage({
                   className="mt-4 flex flex-col gap-2"
                   action={createFolderAction}
                   submitLabel="New folder"
+                  submitClassName="w-full min-h-11"
                 >
                   <input type="hidden" name="workspaceId" value={workspaceId} />
                   {currentFolder ? (
@@ -216,7 +354,7 @@ export default async function WorkspacePage({
                     name="name"
                     required
                     placeholder="e.g. General"
-                    className="tide-input text-sm"
+                    className="tide-input min-h-11 text-sm"
                   />
                 </InlineActionForm>
               ) : null}
@@ -231,15 +369,16 @@ export default async function WorkspacePage({
                   className="mt-3 flex flex-col gap-2"
                   action={inviteMemberAction}
                   submitLabel="Send invite"
+                  submitClassName="w-full min-h-11"
                 >
                   <input type="hidden" name="workspaceId" value={workspaceId} />
                   <input
                     name="target"
                     required
                     placeholder="Username or email"
-                    className="tide-input text-sm"
+                    className="tide-input min-h-11 text-sm"
                   />
-                  <select name="role" className="tide-input text-sm" defaultValue="MEMBER">
+                  <select name="role" className="tide-input min-h-11 text-sm" defaultValue="MEMBER">
                     <option value="ADMIN">Admin</option>
                     <option value="EDITOR">Editor</option>
                     <option value="MEMBER">Member</option>
@@ -263,19 +402,23 @@ export default async function WorkspacePage({
           <section className="space-y-6">
             <div className="tide-panel p-5">
               <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
-                {currentFolder ? currentFolder.name : "Root"}
+                {sectionTitle}
               </h2>
               <p className="text-sm text-[#0A3D45]/60">
-                Subfolders and tasks. Urgency edge rises with priority and due dates.
+                {inbox === "mine"
+                  ? "Tasks you’ve claimed across every folder."
+                  : inbox === "review"
+                    ? "Waiting on Editor+ approval across the workspace."
+                    : "Subfolders and tasks. Urgency edge rises with priority and due dates."}
               </p>
 
-              {childFolders.length > 0 ? (
+              {!inbox && childFolders.length > 0 ? (
                 <ul className="mt-4 flex flex-wrap gap-2">
                   {childFolders.map((f) => (
                     <li key={f.id}>
                       <Link
                         href={`/app/w/${workspaceId}?folder=${f.id}`}
-                        className="tide-btn-secondary text-sm"
+                        className="tide-btn-secondary min-h-10 text-sm"
                       >
                         {f.name}
                       </Link>
@@ -284,17 +427,28 @@ export default async function WorkspacePage({
                 </ul>
               ) : null}
 
-              {canEdit && currentFolder ? (
+              {!inbox && canEdit && currentFolder ? (
                 <>
                   <InlineActionForm
                     className="mt-5 grid gap-2 sm:grid-cols-2"
                     action={createTaskAction}
                     submitLabel="Add task"
+                    submitVariant="primary"
+                    submitClassName="min-h-11 sm:col-span-2 sm:justify-self-start"
                   >
                     <input type="hidden" name="workspaceId" value={workspaceId} />
                     <input type="hidden" name="folderId" value={currentFolder.id} />
-                    <input name="name" required placeholder="Task name" className="tide-input" />
-                    <select name="priority" className="tide-input" defaultValue="MEDIUM">
+                    <input
+                      name="name"
+                      required
+                      placeholder="Task name"
+                      className="tide-input min-h-11"
+                    />
+                    <select
+                      name="priority"
+                      className="tide-input min-h-11"
+                      defaultValue="MEDIUM"
+                    >
                       <option value="CRITICAL">Critical</option>
                       <option value="HIGH">High</option>
                       <option value="MEDIUM">Medium</option>
@@ -303,9 +457,9 @@ export default async function WorkspacePage({
                     <input
                       name="description"
                       placeholder="Description"
-                      className="tide-input sm:col-span-2"
+                      className="tide-input min-h-11 sm:col-span-2"
                     />
-                    <input name="dueDate" type="date" className="tide-input" />
+                    <input name="dueDate" type="date" className="tide-input min-h-11" />
                   </InlineActionForm>
                   <p className="mt-2 text-xs text-[#0A3D45]/55">
                     Members claim tasks. Editors+ review when someone marks them complete.
@@ -313,7 +467,7 @@ export default async function WorkspacePage({
                 </>
               ) : null}
 
-              {!currentFolder && canEdit ? (
+              {!inbox && !currentFolder && canEdit ? (
                 <p className="mt-4 text-sm text-[#0A3D45]/65">
                   Create a folder (topic bucket, e.g. General) to start adding claimable tasks.
                   Status stays on the task — not the folder.
@@ -323,137 +477,24 @@ export default async function WorkspacePage({
 
             <ul className="space-y-3">
               {tasks.map((task) => (
-                <li key={task.id} className="tide-panel relative overflow-hidden p-4 pl-5">
-                  <TaskUrgencyEdge priority={task.priority} dueDate={task.dueDate} />
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg font-semibold text-[#0A3D45]">{task.name}</h3>
-                        <PriorityBadge priority={task.priority} />
-                        <span className="text-xs uppercase tracking-wide text-[#0A3D45]/50">
-                          {task.status.replace("_", " ")}
-                        </span>
-                      </div>
-                      {task.description ? (
-                        <p className="mt-1 text-sm text-[#0A3D45]/70">{task.description}</p>
-                      ) : null}
-                      <p className="mt-2 text-xs text-[#0A3D45]/55">
-                        {task.dueDate
-                          ? `Due ${format(task.dueDate, "MMM d, yyyy")}`
-                          : "No due date"}
-                        {task.assignee
-                          ? ` · claimed by @${task.assignee.username}`
-                          : " · unclaimed"}
-                      </p>
-                      {task.completionComment ? (
-                        <p className="mt-1 text-xs italic text-[#0A3D45]/65">
-                          Review note: {task.completionComment}
-                        </p>
-                      ) : null}
-                      {task.tags.length > 0 ? (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {task.tags.map((tt) => (
-                            <span
-                              key={tt.tagId}
-                              className="rounded-md bg-[#1a7a82]/10 px-2 py-0.5 text-xs text-[#0A3D45]"
-                            >
-                              #{tt.tag.name}
-                              {!tt.tag.isPublic ? " (private)" : ""}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="flex flex-col items-stretch gap-2">
-                      {task.status === "OPEN" ||
-                      (task.status === "CLAIMED" && !task.assigneeId) ? (
-                        <InlineActionForm
-                          action={claimTaskAction}
-                          submitLabel="Pick up"
-                        >
-                          <input type="hidden" name="workspaceId" value={workspaceId} />
-                          <input type="hidden" name="taskId" value={task.id} />
-                        </InlineActionForm>
-                      ) : null}
-
-                      {task.assigneeId === user.id &&
-                      (task.status === "CLAIMED" || task.status === "OPEN") ? (
-                        <InlineActionForm
-                          action={completeTaskAction}
-                          submitLabel="Ready for review"
-                        >
-                          <input type="hidden" name="workspaceId" value={workspaceId} />
-                          <input type="hidden" name="taskId" value={task.id} />
-                          <input
-                            name="comment"
-                            required
-                            placeholder="What did you complete?"
-                            className="tide-input text-sm"
-                          />
-                        </InlineActionForm>
-                      ) : null}
-
-                      {task.status === "IN_REVIEW" && canEdit ? (
-                        <div className="flex gap-2">
-                          <InlineActionForm
-                            action={reviewTaskAction}
-                            submitLabel="Approve"
-                          >
-                            <input type="hidden" name="workspaceId" value={workspaceId} />
-                            <input type="hidden" name="taskId" value={task.id} />
-                            <input type="hidden" name="decision" value="approve" />
-                          </InlineActionForm>
-                          <InlineActionForm
-                            action={reviewTaskAction}
-                            submitLabel="Send back"
-                          >
-                            <input type="hidden" name="workspaceId" value={workspaceId} />
-                            <input type="hidden" name="taskId" value={task.id} />
-                            <input type="hidden" name="decision" value="reopen" />
-                          </InlineActionForm>
-                        </div>
-                      ) : null}
-
-                      {task.assigneeId === user.id ? (
-                        <InlineActionForm
-                          action={addPrivateTagAction}
-                          submitLabel="Private tag"
-                        >
-                          <input type="hidden" name="workspaceId" value={workspaceId} />
-                          <input type="hidden" name="taskId" value={task.id} />
-                          <input
-                            name="name"
-                            required
-                            placeholder="my-focus"
-                            className="tide-input text-sm"
-                          />
-                        </InlineActionForm>
-                      ) : null}
-
-                      {canEdit ? (
-                        <InlineActionForm
-                          action={addPublicTagAction}
-                          submitLabel="Public tag"
-                        >
-                          <input type="hidden" name="workspaceId" value={workspaceId} />
-                          <input type="hidden" name="taskId" value={task.id} />
-                          <input
-                            name="name"
-                            required
-                            placeholder="design"
-                            className="tide-input text-sm"
-                          />
-                        </InlineActionForm>
-                      ) : null}
-                    </div>
-                  </div>
-                </li>
+                <WorkspaceTaskRow
+                  key={task.id}
+                  task={task}
+                  workspaceId={workspaceId}
+                  userId={user.id}
+                  canEdit={canEdit}
+                  showFolder={Boolean(inbox)}
+                />
               ))}
-              {currentFolder && tasks.length === 0 ? (
+              {tasks.length === 0 ? (
                 <li className="tide-panel p-4 text-sm text-[#0A3D45]/70">
-                  Add a task people can claim. When they’re done, it goes to review — status moves
-                  on the task automatically.
+                  {inbox === "mine"
+                    ? "Nothing claimed right now. Open a folder and pick up a task."
+                    : inbox === "review"
+                      ? "No tasks waiting for review."
+                      : currentFolder
+                        ? "Add a task people can claim. When they’re done, it goes to review — status moves on the task automatically."
+                        : "Pick a folder to see tasks, or use My claimed / Needs review above."}
                 </li>
               ) : null}
             </ul>
