@@ -15,6 +15,7 @@ Collaborative task management where urgency rises with due dates — nested fold
 - **Archive** — Admin+ soft-delete workspaces/folders with visibility (everyone / by role / specific people); history preserved
 - **Folder templates** — starter trees (Simple / Project / Team) plus save/reuse workspace folder layouts
 - **Calendar** — list/month views; drag personal, task, and workspace items between days
+- **Weekly digest** — optional email summary of overdue / due soon / reviews (Alerts → send preview)
 - **Social** — friends; DMs (friends free; workspace DMs need accept); Admin+ group chats
 
 ## Stack

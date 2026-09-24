@@ -9,8 +9,10 @@ import {
 } from "@/app/actions/social";
 import { InlineActionForm } from "@/app/components/forms";
 import { MarkNotificationsSeen } from "@/app/components/mark-notifications-seen";
+import { WeeklyDigestPanel } from "@/app/components/weekly-digest-panel";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { buildWeeklyDigest } from "@/lib/weekly-digest";
 import { redirect } from "next/navigation";
 
 type NotifMeta = {
@@ -52,6 +54,8 @@ function typeLabel(type: string) {
       return "Approved";
     case "TASK_REOPENED":
       return "Sent back";
+    case "WEEKLY_DIGEST":
+      return "Digest";
     default:
       return "Update";
   }
@@ -68,6 +72,17 @@ function taskHref(meta: NotifMeta) {
 export default async function NotificationsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+
+  const fullUser = await prisma.user.findUniqueOrThrow({
+    where: { id: user.id },
+    select: {
+      email: true,
+      weeklyDigestEnabled: true,
+      weeklyDigestLastSentAt: true,
+    },
+  });
+
+  const digestPreview = await buildWeeklyDigest(user.id);
 
   const notifications = await prisma.notification.findMany({
     where: {
@@ -141,6 +156,19 @@ export default async function NotificationsPage() {
       <p className="mt-2 text-[#0A3D45]/70">
         Invites, reviews, and other updates. Opening this tab clears the unread badge.
       </p>
+
+      {digestPreview ? (
+        <WeeklyDigestPanel
+          enabled={fullUser.weeklyDigestEnabled}
+          lastSentAt={
+            fullUser.weeklyDigestLastSentAt
+              ? fullUser.weeklyDigestLastSentAt.toISOString()
+              : null
+          }
+          hasEmail={Boolean(fullUser.email)}
+          preview={digestPreview}
+        />
+      ) : null}
 
       <ul className="mt-8 space-y-3">
         {notifications.length === 0 ? (
