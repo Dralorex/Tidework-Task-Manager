@@ -16,6 +16,7 @@ import {
   canManagePeople,
   requireMembership,
 } from "@/lib/permissions";
+import { assertCanAccessFolder } from "@/lib/folder-access";
 import type { ActionResult } from "@/app/actions/auth";
 
 function revalidateWorkspace(workspaceId: string) {
@@ -74,6 +75,13 @@ export async function applyFolderTemplateAction(
     if (isArchived(parent)) {
       return { ok: false, error: "That folder is archived. Restore it first." };
     }
+    const access = await assertCanAccessFolder({
+      workspaceId,
+      folderId: parentId,
+      membershipId: membership.id,
+      membershipRole: membership.role,
+    });
+    if (!access.ok) return access;
   }
 
   let tree: FolderTemplateNode[] | null = null;

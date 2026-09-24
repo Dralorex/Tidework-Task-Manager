@@ -21,20 +21,46 @@ function useChatPresence(
 
   useEffect(() => {
     let cancelled = false;
+    let pollId: number | undefined;
+    let source: EventSource | null = null;
 
-    async function poll() {
+    async function pollOnce() {
       const result = await fetchChatPresence(groupId);
       if (cancelled || !result.ok) return;
       setPresence(result.presence);
     }
 
-    void poll();
-    const id = window.setInterval(() => {
-      void poll();
-    }, 2500);
+    function startPolling() {
+      void pollOnce();
+      pollId = window.setInterval(() => {
+        void pollOnce();
+      }, 2500);
+    }
+
+    try {
+      source = new EventSource(`/api/chat/${groupId}/presence`);
+      source.addEventListener("presence", (event) => {
+        if (cancelled) return;
+        try {
+          const data = JSON.parse((event as MessageEvent).data) as ChatPresenceMember[];
+          if (Array.isArray(data)) setPresence(data);
+        } catch {
+          // ignore bad payloads
+        }
+      });
+      source.onerror = () => {
+        source?.close();
+        source = null;
+        if (!cancelled && pollId === undefined) startPolling();
+      };
+    } catch {
+      startPolling();
+    }
+
     return () => {
       cancelled = true;
-      window.clearInterval(id);
+      source?.close();
+      if (pollId !== undefined) window.clearInterval(pollId);
     };
   }, [groupId]);
 

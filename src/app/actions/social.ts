@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
+import { publishChatPresence } from "@/lib/chat-presence-bus";
 import { prisma } from "@/lib/db";
 import { canCreateGroups, canManagePeople, requireMembership } from "@/lib/permissions";
 import { OPEN_THREAD_MS, parseMentions } from "@/lib/mentions";
@@ -462,6 +463,7 @@ export async function sendMessageAction(
   revalidatePath("/app/chat");
   revalidatePath("/app", "layout");
   revalidatePath("/app/notifications");
+  publishChatPresence(groupId);
   return { ok: true };
 }
 
@@ -517,6 +519,7 @@ export async function touchChatSeenAction(
     data: { read: true },
   });
 
+  publishChatPresence(groupId);
   revalidatePath("/app", "layout");
   return { ok: true };
 }
@@ -533,6 +536,7 @@ export async function setTypingAction(groupId: string): Promise<ActionResult> {
     where: { id: member.id },
     data: { typingAt: now, lastSeenAt: now },
   });
+  publishChatPresence(groupId);
   return { ok: true };
 }
 
@@ -547,6 +551,7 @@ export async function clearTypingAction(groupId: string): Promise<ActionResult> 
     where: { id: member.id },
     data: { typingAt: null },
   });
+  publishChatPresence(groupId);
   return { ok: true };
 }
 

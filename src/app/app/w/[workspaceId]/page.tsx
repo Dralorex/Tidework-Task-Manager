@@ -4,6 +4,10 @@ import {
   ArchiveFolderControls,
   ArchiveWorkspacePanel,
 } from "@/app/components/archive-controls";
+import {
+  FolderAccessPanel,
+  WorkspaceRolesPanel,
+} from "@/app/components/folder-acl-panels";
 import { FolderTemplatesPanel } from "@/app/components/folder-templates-panel";
 import { InlineActionForm } from "@/app/components/forms";
 import { WorkspacePulseStrip } from "@/app/components/workspace-pulse-strip";
@@ -21,6 +25,12 @@ import { inviteMemberAction } from "@/app/actions/workspaces";
 import { canViewArchived, isArchived } from "@/lib/archive";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import {
+  buildFolderVisibility,
+  canAccessFolder,
+  loadFolderAccessRows,
+  loadUserCustomRoleIds,
+} from "@/lib/folder-access";
 import { canEditContent, canManagePeople } from "@/lib/permissions";
 import { syncDueRecurrences } from "@/lib/recurrence";
 import { compareTasksByUrgency } from "@/lib/urgency";
@@ -124,13 +134,36 @@ export default async function WorkspacePage({
 
   const workspaceArchived = isArchived(workspace);
 
+  const [folderAccessRows, userRoleIds, workspaceRoles] = await Promise.all([
+    loadFolderAccessRows(workspaceId),
+    loadUserCustomRoleIds(membership.id),
+    prisma.workspaceRole.findMany({
+      where: { workspaceId },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, hideFolders: true },
+    }),
+  ]);
+  const foldersById = new Map(folderAccessRows.map((f) => [f.id, f]));
+  const visibleAcl = buildFolderVisibility(folderAccessRows, userRoleIds, {
+    membershipRole: membership.role,
+  });
+  const visibleAclIds = new Set(visibleAcl.map((f) => f.id));
+  const accessibleFolderIds = new Set(
+    visibleAcl.filter((f) => f.canAccess).map((f) => f.id),
+  );
+  const folderAclMeta = new Map(
+    visibleAcl.map((f) => [f.id, f] as const),
+  );
+
   const foldersAll = await prisma.folder.findMany({
     where: { workspaceId },
     orderBy: { name: "asc" },
   });
 
-  const folders = foldersAll.filter((f) =>
-    canViewArchived(user.id, membership.role, f),
+  const folders = foldersAll.filter(
+    (f) =>
+      visibleAclIds.has(f.id) &&
+      canViewArchived(user.id, membership.role, f),
   );
   const activeFolders = folders.filter((f) => !isArchived(f));
   const archivedFolders = folders.filter((f) => isArchived(f));
@@ -151,6 +184,14 @@ export default async function WorkspacePage({
   if (currentFolder && !canViewArchived(user.id, membership.role, currentFolder)) {
     redirect(`/app/w/${workspaceId}`);
   }
+  if (
+    currentFolder &&
+    !canAccessFolder(currentFolder.id, foldersById, userRoleIds, {
+      membershipRole: membership.role,
+    })
+  ) {
+    redirect(`/app/w/${workspaceId}`);
+  }
 
   const childFolders = currentFolder
     ? folders.filter(
@@ -161,10 +202,12 @@ export default async function WorkspacePage({
   const canEdit =
     canEditContent(membership.role) &&
     !workspaceArchived &&
-    !(currentFolder && isArchived(currentFolder));
+    !(currentFolder && isArchived(currentFolder)) &&
+    (!currentFolder || accessibleFolderIds.has(currentFolder.id));
   const canInvite = canManagePeople(membership.role) && !workspaceArchived;
   const canArchive = canManagePeople(membership.role);
   const showPulse = canManagePeople(membership.role);
+  const canManageRoles = canManagePeople(membership.role);
 
   const pendingInvites = canInvite
     ? await prisma.invite.findMany({
@@ -180,12 +223,18 @@ export default async function WorkspacePage({
   });
 
   const allWorkspaceTasks = await prisma.task.findMany({
-    where: { workspaceId },
+    where: {
+      workspaceId,
+      ...(canManagePeople(membership.role)
+        ? {}
+        : { folderId: { in: [...accessibleFolderIds] } }),
+    },
     select: {
       id: true,
       status: true,
       dueDate: true,
       assigneeId: true,
+      folderId: true,
     },
   });
 
@@ -207,11 +256,22 @@ export default async function WorkspacePage({
 
   const workspaceMembers = await prisma.membership.findMany({
     where: { workspaceId },
-    include: { user: { select: { id: true, username: true } } },
+    include: {
+      user: { select: { id: true, username: true } },
+      customRoles: { select: { roleId: true } },
+    },
     orderBy: { user: { username: "asc" } },
   });
-  // Folder ACL not on this scaffold yet — assignable = all members (Editor+ UI only)
-  const assignableMembers = workspaceMembers.map((m) => ({
+
+  const assignableMembers = (
+    currentFolder
+      ? workspaceMembers.filter((m) =>
+          canAccessFolder(currentFolder.id, foldersById, new Set(m.customRoles.map((r) => r.roleId)), {
+            membershipRole: m.role,
+          }),
+        )
+      : workspaceMembers
+  ).map((m) => ({
     id: m.user.id,
     username: m.user.username,
   }));
@@ -225,6 +285,10 @@ export default async function WorkspacePage({
     (t) => t.status === "IN_REVIEW",
   ).length;
 
+  const inboxFolderFilter = canManagePeople(membership.role)
+    ? {}
+    : { folderId: { in: [...accessibleFolderIds] } };
+
   let tasksRaw =
     inbox === "mine"
       ? await prisma.task.findMany({
@@ -232,15 +296,20 @@ export default async function WorkspacePage({
             workspaceId,
             assigneeId: user.id,
             status: { in: ["OPEN", "CLAIMED", "IN_REVIEW"] },
+            ...inboxFolderFilter,
           },
           include: taskInclude,
         })
       : inbox === "review"
         ? await prisma.task.findMany({
-            where: { workspaceId, status: "IN_REVIEW" },
+            where: {
+              workspaceId,
+              status: "IN_REVIEW",
+              ...inboxFolderFilter,
+            },
             include: taskInclude,
           })
-        : currentFolder
+        : currentFolder && accessibleFolderIds.has(currentFolder.id)
           ? await prisma.task.findMany({
               where: { folderId: currentFolder.id },
               include: taskInclude,
@@ -285,7 +354,8 @@ export default async function WorkspacePage({
   const memberCount = await prisma.membership.count({ where: { workspaceId } });
   const hasInviteActivity = pendingInvites.length > 0 || memberCount > 1;
   const rootFolderCount = activeFolders.filter((f) => !f.parentId).length;
-  const firstFolderId = activeFolders[0]?.id ?? null;
+  const firstFolderId =
+    activeFolders.find((f) => accessibleFolderIds.has(f.id))?.id ?? null;
   const folderArchived = Boolean(currentFolder && isArchived(currentFolder));
 
   const sectionTitle =
@@ -417,20 +487,33 @@ export default async function WorkspacePage({
                 </li>
                 {activeFolders
                   .filter((f) => !f.parentId)
-                  .map((f) => (
+                  .map((f) => {
+                    const meta = folderAclMeta.get(f.id);
+                    const locked = Boolean(meta?.locked);
+                    return (
                     <li key={f.id}>
-                      <Link
-                        href={`/app/w/${workspaceId}?folder=${f.id}`}
-                        className={
-                          currentFolder?.id === f.id
-                            ? "font-semibold text-[#0A3D45]"
-                            : "text-[#0A3D45]/70 hover:text-[#0A3D45]"
-                        }
-                      >
-                        {f.name}
-                      </Link>
+                      {locked ? (
+                        <span className="text-[#0A3D45]/45">
+                          {f.name}{" "}
+                          <span className="text-[10px] uppercase tracking-wide">
+                            locked
+                          </span>
+                        </span>
+                      ) : (
+                        <Link
+                          href={`/app/w/${workspaceId}?folder=${f.id}`}
+                          className={
+                            currentFolder?.id === f.id
+                              ? "font-semibold text-[#0A3D45]"
+                              : "text-[#0A3D45]/70 hover:text-[#0A3D45]"
+                          }
+                        >
+                          {f.name}
+                        </Link>
+                      )}
                     </li>
-                  ))}
+                    );
+                  })}
               </ul>
 
               {archivedFolders.filter((f) => !f.parentId).length > 0 ? (
@@ -479,6 +562,26 @@ export default async function WorkspacePage({
                 </InlineActionForm>
               ) : null}
 
+              {canManageRoles && currentFolder && !isArchived(currentFolder) ? (
+                <div className="mt-3">
+                  <FolderAccessPanel
+                    workspaceId={workspaceId}
+                    folderId={currentFolder.id}
+                    roles={workspaceRoles}
+                    requiredRoleIds={
+                      folderAclMeta.get(currentFolder.id)?.requiredRoleIds ?? []
+                    }
+                    hideFromUnauthorized={
+                      folderAclMeta.get(currentFolder.id)?.hideFromUnauthorized ??
+                      false
+                    }
+                    alwaysVisible={
+                      folderAclMeta.get(currentFolder.id)?.alwaysVisible ?? false
+                    }
+                  />
+                </div>
+              ) : null}
+
               {!workspaceArchived ? (
                 <FolderTemplatesPanel
                   workspaceId={workspaceId}
@@ -499,6 +602,23 @@ export default async function WorkspacePage({
                 />
               ) : null}
             </div>
+
+            {canManageRoles ? (
+              <div className="tide-panel p-4">
+                <h2 className="font-[family-name:var(--font-display)] text-lg text-[#0A3D45]">
+                  Access
+                </h2>
+                <WorkspaceRolesPanel
+                  workspaceId={workspaceId}
+                  roles={workspaceRoles}
+                  members={workspaceMembers.map((m) => ({
+                    id: m.user.id,
+                    username: m.user.username,
+                    roleIds: m.customRoles.map((r) => r.roleId),
+                  }))}
+                />
+              </div>
+            ) : null}
 
             {canInvite ? (
               <div className="tide-panel p-4">

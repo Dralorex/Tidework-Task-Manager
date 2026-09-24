@@ -13,11 +13,12 @@ Collaborative task management where urgency rises with due dates — nested fold
 - **Search** — name relevance + tag filters in the current folder area
 - **Invites** — Owner/Admin invite by username or email
 - **Archive** — Admin+ soft-delete workspaces/folders with visibility (everyone / by role / specific people); history preserved
+- **Folder ACL** — custom workspace roles; folders can require roles (Owner/Admin bypass); hide or show locked folders
 - **Folder templates** — starter trees (Simple / Project / Team) plus save/reuse workspace folder layouts
 - **Calendar** — list/month views; drag personal, task, and workspace items between days
 - **Weekly digest** — optional email summary of overdue / due soon / reviews (Alerts → send preview)
 - **Chat task links** — type `#` in chat to attach a task; messages render deep links into the folder
-- **Presence** — online dots and “is typing…” in chat (polled; no websocket required)
+- **Presence** — online dots and “is typing…” via SSE (`/api/chat/[groupId]/presence`), with poll fallback
 - **Social** — friends; DMs (friends free; workspace DMs need accept); Admin+ group chats
 
 ## Stack
@@ -42,6 +43,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `npm run dev` | Dev server |
 | `npm run build` | Production build |
 | `npm run start` | Start production server |
+| `npm run test:e2e` | Playwright e2e (calendar DnD) |
 | `npx prisma db push` | Sync schema to SQLite |
 | `npx prisma studio` | Browse data |
 

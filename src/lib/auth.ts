@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import { prisma } from "@/lib/db";
 
 const SESSION_COOKIE = "tidework_session";
+export const SESSION_COOKIE_NAME = SESSION_COOKIE;
 const SESSION_DAYS = 30;
 
 export async function hashPassword(password: string) {

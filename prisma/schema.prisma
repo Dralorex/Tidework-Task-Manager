@@ -91,6 +91,7 @@ model User {
   groupsCreated         ChatGroup[]          @relation("GroupCreator")
   taskActivities        TaskActivity[]       @relation("TaskActivityActor")
   messageMentions       MessageMention[]     @relation("MentionedUser")
+  workspaceRoleSeens    WorkspaceRoleSeen[]
 }
 
 model Session {
@@ -141,6 +142,7 @@ model Workspace {
   calendarEvents WorkspaceCalendarEvent[]
   calendarFilters CalendarWorkspaceFilter[]
   folderTemplates FolderTemplate[]
+  customRoles WorkspaceRole[]
 
   @@index([ownerId])
   @@index([archivedAt])
@@ -153,11 +155,70 @@ model Membership {
   role        Role
   createdAt   DateTime @default(now())
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customRoles MembershipRole[]
 
   @@unique([workspaceId, userId])
   @@index([userId])
+}
+
+/** Workspace-scoped custom role (Builders, Developers, …) — separate from Membership.role. */
+model WorkspaceRole {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  /** When set, folders requiring this role are hidden from members who lack access (unless alwaysVisible). */
+  hideFolders Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members   MembershipRole[]
+  folders   FolderRole[]
+  seenBy    WorkspaceRoleSeen[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+model MembershipRole {
+  id           String @id @default(cuid())
+  membershipId String
+  roleId       String
+
+  membership Membership    @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  role       WorkspaceRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([membershipId, roleId])
+  @@index([roleId])
+}
+
+/** Required custom roles for a folder. Empty = open to everyone (same as “All”). */
+model FolderRole {
+  id       String @id @default(cuid())
+  folderId String
+  roleId   String
+
+  folder Folder        @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  role   WorkspaceRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([folderId, roleId])
+  @@index([roleId])
+}
+
+/** Per-user cursor for role-based new-task activity. */
+model WorkspaceRoleSeen {
+  id         String   @id @default(cuid())
+  userId     String
+  roleId     String
+  lastSeenAt DateTime @default(now())
+
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role WorkspaceRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([roleId])
 }
 
 model Invite {
@@ -185,6 +246,10 @@ model Folder {
   workspaceId String
   parentId    String?
   name        String
+  /** Hide this folder from members who cannot access it (instead of showing locked). */
+  hideFromUnauthorized Boolean @default(false)
+  /** Always show in the tree regardless of role hide rules. Does not grant access. */
+  alwaysVisible        Boolean @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   archivedAt  DateTime?
@@ -194,10 +259,11 @@ model Folder {
   archiveVisibilityRoles String?
   archiveVisibilityUserIds String?
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  parent    Folder?   @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
-  children  Folder[]  @relation("FolderTree")
-  tasks     Task[]
+  workspace     Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parent        Folder?      @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children      Folder[]     @relation("FolderTree")
+  tasks         Task[]
+  requiredRoles FolderRole[]
 
   @@index([workspaceId])
   @@index([parentId])
