@@ -43,6 +43,12 @@ enum FriendshipStatus {
   DECLINED
 }
 
+enum ChatNotifyMode {
+  ALL
+  MENTIONS
+  MUTE
+}
+
 enum DmRequestStatus {
   PENDING
   ACCEPTED
@@ -81,6 +87,7 @@ model User {
   notifications         Notification[]
   groupsCreated         ChatGroup[]          @relation("GroupCreator")
   taskActivities        TaskActivity[]       @relation("TaskActivityActor")
+  messageMentions       MessageMention[]     @relation("MentionedUser")
 }
 
 model Session {
@@ -354,10 +361,12 @@ model ChatGroup {
 }
 
 model ChatMember {
-  id       String   @id @default(cuid())
-  groupId  String
-  userId   String
-  joinedAt DateTime @default(now())
+  id         String         @id @default(cuid())
+  groupId    String
+  userId     String
+  notifyMode ChatNotifyMode @default(ALL)
+  lastSeenAt DateTime?
+  joinedAt   DateTime       @default(now())
 
   group ChatGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -391,10 +400,25 @@ model Message {
   body      String
   createdAt DateTime @default(now())
 
-  group  ChatGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  sender User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  group    ChatGroup        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  sender   User             @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  mentions MessageMention[]
 
   @@index([groupId, createdAt])
+}
+
+model MessageMention {
+  id         String  @id @default(cuid())
+  messageId  String
+  kind       String
+  userId     String?
+  roleName   String?
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User?   @relation("MentionedUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([messageId])
+  @@index([userId])
 }
 
 model Notification {

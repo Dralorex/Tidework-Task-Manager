@@ -42,6 +42,8 @@ function typeLabel(type: string) {
       return "Chat request";
     case "CHAT_MESSAGE":
       return "Chat";
+    case "CHAT_MENTION":
+      return "Mention";
     case "TASK_REVIEW":
       return "Review";
     case "TASK_APPROVED":

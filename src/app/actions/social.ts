@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { canCreateGroups, requireMembership } from "@/lib/permissions";
+import { canCreateGroups, canManagePeople, requireMembership } from "@/lib/permissions";
+import { OPEN_THREAD_MS, parseMentions } from "@/lib/mentions";
 import { normalizeUsername } from "@/lib/utils";
+import type { Role } from "@/generated/prisma/client";
 import type { ActionResult } from "@/app/actions/auth";
 
 export async function sendFriendRequestAction(
@@ -308,13 +310,208 @@ export async function sendMessageAction(
 
   const member = await prisma.chatMember.findUnique({
     where: { groupId_userId: { groupId, userId: user.id } },
+    include: {
+      group: {
+        include: {
+          members: { include: { user: true } },
+        },
+      },
+    },
   });
   if (!member) return { ok: false, error: "You’re not in this chat." };
 
-  await prisma.message.create({
-    data: { groupId, senderId: user.id, body },
+  const group = member.group;
+  const chatMembers = group.members;
+  const memberByUsername = new Map(
+    chatMembers.map((m) => [m.user.username.toLowerCase(), m]),
+  );
+
+  const parsed = parseMentions(body);
+  const wantsEveryone = parsed.some((p) => p.kind === "everyone");
+  const roleMentions = parsed.filter(
+    (p): p is { kind: "role"; roleName: Role } => p.kind === "role",
+  );
+  const userMentions = parsed.filter(
+    (p): p is { kind: "user"; username: string } => p.kind === "user",
+  );
+
+  let senderWorkspaceRole: Role | null = null;
+  if (group.workspaceId) {
+    const wsMembership = await prisma.membership.findUnique({
+      where: {
+        workspaceId_userId: { workspaceId: group.workspaceId, userId: user.id },
+      },
+    });
+    senderWorkspaceRole = wsMembership?.role ?? null;
+  }
+
+  const canUseElevatedMentions = group.workspaceId
+    ? Boolean(senderWorkspaceRole && canManagePeople(senderWorkspaceRole))
+    : true; // friend groups: any member may @everyone
+
+  if ((wantsEveryone || roleMentions.length > 0) && !canUseElevatedMentions) {
+    return {
+      ok: false,
+      error: "Only Admin+ can use @everyone or @role in workspace chats.",
+    };
+  }
+
+  if (roleMentions.length > 0 && !group.workspaceId) {
+    return { ok: false, error: "@role only works in workspace group chats." };
+  }
+
+  if (wantsEveryone && group.isDirect) {
+    return { ok: false, error: "@everyone isn’t used in 1:1 DMs." };
+  }
+
+  const mentionedUserIds = new Set<string>();
+
+  for (const mention of userMentions) {
+    const target = memberByUsername.get(mention.username);
+    if (target && target.userId !== user.id) {
+      mentionedUserIds.add(target.userId);
+    }
+  }
+
+  if (wantsEveryone) {
+    for (const m of chatMembers) {
+      if (m.userId !== user.id) mentionedUserIds.add(m.userId);
+    }
+  }
+
+  if (roleMentions.length > 0 && group.workspaceId) {
+    const roleNames = roleMentions.map((r) => r.roleName);
+    const roleMembers = await prisma.membership.findMany({
+      where: {
+        workspaceId: group.workspaceId,
+        role: { in: roleNames },
+        userId: { in: chatMembers.map((m) => m.userId) },
+      },
+    });
+    for (const rm of roleMembers) {
+      if (rm.userId !== user.id) mentionedUserIds.add(rm.userId);
+    }
+  }
+
+  const message = await prisma.message.create({
+    data: {
+      groupId,
+      senderId: user.id,
+      body,
+      mentions: {
+        create: [
+          ...userMentions
+            .map((m) => {
+              const target = memberByUsername.get(m.username);
+              if (!target) return null;
+              return {
+                kind: "user",
+                userId: target.userId,
+              };
+            })
+            .filter((m): m is { kind: string; userId: string } => Boolean(m)),
+          ...(wantsEveryone ? [{ kind: "everyone" as const }] : []),
+          ...roleMentions.map((r) => ({
+            kind: "role" as const,
+            roleName: r.roleName,
+          })),
+        ],
+      },
+    },
+  });
+
+  const now = Date.now();
+  const preview = body.length > 120 ? `${body.slice(0, 117)}…` : body;
+
+  for (const m of chatMembers) {
+    if (m.userId === user.id) continue;
+
+    const mentioned = mentionedUserIds.has(m.userId);
+    const mode = m.notifyMode;
+    if (mode === "MUTE") continue;
+    if (mode === "MENTIONS" && !mentioned) continue;
+    // ALL: notify for every message; MENTIONS: only when mentioned
+
+    if (
+      m.lastSeenAt &&
+      now - m.lastSeenAt.getTime() < OPEN_THREAD_MS
+    ) {
+      continue; // actively in the chat
+    }
+
+    await prisma.notification.create({
+      data: {
+        userId: m.userId,
+        type: mentioned ? "CHAT_MENTION" : "CHAT_MESSAGE",
+        title: mentioned ? "Mentioned in chat" : "New chat message",
+        body: `${user.username} in ${group.name}: ${preview}`,
+        meta: JSON.stringify({
+          groupId,
+          messageId: message.id,
+          mentioned,
+        }),
+      },
+    });
+  }
+
+  revalidatePath("/app/chat");
+  revalidatePath("/app", "layout");
+  revalidatePath("/app/notifications");
+  return { ok: true };
+}
+
+export async function setChatNotifyModeAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const groupId = String(formData.get("groupId") ?? "");
+  const mode = String(formData.get("mode") ?? "") as "ALL" | "MENTIONS" | "MUTE";
+  if (!["ALL", "MENTIONS", "MUTE"].includes(mode)) {
+    return { ok: false, error: "Pick a valid notification mode." };
+  }
+
+  const member = await prisma.chatMember.findUnique({
+    where: { groupId_userId: { groupId, userId: user.id } },
+  });
+  if (!member) return { ok: false, error: "You’re not in this chat." };
+
+  await prisma.chatMember.update({
+    where: { id: member.id },
+    data: { notifyMode: mode },
   });
 
   revalidatePath("/app/chat");
+  return { ok: true };
+}
+
+export async function touchChatSeenAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const groupId = String(formData.get("groupId") ?? "");
+  const member = await prisma.chatMember.findUnique({
+    where: { groupId_userId: { groupId, userId: user.id } },
+  });
+  if (!member) return { ok: false, error: "You’re not in this chat." };
+
+  await prisma.chatMember.update({
+    where: { id: member.id },
+    data: { lastSeenAt: new Date() },
+  });
+
+  // Mark chat notifications for this group as read
+  await prisma.notification.updateMany({
+    where: {
+      userId: user.id,
+      read: false,
+      type: { in: ["CHAT_MESSAGE", "CHAT_MENTION"] },
+      meta: { contains: groupId },
+    },
+    data: { read: true },
+  });
+
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
