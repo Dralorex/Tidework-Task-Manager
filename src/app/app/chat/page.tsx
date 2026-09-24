@@ -319,6 +319,10 @@ export default async function ChatPage({
               groupId={active.id}
               options={mentionOptions}
               taskOptions={taskOptions}
+              memberUsernames={active.members.map((m) => ({
+                userId: m.userId,
+                username: m.user.username,
+              }))}
               notifyMode={myMembership.notifyMode}
             />
           </>

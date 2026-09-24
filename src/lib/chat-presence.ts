@@ -36,5 +36,7 @@ export function typingLabel(usernames: string[]) {
   if (usernames.length === 2) {
     return `${usernames[0]} and ${usernames[1]} are typing…`;
   }
-  return `${usernames[0]} and ${usernames.length - 1} others are typing…`;
+  const head = usernames.slice(0, -1).join(", ");
+  const last = usernames[usernames.length - 1];
+  return `${head}, and ${last} are typing…`;
 }

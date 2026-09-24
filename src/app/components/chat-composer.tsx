@@ -13,6 +13,7 @@ import {
   setTypingAction,
   touchChatSeenAction,
 } from "@/app/actions/social";
+import { ChatTypingLine } from "@/app/components/chat-presence";
 import { highlightMessageParts, type TaskLinkInfo } from "@/lib/task-links";
 
 type MentionOption =
@@ -83,11 +84,13 @@ export function ChatComposer({
   groupId,
   options,
   taskOptions = [],
+  memberUsernames = [],
   notifyMode,
 }: {
   groupId: string;
   options: MentionOption[];
   taskOptions?: TaskOption[];
+  memberUsernames?: { userId: string; username: string }[];
   notifyMode: "ALL" | "MENTIONS" | "MUTE";
 }) {
   const router = useRouter();
@@ -215,7 +218,8 @@ export function ChatComposer({
   );
 
   return (
-    <div className="mt-4 space-y-3">
+    <div className="mt-4 space-y-2">
+      <ChatTypingLine groupId={groupId} memberUsernames={memberUsernames} />
       <form action={formAction} className="relative flex flex-col gap-2 sm:flex-row sm:items-end">
         <input type="hidden" name="groupId" value={groupId} />
         <div className="relative min-w-0 flex-1">
