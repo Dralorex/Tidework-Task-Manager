@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { InlineActionForm } from "@/app/components/forms";
 import { createWorkspaceAction } from "@/app/actions/workspaces";
+import { canViewArchived, isArchived } from "@/lib/archive";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
@@ -14,6 +15,12 @@ export default async function AppHomePage() {
     include: { workspace: true },
     orderBy: { createdAt: "desc" },
   });
+
+  const visible = memberships.filter((m) =>
+    canViewArchived(user.id, m.role, m.workspace),
+  );
+  const active = visible.filter((m) => !isArchived(m.workspace));
+  const archived = visible.filter((m) => isArchived(m.workspace));
 
   const unreadCount = await prisma.notification.count({
     where: {
@@ -54,7 +61,7 @@ export default async function AppHomePage() {
       </div>
 
       <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {memberships.length === 0 ? (
+        {active.length === 0 && archived.length === 0 ? (
           <div className="tide-panel sm:col-span-2 lg:col-span-3 max-w-xl p-6 animate-tide-rise">
             <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
               Start here
@@ -76,8 +83,12 @@ export default async function AppHomePage() {
               Use <span className="text-[#1a7a82]">New workspace</span> above to create one.
             </p>
           </div>
+        ) : active.length === 0 ? (
+          <div className="tide-panel sm:col-span-2 lg:col-span-3 max-w-xl p-5 text-sm text-[#0A3D45]/70">
+            No active workspaces. Archived ones are listed below if you still have access.
+          </div>
         ) : (
-          memberships.map((m, i) => (
+          active.map((m, i) => (
             <Link
               key={m.id}
               href={`/app/w/${m.workspaceId}`}
@@ -94,6 +105,33 @@ export default async function AppHomePage() {
           ))
         )}
       </section>
+
+      {archived.length > 0 ? (
+        <section className="mt-12">
+          <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
+            Archived
+          </h2>
+          <p className="mt-1 text-sm text-[#0A3D45]/60">
+            Soft-deleted workspaces. History is kept; Admin+ can restore.
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {archived.map((m) => (
+              <Link
+                key={m.id}
+                href={`/app/w/${m.workspaceId}`}
+                className="tide-panel block border border-[#0A3D45]/10 bg-white/50 p-5 opacity-90 transition hover:opacity-100"
+              >
+                <p className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
+                  {m.workspace.name}
+                </p>
+                <p className="mt-2 text-xs uppercase tracking-wide text-[#0A3D45]/50">
+                  Archived · {m.role.toLowerCase()}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {unreadCount > 0 ? (
         <section className="mt-12">

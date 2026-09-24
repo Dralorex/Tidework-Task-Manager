@@ -1,5 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import {
+  ArchiveFolderControls,
+  ArchiveWorkspacePanel,
+} from "@/app/components/archive-controls";
 import { InlineActionForm } from "@/app/components/forms";
 import { WorkspacePulseStrip } from "@/app/components/workspace-pulse-strip";
 import { WorkspaceSetupChecklist } from "@/app/components/workspace-setup-checklist";
@@ -13,6 +17,7 @@ import {
   createTaskAction,
 } from "@/app/actions/tasks";
 import { inviteMemberAction } from "@/app/actions/workspaces";
+import { canViewArchived, isArchived } from "@/lib/archive";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { canEditContent, canManagePeople } from "@/lib/permissions";
@@ -112,22 +117,46 @@ export default async function WorkspacePage({
     where: { id: workspaceId },
   });
 
-  const folders = await prisma.folder.findMany({
+  if (!canViewArchived(user.id, membership.role, workspace)) {
+    redirect("/app");
+  }
+
+  const workspaceArchived = isArchived(workspace);
+
+  const foldersAll = await prisma.folder.findMany({
     where: { workspaceId },
     orderBy: { name: "asc" },
   });
 
-  const currentFolderId = inbox ? null : (sp.folder ?? folders[0]?.id ?? null);
+  const folders = foldersAll.filter((f) =>
+    canViewArchived(user.id, membership.role, f),
+  );
+  const activeFolders = folders.filter((f) => !isArchived(f));
+  const archivedFolders = folders.filter((f) => isArchived(f));
+
+  const currentFolderId = inbox
+    ? null
+    : (sp.folder ?? activeFolders[0]?.id ?? archivedFolders[0]?.id ?? null);
   const currentFolder = currentFolderId
     ? (folders.find((f) => f.id === currentFolderId) ?? null)
     : null;
 
+  if (currentFolder && !canViewArchived(user.id, membership.role, currentFolder)) {
+    redirect(`/app/w/${workspaceId}`);
+  }
+
   const childFolders = currentFolder
-    ? folders.filter((f) => f.parentId === currentFolder.id)
+    ? folders.filter(
+        (f) => f.parentId === currentFolder.id && !isArchived(f),
+      )
     : [];
 
-  const canEdit = canEditContent(membership.role);
-  const canInvite = canManagePeople(membership.role);
+  const canEdit =
+    canEditContent(membership.role) &&
+    !workspaceArchived &&
+    !(currentFolder && isArchived(currentFolder));
+  const canInvite = canManagePeople(membership.role) && !workspaceArchived;
+  const canArchive = canManagePeople(membership.role);
   const showPulse = canManagePeople(membership.role);
 
   const pendingInvites = canInvite
@@ -242,8 +271,9 @@ export default async function WorkspacePage({
   const taskCount = allWorkspaceTasks.length;
   const memberCount = await prisma.membership.count({ where: { workspaceId } });
   const hasInviteActivity = pendingInvites.length > 0 || memberCount > 1;
-  const rootFolderCount = folders.filter((f) => !f.parentId).length;
-  const firstFolderId = folders[0]?.id ?? null;
+  const rootFolderCount = activeFolders.filter((f) => !f.parentId).length;
+  const firstFolderId = activeFolders[0]?.id ?? null;
+  const folderArchived = Boolean(currentFolder && isArchived(currentFolder));
 
   const sectionTitle =
     inbox === "mine"
@@ -254,6 +284,11 @@ export default async function WorkspacePage({
           ? currentFolder.name
           : "Root";
 
+  const archiveMembers = workspaceMembers.map((m) => ({
+    id: m.user.id,
+    username: m.user.username,
+  }));
+
   return (
     <><main className="mx-auto max-w-6xl px-4 py-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -263,6 +298,11 @@ export default async function WorkspacePage({
             </Link>
             <h1 className="mt-1 font-[family-name:var(--font-display)] text-4xl text-[#0A3D45]">
               {workspace.name}
+              {workspaceArchived ? (
+                <span className="ml-3 align-middle text-sm font-sans font-semibold uppercase tracking-wide text-[#E85D4C]">
+                  Archived
+                </span>
+              ) : null}
             </h1>
             <p className="text-sm capitalize text-[#0A3D45]/60">
               You’re {membership.role.toLowerCase()}
@@ -292,21 +332,35 @@ export default async function WorkspacePage({
           </form>
         </div>
 
+        {canArchive ? (
+          <div className="mt-6">
+            <ArchiveWorkspacePanel
+              workspaceId={workspaceId}
+              isArchived={workspaceArchived}
+              members={archiveMembers}
+            />
+          </div>
+        ) : workspaceArchived ? (
+          <div className="mt-6 tide-panel border border-[#E85D4C]/25 bg-[#E85D4C]/8 p-4 text-sm text-[#0A3D45]/80">
+            This workspace is archived. History stays visible; new work is paused.
+          </div>
+        ) : null}
+
         <WorkspaceSetupChecklist
           workspaceId={workspaceId}
           forceShow={showSetup}
-          hasFolder={folders.length > 0}
+          hasFolder={activeFolders.length > 0}
           hasTask={taskCount > 0}
           hasInvite={hasInviteActivity}
           canInvite={canInvite}
-          canEdit={canEdit}
+          canEdit={canEdit && !workspaceArchived}
           firstFolderId={firstFolderId}
         />
 
         <WorkspacePulseStrip
           workspaceId={workspaceId}
           counts={counts}
-          canReview={canEdit}
+          canReview={canEditContent(membership.role) && !workspaceArchived}
           inbox={inbox}
           myClaimedCount={myClaimedCount}
           needsReviewCount={needsReviewCount}
@@ -337,7 +391,7 @@ export default async function WorkspacePage({
                     Root
                   </Link>
                 </li>
-                {folders
+                {activeFolders
                   .filter((f) => !f.parentId)
                   .map((f) => (
                     <li key={f.id}>
@@ -355,7 +409,33 @@ export default async function WorkspacePage({
                   ))}
               </ul>
 
-              {canEdit ? (
+              {archivedFolders.filter((f) => !f.parentId).length > 0 ? (
+                <div className="mt-4 border-t border-[#0A3D45]/10 pt-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#0A3D45]/45">
+                    Archived
+                  </p>
+                  <ul className="mt-2 space-y-1 text-sm">
+                    {archivedFolders
+                      .filter((f) => !f.parentId)
+                      .map((f) => (
+                        <li key={f.id}>
+                          <Link
+                            href={`/app/w/${workspaceId}?folder=${f.id}`}
+                            className={
+                              currentFolder?.id === f.id
+                                ? "font-semibold text-[#0A3D45]"
+                                : "text-[#0A3D45]/55 hover:text-[#0A3D45]"
+                            }
+                          >
+                            {f.name}
+                          </Link>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {canEdit && !workspaceArchived ? (
                 <InlineActionForm
                   className="mt-4 flex flex-col gap-2"
                   action={createFolderAction}
@@ -363,7 +443,7 @@ export default async function WorkspacePage({
                   submitClassName="w-full min-h-11"
                 >
                   <input type="hidden" name="workspaceId" value={workspaceId} />
-                  {currentFolder ? (
+                  {currentFolder && !isArchived(currentFolder) ? (
                     <input type="hidden" name="parentId" value={currentFolder.id} />
                   ) : null}
                   <input
@@ -419,13 +499,20 @@ export default async function WorkspacePage({
             <div className="tide-panel p-5">
               <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
                 {sectionTitle}
+                {folderArchived ? (
+                  <span className="ml-2 align-middle text-sm font-sans font-semibold uppercase tracking-wide text-[#E85D4C]">
+                    Archived
+                  </span>
+                ) : null}
               </h2>
               <p className="text-sm text-[#0A3D45]/60">
                 {inbox === "mine"
                   ? "Tasks you’ve claimed across every folder."
                   : inbox === "review"
                     ? "Waiting on Editor+ approval across the workspace."
-                    : "Subfolders and tasks. Urgency edge rises with priority and due dates."}
+                    : folderArchived
+                      ? "Archived folder — history preserved; new tasks paused."
+                      : "Subfolders and tasks. Urgency edge rises with priority and due dates."}
               </p>
 
               {!inbox && childFolders.length > 0 ? (
@@ -441,6 +528,16 @@ export default async function WorkspacePage({
                     </li>
                   ))}
                 </ul>
+              ) : null}
+
+              {!inbox && canArchive && currentFolder && !workspaceArchived ? (
+                <ArchiveFolderControls
+                  workspaceId={workspaceId}
+                  folderId={currentFolder.id}
+                  folderName={currentFolder.name}
+                  isArchived={isArchived(currentFolder)}
+                  members={archiveMembers}
+                />
               ) : null}
 
               {!inbox && canEdit && currentFolder ? (
@@ -520,7 +617,9 @@ export default async function WorkspacePage({
                     : inbox === "review"
                       ? "No tasks waiting for review."
                       : currentFolder
-                        ? "Add a task people can claim. When they’re done, it goes to review — status moves on the task automatically."
+                        ? folderArchived
+                          ? "No tasks in this archived folder."
+                          : "Add a task people can claim. When they’re done, it goes to review — status moves on the task automatically."
                         : "Pick a folder to see tasks, or use My claimed / Needs review above."}
                 </li>
               ) : null}

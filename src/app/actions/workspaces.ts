@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { nanoid } from "nanoid";
+import {
+  archiveUpdateData,
+  parseArchiveForm,
+  unarchiveUpdateData,
+} from "@/lib/archive";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { canManagePeople, requireMembership } from "@/lib/permissions";
@@ -51,6 +56,16 @@ export async function inviteMemberAction(
     return { ok: false, error: "Only owners and admins can invite people." };
   }
 
+  const workspace = await prisma.workspace.findUniqueOrThrow({
+    where: { id: workspaceId },
+  });
+  if (workspace.archivedAt) {
+    return {
+      ok: false,
+      error: "This workspace is archived. Restore it to invite people.",
+    };
+  }
+
   const target = String(formData.get("target") ?? "").trim();
   const role = String(formData.get("role") ?? "MEMBER") as Role;
   if (!["ADMIN", "EDITOR", "MEMBER"].includes(role)) {
@@ -62,10 +77,6 @@ export async function inviteMemberAction(
   if (isEmail && !isValidEmail(target)) {
     return { ok: false, error: "That email doesn’t look valid." };
   }
-
-  const workspace = await prisma.workspace.findUniqueOrThrow({
-    where: { id: workspaceId },
-  });
 
   const invitee = isEmail
     ? await prisma.user.findFirst({
@@ -209,5 +220,66 @@ export async function declineInviteAction(
 
   revalidatePath("/app", "layout");
   revalidatePath("/app/notifications");
+  return { ok: true };
+}
+
+export async function archiveWorkspaceAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const membership = await requireMembership(workspaceId, user.id);
+  if (!canManagePeople(membership.role)) {
+    return { ok: false, error: "Only owners and admins can archive workspaces." };
+  }
+
+  const parsed = parseArchiveForm(formData);
+  if (parsed.error) return { ok: false, error: parsed.error };
+
+  const workspace = await prisma.workspace.findUniqueOrThrow({
+    where: { id: workspaceId },
+  });
+  if (workspace.archivedAt) {
+    return { ok: false, error: "This workspace is already archived." };
+  }
+
+  await prisma.workspace.update({
+    where: { id: workspaceId },
+    data: archiveUpdateData({
+      userId: user.id,
+      visibility: parsed.visibility,
+      roles: parsed.roles,
+      memberIds: parsed.memberIds,
+    }),
+  });
+
+  revalidatePath("/app");
+  revalidatePath(`/app/w/${workspaceId}`);
+  revalidatePath("/app", "layout");
+  revalidatePath("/app/calendar");
+  return { ok: true };
+}
+
+export async function unarchiveWorkspaceAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const membership = await requireMembership(workspaceId, user.id);
+  if (!canManagePeople(membership.role)) {
+    return { ok: false, error: "Only owners and admins can restore workspaces." };
+  }
+
+  await prisma.workspace.update({
+    where: { id: workspaceId },
+    data: unarchiveUpdateData(),
+  });
+
+  revalidatePath("/app");
+  revalidatePath(`/app/w/${workspaceId}`);
+  revalidatePath("/app", "layout");
+  revalidatePath("/app/calendar");
   return { ok: true };
 }

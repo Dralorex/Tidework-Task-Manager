@@ -133,6 +133,12 @@ export async function spawnNextRecurringTask(
 
 /** Create due-rollover instances for a workspace (idempotent). */
 export async function syncDueRecurrences(workspaceId: string) {
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { archivedAt: true },
+  });
+  if (!workspace || workspace.archivedAt) return;
+
   const now = new Date();
   const dueTasks = await prisma.task.findMany({
     where: {
@@ -141,6 +147,7 @@ export async function syncDueRecurrences(workspaceId: string) {
       recurrenceSpawnMode: { in: ["due", "both"] },
       dueDate: { lt: now },
       status: { in: ["OPEN", "CLAIMED", "IN_REVIEW"] },
+      folder: { archivedAt: null },
     },
   });
 

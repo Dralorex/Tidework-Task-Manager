@@ -49,12 +49,16 @@ export default async function ChatPage({
   });
 
   const adminWorkspaces = await prisma.membership.findMany({
-    where: { userId: user.id, role: { in: ["OWNER", "ADMIN"] } },
+    where: {
+      userId: user.id,
+      role: { in: ["OWNER", "ADMIN"] },
+      workspace: { archivedAt: null },
+    },
     include: { workspace: true },
   });
 
   const allWorkspaces = await prisma.membership.findMany({
-    where: { userId: user.id },
+    where: { userId: user.id, workspace: { archivedAt: null } },
     include: { workspace: true },
   });
 

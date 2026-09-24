@@ -4,6 +4,7 @@ import {
   CalendarBoard,
   type CalendarBoardEvent,
 } from "@/app/components/calendar-board";
+import { canViewArchived, isArchived } from "@/lib/archive";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { canEditContent } from "@/lib/permissions";
@@ -35,10 +36,16 @@ export default async function CalendarPage() {
   ]);
 
   const filterMap = new Map(filters.map((f) => [f.workspaceId, f.enabled]));
-  const enabledWorkspaceIds = memberships
+  const visibleMemberships = memberships.filter((m) =>
+    canViewArchived(user.id, m.role, m.workspace),
+  );
+  const activeMemberships = visibleMemberships.filter(
+    (m) => !isArchived(m.workspace),
+  );
+  const enabledWorkspaceIds = activeMemberships
     .filter((m) => filterMap.get(m.workspaceId) !== false)
     .map((m) => m.workspaceId);
-  const allWorkspaceIds = memberships.map((m) => m.workspaceId);
+  const allWorkspaceIds = activeMemberships.map((m) => m.workspaceId);
 
   const friendships = await prisma.friendship.findMany({
     where: {
@@ -97,7 +104,9 @@ export default async function CalendarPage() {
   }
 
   for (const event of workspaceEvents) {
-    const membership = memberships.find((m) => m.workspaceId === event.workspaceId);
+    const membership = activeMemberships.find(
+      (m) => m.workspaceId === event.workspaceId,
+    );
     events.push({
       id: `workspace:${event.id}`,
       recordId: event.id,
@@ -112,6 +121,9 @@ export default async function CalendarPage() {
   }
 
   for (const event of taskEvents) {
+    if (isArchived(event.task.folder) || isArchived(event.task.workspace)) {
+      continue;
+    }
     events.push({
       id: `task:${event.id}`,
       recordId: event.id,
@@ -152,7 +164,7 @@ export default async function CalendarPage() {
 
   events.sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
 
-  const workspaces = memberships.map((m) => ({
+  const workspaces = activeMemberships.map((m) => ({
     id: m.workspaceId,
     name: m.workspace.name,
     canEdit: canEditContent(m.role),

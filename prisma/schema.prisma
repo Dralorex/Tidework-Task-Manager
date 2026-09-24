@@ -118,6 +118,15 @@ model Workspace {
   ownerId   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  /** Soft-delete / archive — null means active */
+  archivedAt DateTime?
+  archivedById String?
+  /** all | roles | members — who (besides Admin+) can still open it */
+  archiveVisibility String?
+  /** CSV of Role names when visibility=roles */
+  archiveVisibilityRoles String?
+  /** CSV of user ids when visibility=members */
+  archiveVisibilityUserIds String?
 
   owner       User         @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   memberships Membership[]
@@ -130,6 +139,7 @@ model Workspace {
   calendarFilters CalendarWorkspaceFilter[]
 
   @@index([ownerId])
+  @@index([archivedAt])
 }
 
 model Membership {
@@ -173,6 +183,12 @@ model Folder {
   name        String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  archivedAt  DateTime?
+  archivedById String?
+  /** all | roles | members */
+  archiveVisibility String?
+  archiveVisibilityRoles String?
+  archiveVisibilityUserIds String?
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   parent    Folder?   @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
@@ -181,6 +197,7 @@ model Folder {
 
   @@index([workspaceId])
   @@index([parentId])
+  @@index([archivedAt])
 }
 
 model Task {

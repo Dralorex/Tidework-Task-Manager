@@ -12,6 +12,7 @@ Collaborative task management where urgency rises with due dates — nested fold
 - **Tags** — public tags (Editor+); private tags after claiming a task
 - **Search** — name relevance + tag filters in the current folder area
 - **Invites** — Owner/Admin invite by username or email
+- **Archive** — Admin+ soft-delete workspaces/folders with visibility (everyone / by role / specific people); history preserved
 - **Social** — friends; DMs (friends free; workspace DMs need accept); Admin+ group chats
 
 ## Stack

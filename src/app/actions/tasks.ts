@@ -1,12 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import {
+  archiveUpdateData,
+  isArchived,
+  parseArchiveForm,
+  unarchiveUpdateData,
+} from "@/lib/archive";
 import { requireUser } from "@/lib/auth";
 import { syncCalendarForTask } from "@/lib/calendar";
 import { prisma } from "@/lib/db";
 import {
   canCreatePublicTags,
   canEditContent,
+  canManagePeople,
   requireMembership,
 } from "@/lib/permissions";
 import { recordTaskActivity } from "@/lib/task-activity";
@@ -31,8 +38,25 @@ export async function createFolderAction(
     return { ok: false, error: "Members can’t create folders." };
   }
 
+  const workspace = await prisma.workspace.findUniqueOrThrow({
+    where: { id: workspaceId },
+  });
+  if (isArchived(workspace)) {
+    return { ok: false, error: "This workspace is archived. Restore it to add folders." };
+  }
+
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "Folder needs a name." };
+
+  if (parentId) {
+    const parent = await prisma.folder.findFirst({
+      where: { id: parentId, workspaceId },
+    });
+    if (!parent) return { ok: false, error: "Parent folder not found." };
+    if (isArchived(parent)) {
+      return { ok: false, error: "That folder is archived. Restore it first." };
+    }
+  }
 
   await prisma.folder.create({
     data: { workspaceId, parentId, name },
@@ -55,6 +79,13 @@ export async function createTaskAction(
     return { ok: false, error: "Members can’t create tasks." };
   }
 
+  const workspace = await prisma.workspace.findUniqueOrThrow({
+    where: { id: workspaceId },
+  });
+  if (isArchived(workspace)) {
+    return { ok: false, error: "This workspace is archived. Restore it to add tasks." };
+  }
+
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const priority = String(formData.get("priority") ?? "MEDIUM") as TaskPriority;
@@ -70,6 +101,9 @@ export async function createTaskAction(
     where: { id: folderId, workspaceId },
   });
   if (!folder) return { ok: false, error: "Folder not found." };
+  if (isArchived(folder)) {
+    return { ok: false, error: "That folder is archived. Restore it to add tasks." };
+  }
 
   let assignedUserId: string | null = null;
   let assignedUsername: string | null = null;
@@ -636,5 +670,109 @@ export async function addPublicTagAction(
   });
 
   revalidateWorkspace(workspaceId);
+  return { ok: true };
+}
+
+async function collectFolderDescendantIds(
+  workspaceId: string,
+  rootId: string,
+): Promise<string[]> {
+  const all = await prisma.folder.findMany({
+    where: { workspaceId },
+    select: { id: true, parentId: true },
+  });
+  const byParent = new Map<string | null, string[]>();
+  for (const f of all) {
+    const list = byParent.get(f.parentId) ?? [];
+    list.push(f.id);
+    byParent.set(f.parentId, list);
+  }
+  const ids: string[] = [];
+  const stack = [rootId];
+  while (stack.length) {
+    const id = stack.pop()!;
+    ids.push(id);
+    for (const child of byParent.get(id) ?? []) stack.push(child);
+  }
+  return ids;
+}
+
+export async function archiveFolderAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const folderId = String(formData.get("folderId") ?? "");
+  const membership = await requireMembership(workspaceId, user.id);
+  if (!canManagePeople(membership.role)) {
+    return { ok: false, error: "Only owners and admins can archive folders." };
+  }
+
+  const workspace = await prisma.workspace.findUniqueOrThrow({
+    where: { id: workspaceId },
+  });
+  if (isArchived(workspace)) {
+    return {
+      ok: false,
+      error:
+        "This workspace is already archived. Restore it first, or leave the folder as-is.",
+    };
+  }
+
+  const folder = await prisma.folder.findFirst({
+    where: { id: folderId, workspaceId },
+  });
+  if (!folder) return { ok: false, error: "Folder not found." };
+  if (isArchived(folder)) {
+    return { ok: false, error: "This folder is already archived." };
+  }
+
+  const parsed = parseArchiveForm(formData);
+  if (parsed.error) return { ok: false, error: parsed.error };
+
+  const ids = await collectFolderDescendantIds(workspaceId, folderId);
+  const data = archiveUpdateData({
+    userId: user.id,
+    visibility: parsed.visibility,
+    roles: parsed.roles,
+    memberIds: parsed.memberIds,
+  });
+
+  await prisma.folder.updateMany({
+    where: { id: { in: ids }, workspaceId },
+    data,
+  });
+
+  revalidateWorkspace(workspaceId);
+  revalidatePath("/app/calendar");
+  return { ok: true };
+}
+
+export async function unarchiveFolderAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const folderId = String(formData.get("folderId") ?? "");
+  const membership = await requireMembership(workspaceId, user.id);
+  if (!canManagePeople(membership.role)) {
+    return { ok: false, error: "Only owners and admins can restore folders." };
+  }
+
+  const folder = await prisma.folder.findFirst({
+    where: { id: folderId, workspaceId },
+  });
+  if (!folder) return { ok: false, error: "Folder not found." };
+
+  const ids = await collectFolderDescendantIds(workspaceId, folderId);
+  await prisma.folder.updateMany({
+    where: { id: { in: ids }, workspaceId },
+    data: unarchiveUpdateData(),
+  });
+
+  revalidateWorkspace(workspaceId);
+  revalidatePath("/app/calendar");
   return { ok: true };
 }
