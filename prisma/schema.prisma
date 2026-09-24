@@ -54,6 +54,9 @@ model User {
   username     String   @unique
   passwordHash String
   email        String?  @unique
+  /** Month-day birthday (year ignored). UTC noon on that month/day. */
+  birthday     DateTime?
+  showBirthdaysOnCalendar Boolean @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -66,6 +69,9 @@ model User {
   createdTasks          Task[]               @relation("TaskCreator")
   privateTags           Tag[]                @relation("TagCreator")
   calendarEvents        CalendarEvent[]
+  personalCalendarEvents PersonalCalendarEvent[]
+  workspaceEventsCreated WorkspaceCalendarEvent[] @relation("WorkspaceEventCreator")
+  calendarWorkspaceFilters CalendarWorkspaceFilter[]
   friendshipsRequested  Friendship[]         @relation("FriendshipRequester")
   friendshipsReceived   Friendship[]         @relation("FriendshipAddressee")
   chatMemberships       ChatMember[]
@@ -113,6 +119,8 @@ model Workspace {
   tasks       Task[]
   tags        Tag[]
   chatGroups  ChatGroup[]
+  calendarEvents WorkspaceCalendarEvent[]
+  calendarFilters CalendarWorkspaceFilter[]
 
   @@index([ownerId])
 }
@@ -267,6 +275,50 @@ model CalendarEvent {
 
   @@unique([userId, taskId])
   @@index([userId, dueDate])
+}
+
+/** Freeform events on a user’s private calendar. */
+model PersonalCalendarEvent {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String   @default("")
+  date        DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+/** Freeform events on a workspace calendar (Editor+ can create). */
+model WorkspaceCalendarEvent {
+  id          String   @id @default(cuid())
+  workspaceId String
+  createdById String
+  title       String
+  description String   @default("")
+  date        DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation("WorkspaceEventCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, date])
+}
+
+/** Which workspaces’ claimed tasks appear on the personal calendar. */
+model CalendarWorkspaceFilter {
+  userId      String
+  workspaceId String
+  enabled     Boolean @default(true)
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@id([userId, workspaceId])
 }
 
 model Friendship {
