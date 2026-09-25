@@ -38,7 +38,7 @@ type Assignable = { id: string; username: string };
 
 function blinkClass(on: boolean) {
   return on
-    ? "animate-tide-blink-empty ring-2 ring-[#3b82f6]/45 ring-offset-1"
+    ? "animate-tide-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
     : "";
 }
 

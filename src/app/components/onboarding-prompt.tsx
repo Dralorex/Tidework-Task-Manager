@@ -76,7 +76,7 @@ export function OnboardingPrompt({
 
 export function blinkRing(active: boolean) {
   return active
-    ? "animate-tide-blink-empty ring-2 ring-[#3b82f6]/50 ring-offset-2 ring-offset-white/40"
+    ? "animate-tide-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
     : "";
 }
 

@@ -74,7 +74,7 @@ export function WorkspaceCollapsible({
         </span>
         {/* Clickable empty stretch — onboarding can blink this */}
         <span
-          className={`min-h-8 min-w-[2.5rem] flex-1 self-stretch rounded-lg ${
+          className={`tide-blink-surface min-h-8 min-w-[2.5rem] flex-1 self-stretch rounded-lg ${
             blinkEmpty ? "animate-tide-blink-empty" : ""
           }`}
           aria-hidden

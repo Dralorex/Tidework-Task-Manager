@@ -4,7 +4,8 @@ import { useEffect } from "react";
 import { useWorkspaceOnboarding } from "@/app/components/workspace-onboarding-context";
 
 /**
- * On phone, keep the current onboarding blink target in view under the sticky nav.
+ * On phone, keep the current onboarding blink target centered in view
+ * (accounting for the sticky nav).
  */
 export function OnboardingScrollToBlink() {
   const { active, step } = useWorkspaceOnboarding();
@@ -45,11 +46,17 @@ export function OnboardingScrollToBlink() {
     const t = window.setTimeout(() => {
       const el = document.querySelector(sel);
       if (!(el instanceof HTMLElement)) return;
+
       const nav = document.querySelector("header");
-      const offset = (nav?.getBoundingClientRect().height ?? 56) + 12;
-      const top = el.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
-    }, 120);
+      const navH = nav?.getBoundingClientRect().height ?? 56;
+      const rect = el.getBoundingClientRect();
+      const available = Math.max(120, window.innerHeight - navH);
+      const elCenter = rect.top + rect.height / 2;
+      const viewCenter = navH + available / 2;
+      const delta = elCenter - viewCenter;
+      if (Math.abs(delta) < 8) return;
+      window.scrollBy({ top: delta, behavior: "smooth" });
+    }, 140);
 
     return () => window.clearTimeout(t);
   }, [active, step]);

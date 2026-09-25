@@ -149,7 +149,7 @@ export function DueDateField({
       <div
         className={`relative min-w-0 overflow-hidden rounded-[0.85rem] ${
           blink
-            ? "animate-tide-blink-empty ring-2 ring-[#3b82f6]/45 ring-offset-1"
+            ? "animate-tide-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
             : ""
         }`}
         onClick={(e) => {
@@ -201,7 +201,7 @@ export function DueDateField({
           type="button"
           className={`rounded-full border border-[#0A3D45]/15 bg-white/70 px-2.5 py-1 text-xs font-semibold text-[#0A3D45]/75 hover:bg-white ${
             blinkReset
-              ? "animate-tide-blink-empty ring-2 ring-[#3b82f6]/45"
+              ? "animate-tide-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
               : ""
           }`}
           onClick={() => {
@@ -215,7 +215,7 @@ export function DueDateField({
           type="button"
           className={`rounded-full border border-[#0A3D45]/15 bg-white/70 px-2.5 py-1 text-xs font-semibold text-[#0A3D45]/75 hover:bg-white ${
             blinkClear
-              ? "animate-tide-blink-empty ring-2 ring-[#3b82f6]/45"
+              ? "animate-tide-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
               : ""
           }`}
           onClick={() => {

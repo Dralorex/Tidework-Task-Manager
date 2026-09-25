@@ -50,7 +50,7 @@ export function FolderBubble({
           : "border-[#0A3D45]/10 bg-[#0A3D45]/[0.02] hover:border-[#0A3D45]/20 hover:bg-[#0A3D45]/[0.05]"
       } ${
         blink && !locked
-          ? "animate-tide-blink-empty ring-2 ring-[#3b82f6]/45 ring-offset-2"
+          ? "animate-tide-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
           : ""
       }`}
     >
