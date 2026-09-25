@@ -231,7 +231,7 @@ export function DueDateField({
       {sheetOpen && typeof document !== "undefined"
         ? createPortal(
             <div
-              className="fixed inset-0 z-[80] flex flex-col justify-end bg-[#0A3D45]/45 sm:items-center sm:justify-center sm:p-4"
+              className="fixed inset-0 z-[80] flex flex-col justify-end bg-[#0A3D45]/55 sm:items-center sm:justify-center sm:bg-[#0A3D45]/45 sm:p-4"
               role="presentation"
               onClick={() => setOpen(false)}
             >
@@ -239,7 +239,11 @@ export function DueDateField({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={titleId}
-                className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-[#F3FBFA] shadow-2xl sm:max-w-md sm:rounded-2xl"
+                className={`flex w-full flex-col overflow-hidden bg-[#F3FBFA] shadow-2xl sm:max-w-md sm:rounded-2xl ${
+                  sheetPrompt
+                    ? "h-[min(100dvh,100%)] max-h-[100dvh] rounded-none sm:h-auto sm:max-h-[92dvh] sm:rounded-2xl"
+                    : "max-h-[92dvh] rounded-t-2xl sm:rounded-2xl"
+                }`}
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between gap-3 border-b border-[#0A3D45]/10 px-4 py-3">
