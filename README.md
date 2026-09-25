@@ -23,12 +23,13 @@ Collaborative task management where urgency rises with due dates — nested fold
 
 ## Stack
 
-Next.js (App Router) · Prisma · SQLite · bcrypt sessions · Tailwind CSS
+Next.js (App Router) · Prisma · Neon Postgres · bcrypt sessions · Tailwind CSS
 
 ## Setup
 
 ```bash
 cp .env.example .env
+# Set rowgon_storage_DATABASE_URL (or DATABASE_URL) to your Neon Postgres URL
 npm install
 npx prisma db push
 npm run dev
@@ -42,9 +43,10 @@ Open [http://localhost:3000](http://localhost:3000).
 |---------|-------------|
 | `npm run dev` | Dev server |
 | `npm run build` | Production build |
+| `npm run vercel-build` | Vercel: check DB env → `prisma db push` → build |
 | `npm run start` | Start production server |
-| `npm run test:e2e` | Playwright e2e (calendar DnD) |
-| `npx prisma db push` | Sync schema to SQLite |
+| `npm run test:e2e` | Playwright e2e (calendar DnD; needs Postgres URL) |
+| `npx prisma db push` | Sync schema to Postgres |
 | `npx prisma studio` | Browse data |
 
 ## Roles

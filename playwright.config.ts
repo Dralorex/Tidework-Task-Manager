@@ -20,10 +20,11 @@ export default defineConfig({
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
-    env: {
-      ...process.env,
-      DATABASE_URL: process.env.DATABASE_URL ?? "file:./prisma/dev.db",
-    },
+    env: Object.fromEntries(
+      Object.entries(process.env).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined,
+      ),
+    ),
   },
   projects: [
     {

@@ -1,11 +1,11 @@
+import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "@/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { getDatabaseUrl } from "@/lib/db-url";
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
 
 function createPrismaClient() {
-  const url = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
-  const adapter = new PrismaBetterSqlite3({ url });
+  const adapter = new PrismaNeon({ connectionString: getDatabaseUrl() });
   return new PrismaClient({ adapter });
 }
 

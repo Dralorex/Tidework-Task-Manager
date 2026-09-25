@@ -1,10 +1,11 @@
-import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaNeon } from "@prisma/adapter-neon";
 import bcrypt from "bcryptjs";
+import { PrismaClient } from "../src/generated/prisma/client";
+import { getDatabaseUrl } from "../src/lib/db-url";
 
 async function main() {
   const prisma = new PrismaClient({
-    adapter: new PrismaBetterSqlite3({ url: "file:./prisma/dev.db" }),
+    adapter: new PrismaNeon({ connectionString: getDatabaseUrl() }),
   });
   const passwordHash = await bcrypt.hash("password123", 10);
   const user = await prisma.user.upsert({

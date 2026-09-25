@@ -19,7 +19,6 @@ function runTsx(script: string, args: string[] = []): string {
       encoding: "utf8",
       env: {
         ...process.env,
-        DATABASE_URL: process.env.DATABASE_URL ?? "file:./prisma/dev.db",
       },
     },
   ).trim();

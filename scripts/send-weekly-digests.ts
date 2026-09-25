@@ -1,10 +1,11 @@
 #!/usr/bin/env npx tsx
 /**
  * Cron-friendly weekly digest sender.
- * Example: DATABASE_URL=file:./prisma/dev.db npx tsx scripts/send-weekly-digests.ts
+ * Example: npx tsx scripts/send-weekly-digests.ts
  */
+import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { getDatabaseUrl } from "../src/lib/db-url";
 import { sendEmail } from "../src/lib/mail";
 import {
   buildWeeklyDigest,
@@ -12,9 +13,8 @@ import {
 } from "../src/lib/weekly-digest";
 
 async function main() {
-  const url = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
   const prisma = new PrismaClient({
-    adapter: new PrismaBetterSqlite3({ url }),
+    adapter: new PrismaNeon({ connectionString: getDatabaseUrl() }),
   });
 
   const users = await prisma.user.findMany({
