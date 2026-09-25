@@ -263,7 +263,7 @@ export function DueDateField({
                 </div>
 
                 {sheetPrompt ? (
-                  <div className="border-b border-[#3b82f6]/25 bg-[#3b82f6]/12 px-4 py-3">
+                  <div className="border-b border-[#93c5fd] bg-[#E8F1FF] px-4 py-3">
                     {sheetPrompt}
                   </div>
                 ) : null}

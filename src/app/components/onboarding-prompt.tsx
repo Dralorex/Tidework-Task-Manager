@@ -52,7 +52,7 @@ export function OnboardingPrompt({
   const card = (
     <div
       role="status"
-      className={`rounded-xl border border-[#3b82f6]/35 bg-[#3b82f6]/10 px-3 py-3 text-sm text-[#0A3D45] shadow-sm ${
+      className={`rounded-xl border border-[#93c5fd] bg-[#E8F1FF] px-3 py-3 text-sm text-[#0A3D45] shadow-md ${
         layer === "foreground" ? "" : "mt-3"
       }`}
     >
@@ -63,7 +63,9 @@ export function OnboardingPrompt({
   if (layer === "foreground" && mounted && typeof document !== "undefined") {
     return createPortal(
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[90] flex justify-center p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:bottom-4">
-        <div className="pointer-events-auto w-full max-w-lg shadow-lg">{card}</div>
+        <div className="pointer-events-auto w-full max-w-lg rounded-xl bg-[#E8F1FF] shadow-lg">
+          {card}
+        </div>
       </div>,
       document.body,
     );
