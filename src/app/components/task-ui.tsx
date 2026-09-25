@@ -28,9 +28,13 @@ export function TaskUrgencyEdge({
 export function PriorityBadge({ priority }: { priority: TaskPriority }) {
   const labels: Record<TaskPriority, string> = {
     CRITICAL: "Critical",
+    URGENT: "Urgent",
     HIGH: "High",
+    ELEVATED: "Elevated",
     MEDIUM: "Medium",
+    NORMAL: "Normal",
     LOW: "Low",
+    MINIMAL: "Minimal",
   };
   return (
     <span className="rounded-md bg-[#0A3D45]/8 px-2 py-0.5 text-xs font-medium text-[#0A3D45]">

@@ -120,7 +120,7 @@ export async function resetPasswordAction(
     return { ok: false, error: "Password must be at least 8 characters." };
   }
 
-  const record = await prisma.passwordResetToken.findUnique({ where: { token } });
+  const record = await prisma.passwordResetToken.findFirst({ where: { token } });
   if (!record || record.expiresAt < new Date()) {
     return { ok: false, error: "This reset link is invalid or expired." };
   }

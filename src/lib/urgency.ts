@@ -4,9 +4,13 @@ import type { TaskPriority } from "@/generated/prisma/client";
 
 const PRIORITY_WEIGHT: Record<TaskPriority, number> = {
   CRITICAL: 4,
+  URGENT: 4,
   HIGH: 3,
+  ELEVATED: 3,
   MEDIUM: 2,
+  NORMAL: 2,
   LOW: 1,
+  MINIMAL: 1,
 };
 
 export function duePressure(dueDate: Date | null | undefined, now = new Date()): number {
