@@ -13,6 +13,10 @@ const PRIORITY_WEIGHT: Record<TaskPriority, number> = {
   MINIMAL: 1,
 };
 
+export function isTaskPriority(value: string): value is TaskPriority {
+  return value in PRIORITY_WEIGHT;
+}
+
 export function duePressure(dueDate: Date | null | undefined, now = new Date()): number {
   if (!dueDate) return 0;
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
