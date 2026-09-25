@@ -15,6 +15,7 @@ export function WorkspaceSetupChecklist({
   canInvite,
   canEdit,
   firstFolderId,
+  inFolder,
 }: {
   workspaceId: string;
   /** From ?setup=1 after first workspace create */
@@ -25,6 +26,8 @@ export function WorkspaceSetupChecklist({
   canInvite: boolean;
   canEdit: boolean;
   firstFolderId: string | null;
+  /** True when viewing a specific folder (Add Task is available). */
+  inFolder: boolean;
 }) {
   const [visible, setVisible] = useState(false);
 
@@ -46,8 +49,9 @@ export function WorkspaceSetupChecklist({
       setVisible(false);
       return;
     }
-    // After first create, or while creator still has no folders
-    setVisible(forceShow || !hasFolder);
+    // Show while setup is incomplete (forceShow after first create, or
+    // still missing a folder/task).
+    setVisible(forceShow || !hasFolder || !hasTask);
   }, [workspaceId, forceShow, hasFolder, hasTask, canEdit]);
 
   function dismiss() {
@@ -65,12 +69,12 @@ export function WorkspaceSetupChecklist({
     {
       done: hasFolder,
       label: "Create a folder",
-      hint: "Topic bucket, e.g. General — or use Templates in the sidebar",
+      hint: "Open the Folders section below — try “General”, or use Templates inside it",
     },
     {
       done: hasTask,
       label: "Add a task",
-      hint: "Something people can claim, then send for review",
+      hint: "Open a folder, then open the Add Task dropdown",
     },
     ...(canInvite
       ? [
@@ -130,11 +134,28 @@ export function WorkspaceSetupChecklist({
           </li>
         ))}
       </ol>
+
+      <div className="mt-4 rounded-xl border border-[#3b82f6]/25 bg-[#3b82f6]/[0.06] px-3 py-3 text-sm text-[#0A3D45]/80">
+        <p className="font-medium text-[#0A3D45]">Tip: open a dropdown</p>
+        <p className="mt-1 text-[#0A3D45]/70">
+          Click the <span className="font-semibold">▸</span> arrow{" "}
+          <span className="font-medium">or any empty space</span> on the
+          section header (the blue-blinking bar) to open or close it.
+        </p>
+      </div>
+
       {!hasFolder ? (
         <p className="mt-4 text-xs text-[#0A3D45]/55">
-          Use <span className="font-medium">New folder</span> in the sidebar — try “General”.
+          Use{" "}
+          <a
+            href="#workspace-folders"
+            className="font-medium underline underline-offset-2"
+          >
+            Folders
+          </a>{" "}
+          below — try “General”.
         </p>
-      ) : !hasTask && firstFolderId ? (
+      ) : !hasTask && firstFolderId && !inFolder ? (
         <p className="mt-4 text-xs text-[#0A3D45]/55">
           Open{" "}
           <Link
@@ -143,7 +164,18 @@ export function WorkspaceSetupChecklist({
           >
             your folder
           </Link>
-          , then use Add task.
+          , then expand <span className="font-medium">Add Task</span>.
+        </p>
+      ) : !hasTask && inFolder ? (
+        <p className="mt-4 text-xs text-[#0A3D45]/55">
+          Expand{" "}
+          <a
+            href="#workspace-add-task"
+            className="font-medium underline underline-offset-2"
+          >
+            Add Task
+          </a>{" "}
+          below (starts closed) — click the arrow or the blinking bar.
         </p>
       ) : null}
     </div>

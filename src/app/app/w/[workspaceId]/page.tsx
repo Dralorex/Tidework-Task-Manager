@@ -9,6 +9,7 @@ import { FolderActions } from "@/app/components/folder-actions";
 import { FolderBubble } from "@/app/components/folder-bubble";
 import { CreateFolderForm } from "@/app/components/create-folder-form";
 import { FolderTemplatesPanel } from "@/app/components/folder-templates-panel";
+import { WorkspaceCollapsible } from "@/app/components/workspace-collapsible";
 import { WorkspaceTaskList } from "@/app/components/workspace-task-list";
 import { WorkspacePulseStrip } from "@/app/components/workspace-pulse-strip";
 import { WorkspaceSetupChecklist } from "@/app/components/workspace-setup-checklist";
@@ -647,6 +648,7 @@ export default async function WorkspacePage({
         canInvite={canInvite}
         canEdit={canEditBase && !workspaceArchived}
         firstFolderId={firstFolderId}
+        inFolder={Boolean(currentFolder)}
       />
 
       <WorkspacePulseStrip
@@ -673,49 +675,6 @@ export default async function WorkspacePage({
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[240px_1fr]">
         <aside className={`space-y-4 ${inbox ? "hidden lg:block" : ""}`}>
-          <div className="tide-panel p-4">
-            <ChatSidebarSection
-              title="Add Folders"
-              description="Create a folder here. Browse folders from the main panel."
-            >
-              {canEdit && !workspaceArchived ? (
-                <CreateFolderForm
-                  workspaceId={workspaceId}
-                  parentId={
-                    currentFolder && !isArchived(currentFolder)
-                      ? currentFolder.id
-                      : null
-                  }
-                  parentName={
-                    currentFolder && !isArchived(currentFolder)
-                      ? currentFolder.name
-                      : null
-                  }
-                  roleNames={roleOptions.map((r) => r.name)}
-                  canSetAccess={canManageRoles}
-                />
-              ) : (
-                <p className="text-xs text-[color:var(--tide-deep)]/55">
-                  {workspaceArchived
-                    ? "Archived workspaces can’t add folders."
-                    : "Editors and above can add folders."}
-                </p>
-              )}
-            </ChatSidebarSection>
-
-            {!workspaceArchived ? (
-              <FolderTemplatesPanel
-                workspaceId={workspaceId}
-                parentId={templateParentFolder?.id ?? null}
-                currentFolderId={templateParentFolder?.id ?? null}
-                currentFolderName={templateParentFolder?.name ?? null}
-                canEdit={canEditBase}
-                canSave={canArchive}
-                savedTemplates={savedTemplates}
-              />
-            ) : null}
-          </div>
-
           {canInvite ? (
             <div className="tide-panel p-4">
               <ChatSidebarSection
@@ -848,31 +807,109 @@ export default async function WorkspacePage({
                 members={archiveMembers}
               />
             ) : null}
+          </div>
 
-            {!inbox && childFolders.length > 0 ? (
-              <ul className="mt-4 space-y-2">
-                {childFolders.map((f) => (
-                  <li key={f.id}>
-                    <FolderBubble
-                      workspaceId={workspaceId}
-                      folderId={f.id}
-                      name={f.name}
-                      locked={f.locked}
-                      restricted={f.requiredRoleIds.length > 0}
-                      done={folderDoneCounts.get(f.id) ?? 0}
-                      total={folderTotalCounts.get(f.id) ?? 0}
-                      unclaimed={folderCounts.get(f.id) ?? 0}
-                      showActions={canEdit && f.canAccess}
-                      folderActions={folderActionsProps(f.id, f.name)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            ) : null}
+          {!inbox ? (
+            <WorkspaceCollapsible
+              id="workspace-folders"
+              title="Folders"
+              description={
+                currentFolder
+                  ? `Subfolders under “${currentFolder.name}”. Browse here; create nested folders below.`
+                  : "Browse workspace folders here. Create a folder or apply a template below."
+              }
+              defaultOpen
+              blinkEmpty={
+                canEditBase &&
+                !workspaceArchived &&
+                (activeFolders.length === 0 ||
+                  (taskCount === 0 && !currentFolder))
+              }
+            >
+              {childFolders.length > 0 ? (
+                <ul className="space-y-2">
+                  {childFolders.map((f) => (
+                    <li key={f.id}>
+                      <FolderBubble
+                        workspaceId={workspaceId}
+                        folderId={f.id}
+                        name={f.name}
+                        locked={f.locked}
+                        restricted={f.requiredRoleIds.length > 0}
+                        done={folderDoneCounts.get(f.id) ?? 0}
+                        total={folderTotalCounts.get(f.id) ?? 0}
+                        unclaimed={folderCounts.get(f.id) ?? 0}
+                        showActions={canEdit && f.canAccess}
+                        folderActions={folderActionsProps(f.id, f.name)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-[#0A3D45]/55">
+                  {currentFolder
+                    ? "No subfolders yet."
+                    : "No folders yet — create one below to start organizing tasks."}
+                </p>
+              )}
 
-            {!inbox && canEdit && currentFolder ? (
+              {canEdit && !workspaceArchived ? (
+                <div className="mt-5 space-y-4 border-t border-[#0A3D45]/10 pt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#0A3D45]/45">
+                    New folder
+                  </p>
+                  <CreateFolderForm
+                    workspaceId={workspaceId}
+                    parentId={
+                      currentFolder && !isArchived(currentFolder)
+                        ? currentFolder.id
+                        : null
+                    }
+                    parentName={
+                      currentFolder && !isArchived(currentFolder)
+                        ? currentFolder.name
+                        : null
+                    }
+                    roleNames={roleOptions.map((r) => r.name)}
+                    canSetAccess={canManageRoles}
+                  />
+                  <FolderTemplatesPanel
+                    workspaceId={workspaceId}
+                    parentId={templateParentFolder?.id ?? null}
+                    currentFolderId={templateParentFolder?.id ?? null}
+                    currentFolderName={templateParentFolder?.name ?? null}
+                    canEdit={canEditBase}
+                    canSave={canArchive}
+                    savedTemplates={savedTemplates}
+                  />
+                </div>
+              ) : workspaceArchived ? (
+                <p className="mt-4 text-xs text-[#0A3D45]/55">
+                  Archived workspaces can’t add folders.
+                </p>
+              ) : (
+                <p className="mt-4 text-xs text-[#0A3D45]/55">
+                  Editors and above can add folders.
+                </p>
+              )}
+            </WorkspaceCollapsible>
+          ) : null}
+
+          {!inbox && canEdit && currentFolder ? (
+            <WorkspaceCollapsible
+              id="workspace-add-task"
+              title="Add Task"
+              description="Create a claimable task in this folder. Starts closed so the task list stays front and center."
+              defaultOpen={false}
+              blinkEmpty={
+                canEditBase &&
+                !workspaceArchived &&
+                activeFolders.length > 0 &&
+                taskCount === 0
+              }
+            >
               <InlineActionForm
-                className="mt-5 grid gap-2 sm:grid-cols-2"
+                className="grid gap-2 sm:grid-cols-2"
                 action={createTaskAction}
                 submitLabel="Add task"
               >
@@ -916,15 +953,14 @@ export default async function WorkspacePage({
                 </div>
                 <RecurrenceFields />
               </InlineActionForm>
-            ) : null}
+            </WorkspaceCollapsible>
+          ) : null}
 
-            {!inbox && isRoot && canEdit ? (
-              <p className="mt-4 text-sm text-[#0A3D45]/65">
-                Open a folder to add tasks. All Tasks lists everything by
-                urgency.
-              </p>
-            ) : null}
-          </div>
+          {!inbox && isRoot && canEdit ? (
+            <p className="text-sm text-[#0A3D45]/65">
+              Open a folder to add tasks. All Tasks lists everything by urgency.
+            </p>
+          ) : null}
 
           <WorkspaceTaskList
             workspaceId={workspaceId}
