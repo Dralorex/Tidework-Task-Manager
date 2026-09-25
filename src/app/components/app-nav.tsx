@@ -72,14 +72,22 @@ function activeKey(pathname: string): NavKey {
 export function AppNav({
   username,
   unreadCount = 0,
+  chatUnreadCount = 0,
 }: {
   username: string;
   /** @deprecated active is derived from the path */
   active?: NavKey;
   unreadCount?: number;
+  chatUnreadCount?: number;
 }) {
   const pathname = usePathname() ?? "/app";
   const active = activeKey(pathname);
+
+  function badgeCount(key: NavKey) {
+    if (key === "chat") return chatUnreadCount;
+    if (key === "notifications") return unreadCount;
+    return 0;
+  }
 
   return (
     <header className="sticky top-0 z-20 border-b border-[#0A3D45]/10 bg-[#E8F7F6]/85 backdrop-blur-md">
@@ -113,8 +121,7 @@ export function AppNav({
         >
           {TABS.map((tab) => {
             const isActive = active === tab.key;
-            const count =
-              tab.key === "notifications" && unreadCount > 0 ? unreadCount : 0;
+            const count = badgeCount(tab.key);
             return (
               <Link
                 key={tab.key}
@@ -148,8 +155,7 @@ export function AppNav({
         <nav className="flex flex-wrap items-center gap-1">
           {TABS.map((tab) => {
             const isActive = active === tab.key;
-            const count =
-              tab.key === "notifications" && unreadCount > 0 ? unreadCount : 0;
+            const count = badgeCount(tab.key);
             return (
               <Link
                 key={tab.key}
