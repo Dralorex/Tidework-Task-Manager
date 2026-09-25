@@ -21,7 +21,13 @@ export function WorkspaceSetupChecklist({
   firstFolderId: string | null;
   inFolder: boolean;
 }) {
-  const { active, step, dismiss } = useWorkspaceOnboarding();
+  const {
+    active,
+    track,
+    step,
+    skipSection,
+    completeOnboarding,
+  } = useWorkspaceOnboarding();
 
   if (!active) return null;
 
@@ -29,7 +35,10 @@ export function WorkspaceSetupChecklist({
     {
       done: hasFolder,
       label: "Create a folder",
-      hint: "Open Folders below (click ▸ or the blinking bar), then add “General” or use a template",
+      hint:
+        track === "short"
+          ? "Open Folders, name it, and add it"
+          : "Open Folders, then follow the blinking fields through Add folder",
     },
     {
       done: hasFolder && inFolder,
@@ -39,7 +48,10 @@ export function WorkspaceSetupChecklist({
     {
       done: hasTask,
       label: "Add a task",
-      hint: "Expand Add Task and follow the guided highlights",
+      hint:
+        track === "short"
+          ? "Open Add Task, type a name, and submit"
+          : "Expand Add Task and follow the guided highlights",
     },
     ...(canInvite
       ? [
@@ -57,19 +69,30 @@ export function WorkspaceSetupChecklist({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
-            Get your workspace going
+            {track === "short" ? "Quick start" : "Get your workspace going"}
           </h2>
           <p className="mt-1 text-sm text-[#0A3D45]/70">
-            One folder, one task, and you’re in the claim → review loop.
+            {track === "short"
+              ? "A few blinks — folder, open it, add a task."
+              : "One folder, one task, and you’re in the claim → review loop."}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={dismiss}
-          className="text-sm text-[#0A3D45]/55 hover:text-[#0A3D45] hover:underline"
-        >
-          Dismiss
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={skipSection}
+            className="text-sm font-medium text-[#1a7a82] underline-offset-2 hover:underline"
+          >
+            Skip this part
+          </button>
+          <button
+            type="button"
+            onClick={completeOnboarding}
+            className="text-sm text-[#0A3D45]/55 hover:text-[#0A3D45] hover:underline"
+          >
+            I’ve already done onboarding
+          </button>
+        </div>
       </div>
       <ol className="mt-4 space-y-3">
         {steps.map((s) => (
@@ -103,7 +126,42 @@ export function WorkspaceSetupChecklist({
       {step === "create-folder" ? (
         <OnboardingPrompt
           title="Tip: open a dropdown"
-          body="Click the ▸ arrow or any empty space on the Folders header (the blue-blinking bar) to open it, then create a folder."
+          body="Click the ▸ arrow or any empty space on the Folders header (the blue-blinking bar) to open it."
+        />
+      ) : null}
+
+      {step === "folder-name" ? (
+        <OnboardingPrompt
+          title="Name your folder"
+          body="The Folder Name field is blinking — click it and type something like “General”, then follow the next highlights."
+        />
+      ) : null}
+
+      {step === "folder-roles" ? (
+        <OnboardingPrompt
+          title="Who can see this folder?"
+          body="Roles is optional — leave empty for everyone, or pick roles to restrict access. Click the field (or skip past it) to continue."
+        />
+      ) : null}
+
+      {step === "folder-hide" ? (
+        <OnboardingPrompt
+          title="Hide from unauthorized"
+          body="Optional: hide locked folders from people without access. Toggle it or click past to keep going."
+        />
+      ) : null}
+
+      {step === "folder-always" ? (
+        <OnboardingPrompt
+          title="Always show"
+          body="Optional: keep the folder visible even when restricted. Then hit Add folder."
+        />
+      ) : null}
+
+      {step === "folder-submit" ? (
+        <OnboardingPrompt
+          title="Add the folder"
+          body="The Add folder button is blinking — click it to create your first folder."
         />
       ) : null}
 

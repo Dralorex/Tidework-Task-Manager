@@ -28,7 +28,7 @@ export function CreateFolderForm({
       <input
         name="name"
         required
-        placeholder="Folder name"
+        placeholder="Folder Name"
         className="tide-input text-sm"
       />
       {parentName ? (

@@ -14,13 +14,25 @@ import {
   deriveOnboardingStep,
   isSetupDismissed,
   parseStoredStep,
+  readOnboardingPreference,
+  skipToNextSection,
+  writeOnboardingPreference,
+  type OnboardingPreference,
+  type OnboardingTrack,
   type WorkspaceOnboardingStep,
 } from "@/lib/workspace-onboarding";
 
 type Ctx = {
   active: boolean;
+  /** Waiting for user to pick full / short / decline. */
+  needsChooser: boolean;
+  track: OnboardingTrack | null;
   step: WorkspaceOnboardingStep;
   setStep: (step: WorkspaceOnboardingStep) => void;
+  chooseTrack: (track: OnboardingTrack) => void;
+  decline: (kind: "hard" | "soft") => void;
+  skipSection: () => void;
+  completeOnboarding: () => void;
   dismiss: () => void;
   blink: (target: string) => boolean;
 };
@@ -44,41 +56,74 @@ export function WorkspaceOnboardingProvider({
   canEdit: boolean;
   children: React.ReactNode;
 }) {
-  const [dismissed, setDismissed] = useState(false);
+  const [pref, setPref] = useState<OnboardingPreference>({ status: "unset" });
   const [step, setStepState] = useState<WorkspaceOnboardingStep>("create-folder");
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const wasDismissed = isSetupDismissed(workspaceId);
-    setDismissed(wasDismissed);
-    let stored: WorkspaceOnboardingStep | null = null;
+    const storedPref = readOnboardingPreference();
+    // Migrate legacy per-workspace dismiss → completed/declined
+    if (storedPref.status === "unset" && isSetupDismissed(workspaceId)) {
+      const migrated: OnboardingPreference = {
+        status: "completed",
+        declineKind: "soft",
+      };
+      writeOnboardingPreference(migrated);
+      setPref(migrated);
+    } else {
+      setPref(storedPref);
+    }
+
+    let storedStep: WorkspaceOnboardingStep | null = null;
     try {
-      stored = parseStoredStep(
+      storedStep = parseStoredStep(
         localStorage.getItem(ONBOARDING_STEP_KEY(workspaceId)),
       );
     } catch {
       /* ignore */
     }
+
+    const track: OnboardingTrack =
+      storedPref.status === "short" ? "short" : "full";
     const next = deriveOnboardingStep({
       hasFolder,
       hasTask,
       inFolder,
-      stored,
+      stored: storedStep,
+      track,
     });
     setStepState(next);
     setReady(true);
   }, [workspaceId, hasFolder, hasTask, inFolder]);
 
-  // Keep step coherent when server props change (folder created, navigated in)
   useEffect(() => {
     if (!ready) return;
+    if (pref.status !== "full" && pref.status !== "short") return;
+
     setStepState((prev) => {
       if (hasTask) return "done";
-      if (!hasFolder) return "create-folder";
+      if (!hasFolder) {
+        // Stay inside folder-create micro-steps
+        if (
+          prev === "folder-name" ||
+          prev === "folder-roles" ||
+          prev === "folder-hide" ||
+          prev === "folder-always" ||
+          prev === "folder-submit" ||
+          prev === "create-folder"
+        ) {
+          return prev;
+        }
+        return "create-folder";
+      }
       if (!inFolder) {
-        // Don't regress past open-folder if they somehow leave mid-form
         if (
           prev === "create-folder" ||
+          prev === "folder-name" ||
+          prev === "folder-roles" ||
+          prev === "folder-hide" ||
+          prev === "folder-always" ||
+          prev === "folder-submit" ||
           prev === "open-folder" ||
           prev === "done"
         ) {
@@ -86,12 +131,20 @@ export function WorkspaceOnboardingProvider({
         }
         return "open-folder";
       }
-      if (prev === "create-folder" || prev === "open-folder") {
+      if (
+        prev === "create-folder" ||
+        prev === "folder-name" ||
+        prev === "folder-roles" ||
+        prev === "folder-hide" ||
+        prev === "folder-always" ||
+        prev === "folder-submit" ||
+        prev === "open-folder"
+      ) {
         return "open-add-task";
       }
       return prev;
     });
-  }, [ready, hasFolder, hasTask, inFolder]);
+  }, [ready, hasFolder, hasTask, inFolder, pref.status]);
 
   const setStep = useCallback(
     (next: WorkspaceOnboardingStep) => {
@@ -105,29 +158,120 @@ export function WorkspaceOnboardingProvider({
     [workspaceId],
   );
 
-  const dismiss = useCallback(() => {
+  const chooseTrack = useCallback(
+    (track: OnboardingTrack) => {
+      const next: OnboardingPreference = { status: track, track };
+      writeOnboardingPreference(next);
+      setPref(next);
+      setStep(hasFolder ? (inFolder ? "open-add-task" : "open-folder") : "create-folder");
+    },
+    [hasFolder, inFolder, setStep],
+  );
+
+  const decline = useCallback(
+    (kind: "hard" | "soft") => {
+      const next: OnboardingPreference = {
+        status: "declined",
+        declineKind: kind,
+      };
+      writeOnboardingPreference(next);
+      setPref(next);
+      try {
+        localStorage.setItem(SETUP_DISMISS_KEY(workspaceId), "1");
+      } catch {
+        /* ignore */
+      }
+      setStep("done");
+    },
+    [workspaceId, setStep],
+  );
+
+  const completeOnboarding = useCallback(() => {
+    const next: OnboardingPreference = { status: "completed" };
+    writeOnboardingPreference(next);
+    setPref(next);
     try {
       localStorage.setItem(SETUP_DISMISS_KEY(workspaceId), "1");
     } catch {
       /* ignore */
     }
-    setDismissed(true);
     setStep("done");
   }, [workspaceId, setStep]);
+
+  const skipSection = useCallback(() => {
+    if (pref.status === "short") {
+      // Short track: skip jumps toward done faster
+      if (!hasFolder) {
+        setStep("open-folder");
+        return;
+      }
+      if (!inFolder) {
+        setStep("open-add-task");
+        return;
+      }
+      if (step === "open-add-task" || step === "task-name") {
+        setStep("submit");
+        return;
+      }
+      completeOnboarding();
+      return;
+    }
+    const next = skipToNextSection(step);
+    if (next === "done") completeOnboarding();
+    else setStep(next);
+  }, [
+    pref.status,
+    hasFolder,
+    inFolder,
+    step,
+    setStep,
+    completeOnboarding,
+  ]);
+
+  const dismiss = completeOnboarding;
+
+  const track: OnboardingTrack | null =
+    pref.status === "full" || pref.status === "short" ? pref.status : null;
+
+  const needsChooser =
+    ready &&
+    canEdit &&
+    pref.status === "unset" &&
+    !hasTask &&
+    (forceShow || !hasFolder || !hasTask);
 
   const active =
     ready &&
     canEdit &&
-    !dismissed &&
+    (pref.status === "full" || pref.status === "short") &&
     !hasTask &&
-    (forceShow || !hasFolder || !hasTask) &&
     step !== "done";
 
   const blink = useCallback(
     (target: string) => {
-      if (!active) return false;
+      if (!active || !track) return false;
+
+      // Short track: only a subset blinks
+      if (track === "short") {
+        const shortMap: Record<string, WorkspaceOnboardingStep[]> = {
+          "folders-header": ["create-folder"],
+          "folder-name": ["folder-name"],
+          "folder-submit": ["folder-submit"],
+          "folder-bubble": ["open-folder"],
+          "add-task-header": ["open-add-task"],
+          "task-name": ["task-name"],
+          submit: ["submit"],
+        };
+        return (shortMap[target] ?? []).includes(step);
+      }
+
       const map: Record<string, WorkspaceOnboardingStep[]> = {
         "folders-header": ["create-folder"],
+        "folder-name": ["folder-name"],
+        "folder-roles": ["folder-roles"],
+        "folder-hide": ["folder-hide"],
+        "folder-always": ["folder-always"],
+        "folder-submit": ["folder-submit"],
         "folder-bubble": ["open-folder"],
         "add-task-header": ["open-add-task"],
         "task-name": ["task-name"],
@@ -146,12 +290,36 @@ export function WorkspaceOnboardingProvider({
       };
       return (map[target] ?? []).includes(step);
     },
-    [active, step],
+    [active, track, step],
   );
 
   const value = useMemo(
-    () => ({ active, step, setStep, dismiss, blink }),
-    [active, step, setStep, dismiss, blink],
+    () => ({
+      active,
+      needsChooser,
+      track,
+      step,
+      setStep,
+      chooseTrack,
+      decline,
+      skipSection,
+      completeOnboarding,
+      dismiss,
+      blink,
+    }),
+    [
+      active,
+      needsChooser,
+      track,
+      step,
+      setStep,
+      chooseTrack,
+      decline,
+      skipSection,
+      completeOnboarding,
+      dismiss,
+      blink,
+    ],
   );
 
   return (
@@ -166,8 +334,14 @@ export function useWorkspaceOnboarding() {
   if (!ctx) {
     return {
       active: false,
+      needsChooser: false,
+      track: null as OnboardingTrack | null,
       step: "done" as WorkspaceOnboardingStep,
       setStep: (_: WorkspaceOnboardingStep) => {},
+      chooseTrack: (_: OnboardingTrack) => {},
+      decline: (_: "hard" | "soft") => {},
+      skipSection: () => {},
+      completeOnboarding: () => {},
       dismiss: () => {},
       blink: (_: string) => false,
     };

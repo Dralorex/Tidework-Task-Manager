@@ -5,6 +5,7 @@ import { WorkspaceOnboardingProvider } from "@/app/components/workspace-onboardi
 import { WorkspaceTaskList } from "@/app/components/workspace-task-list";
 import { WorkspacePulseStrip } from "@/app/components/workspace-pulse-strip";
 import { WorkspaceSetupChecklist } from "@/app/components/workspace-setup-checklist";
+import { OnboardingChooser } from "@/app/components/onboarding-chooser";
 import { inviteMemberAction } from "@/app/actions/workspaces";
 import { FriendInvitePicker } from "@/app/components/friend-invite-picker";
 import { PendingInvitesDropdown } from "@/app/components/pending-invites-dropdown";
@@ -640,6 +641,8 @@ export default async function WorkspacePage({
           )}
         </div>
       ) : null}
+
+      <OnboardingChooser />
 
       <WorkspaceSetupChecklist
         workspaceId={workspaceId}

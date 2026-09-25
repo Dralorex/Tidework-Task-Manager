@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CreateFolderForm } from "@/app/components/create-folder-form";
+import { GuidedCreateFolderForm } from "@/app/components/guided-create-folder-form";
 import { FolderBubble } from "@/app/components/folder-bubble";
 import { FolderTemplatesPanel } from "@/app/components/folder-templates-panel";
 import { WorkspaceCollapsible } from "@/app/components/workspace-collapsible";
@@ -38,6 +38,14 @@ type SavedTemplate = {
   treeJson: string;
 };
 
+const FOLDER_FORM_STEPS = new Set([
+  "folder-name",
+  "folder-roles",
+  "folder-hide",
+  "folder-always",
+  "folder-submit",
+]);
+
 export function WorkspaceFoldersPanel({
   workspaceId,
   currentFolderName,
@@ -69,7 +77,8 @@ export function WorkspaceFoldersPanel({
   savedTemplates: SavedTemplate[];
   canEditTemplates: boolean;
 }) {
-  const { active, step, blink } = useWorkspaceOnboarding();
+  const { active, needsChooser, step, setStep, blink } =
+    useWorkspaceOnboarding();
   const [open, setOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
@@ -78,16 +87,16 @@ export function WorkspaceFoldersPanel({
     if (stored != null) {
       setOpen(stored);
     } else {
-      // During onboarding start closed; otherwise open
-      setOpen(!active);
+      // During chooser / onboarding start closed; otherwise open
+      setOpen(!(active || needsChooser));
     }
     setHydrated(true);
-  }, [workspaceId, active]);
+  }, [workspaceId, active, needsChooser]);
 
-  // After a folder exists, open Folders so blinking bubbles are visible
+  // Keep Folders open while guiding through create form or folder pick
   useEffect(() => {
     if (!hydrated) return;
-    if (step === "open-folder") {
+    if (step === "open-folder" || FOLDER_FORM_STEPS.has(step)) {
       setOpen(true);
       writeFoldersOpenPreference(workspaceId, true);
     }
@@ -96,6 +105,10 @@ export function WorkspaceFoldersPanel({
   function onOpenChange(next: boolean) {
     setOpen(next);
     writeFoldersOpenPreference(workspaceId, next);
+    // Opening Folders during create-folder: stop header blink → Folder Name
+    if (next && active && step === "create-folder") {
+      setStep("folder-name");
+    }
   }
 
   if (!hydrated) {
@@ -148,7 +161,7 @@ export function WorkspaceFoldersPanel({
           <p className="text-xs font-semibold uppercase tracking-wide text-[#0A3D45]/45">
             New folder
           </p>
-          <CreateFolderForm
+          <GuidedCreateFolderForm
             workspaceId={workspaceId}
             parentId={parentId}
             parentName={parentName}
