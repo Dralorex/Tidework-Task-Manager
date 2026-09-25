@@ -73,6 +73,8 @@ body {
 
 .tide-input {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   border-radius: 0.85rem;
   border: 1.5px solid rgba(10, 61, 69, 0.15);
   background: rgba(255, 255, 255, 0.75);
@@ -80,6 +82,17 @@ body {
   color: var(--tide-ink);
   outline: none;
   transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+/* Keep native date pickers from overflowing narrow phone screens */
+input[type="date"].tide-input {
+  min-width: 0;
+  max-width: 100%;
+}
+
+input[type="date"].tide-input::-webkit-datetime-edit {
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .tide-input:focus {

@@ -1,6 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  readFoldersOpenPreference,
+  writeFoldersOpenPreference,
+} from "@/lib/workspace-onboarding";
 
 /**
  * Workspace main-panel collapsible: whole header is clickable
@@ -15,6 +19,11 @@ export function WorkspaceCollapsible({
   defaultOpen = false,
   blinkEmpty = false,
   className = "",
+  persistKey,
+  /** When set, overrides initial open (e.g. force closed during onboarding). */
+  forceInitialOpen,
+  open: openControlled,
+  onOpenChange,
 }: {
   id?: string;
   title: string;
@@ -24,8 +33,33 @@ export function WorkspaceCollapsible({
   /** Slow blue pulse on the header’s empty space (onboarding). */
   blinkEmpty?: boolean;
   className?: string;
+  /** localStorage key suffix scope — pass workspaceId for Folders persistence. */
+  persistKey?: string;
+  forceInitialOpen?: boolean | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [openInternal, setOpenInternal] = useState(defaultOpen);
+  const controlled = openControlled !== undefined;
+  const open = controlled ? openControlled : openInternal;
+
+  useEffect(() => {
+    if (controlled) return;
+    if (forceInitialOpen != null) {
+      setOpenInternal(forceInitialOpen);
+      return;
+    }
+    if (persistKey) {
+      const stored = readFoldersOpenPreference(persistKey);
+      if (stored != null) setOpenInternal(stored);
+    }
+  }, [controlled, forceInitialOpen, persistKey]);
+
+  function setOpen(next: boolean) {
+    if (!controlled) setOpenInternal(next);
+    onOpenChange?.(next);
+    if (persistKey) writeFoldersOpenPreference(persistKey, next);
+  }
 
   return (
     <div id={id} className={`tide-panel overflow-hidden ${className}`.trim()}>
@@ -33,7 +67,7 @@ export function WorkspaceCollapsible({
         type="button"
         className="flex w-full items-stretch gap-2 px-5 py-4 text-left"
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(!open)}
       >
         <span className="shrink-0 self-center font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
           {title}
