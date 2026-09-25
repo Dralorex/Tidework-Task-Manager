@@ -144,6 +144,33 @@ export function TagSuggestInput({
     };
   }, [open]);
 
+  // Phone “Done” / check dismisses the keyboard via blur — close the menu then.
+  // Delay so tapping a suggestion (mousedown → click) still registers first.
+  const blurCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pickingRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      if (blurCloseTimer.current) clearTimeout(blurCloseTimer.current);
+    };
+  }, []);
+
+  function scheduleCloseOnBlur() {
+    if (blurCloseTimer.current) clearTimeout(blurCloseTimer.current);
+    blurCloseTimer.current = setTimeout(() => {
+      blurCloseTimer.current = null;
+      if (pickingRef.current) return;
+      if (document.activeElement === inputRef.current) return;
+      setOpen(false);
+    }, 160);
+  }
+
+  function cancelBlurClose() {
+    if (blurCloseTimer.current) {
+      clearTimeout(blurCloseTimer.current);
+      blurCloseTimer.current = null;
+    }
+  }
   function commit(next: string, submit: boolean) {
     flushSync(() => {
       setValue(next);
@@ -206,7 +233,15 @@ export function TagSuggestInput({
                 type="button"
                 role="option"
                 className="block w-full px-3 py-1.5 text-left text-xs text-[#0A3D45]/60 hover:bg-[#0A3D45]/[0.06]"
-                onClick={() => commit("", Boolean(submitOnPick))}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  pickingRef.current = true;
+                  cancelBlurClose();
+                }}
+                onClick={() => {
+                  pickingRef.current = false;
+                  commit("", Boolean(submitOnPick));
+                }}
               >
                 {clearOptionLabel}
               </button>
@@ -235,7 +270,15 @@ export function TagSuggestInput({
                           ? "font-semibold text-[#0A3D45]"
                           : "text-[#0A3D45]/80"
                       }`}
-                      onClick={() => pickSuggestion(tag)}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        pickingRef.current = true;
+                        cancelBlurClose();
+                      }}
+                      onClick={() => {
+                        pickingRef.current = false;
+                        pickSuggestion(tag);
+                      }}
                     >
                       {tag}
                     </button>
@@ -266,8 +309,12 @@ export function TagSuggestInput({
             setValue(e.target.value);
             setOpen(true);
           }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            cancelBlurClose();
+            setOpen(true);
+          }}
           onClick={() => setOpen(true)}
+          onBlur={scheduleCloseOnBlur}
         />
       </div>
       {hint ? (
