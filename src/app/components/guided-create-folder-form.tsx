@@ -76,7 +76,6 @@ export function GuidedCreateFolderForm({
       {canSetAccess && track !== "short" ? (
         <>
           <div
-            className={`rounded-xl ${blinkClass(blink("folder-roles"))}`}
             onFocusCapture={() => {
               if (active && step === "folder-roles") advanceFrom("folder-roles");
             }}
@@ -90,6 +89,7 @@ export function GuidedCreateFolderForm({
               placeholder="Roles (optional)"
               allowMultiple
               keepOpenOnPick
+              inputClassName={`tide-input text-sm ${blinkClass(blink("folder-roles"))}`}
               emptyMessage={
                 roleNames.length === 0
                   ? "No roles yet — create one in Roles first"
