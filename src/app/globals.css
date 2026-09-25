@@ -19,10 +19,20 @@
   --font-display: var(--font-display);
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-x: clip;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-body), system-ui, sans-serif;
+  /* Stop iOS from inflating text and making the page look slightly zoomed */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-x: clip;
 }
 
 .tide-wave-bg {
@@ -82,6 +92,18 @@ body {
   color: var(--tide-ink);
   outline: none;
   transition: border-color 160ms ease, box-shadow 160ms ease;
+  /* ≥16px on phone prevents Safari focus-zoom into the field */
+  font-size: 1rem;
+}
+
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+      [type="file"]
+    ):not([type="hidden"]):not([type="submit"]):not([type="button"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 /* Keep native date pickers from overflowing narrow phone screens */

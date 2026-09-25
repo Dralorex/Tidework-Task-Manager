@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Nunito } from "next/font/google";
+import { MobileViewportReset } from "@/app/components/mobile-viewport-reset";
 import "./globals.css";
 
 const display = Fraunces({
@@ -19,6 +20,13 @@ export const metadata: Metadata = {
     "Claim work as the tide rises. Nested folders, urgency that pulls due tasks up, friends, and private chats.",
 };
 
+/** Keep the page at 1× on load; pinch-zoom still allowed. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -29,7 +37,10 @@ export default function RootLayout({
       lang="en"
       className={`${display.variable} ${body.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <MobileViewportReset />
+        {children}
+      </body>
     </html>
   );
 }
