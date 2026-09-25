@@ -1,13 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { InlineActionForm } from "@/app/components/forms";
 import { DueDateField } from "@/app/components/due-date-field";
-import { OnboardingPrompt } from "@/app/components/onboarding-prompt";
+import {
+  OnboardingPrompt,
+  OnboardingPromptBody,
+} from "@/app/components/onboarding-prompt";
 import { TagSuggestInput } from "@/app/components/tag-suggest-input";
 import { useWorkspaceOnboarding } from "@/app/components/workspace-onboarding-context";
 import { createTaskAction } from "@/app/actions/tasks";
 import { PRIORITY_LABELS, TASK_PRIORITIES } from "@/lib/urgency";
+
+function useIsPhoneLayout() {
+  const [phone, setPhone] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px), (pointer: coarse)");
+    const sync = () => setPhone(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return phone;
+}
 
 const WEEKDAYS = [
   { value: 0, label: "Sun" },
@@ -42,11 +57,13 @@ export function GuidedCreateTaskForm({
   assignableMembers: Assignable[];
 }) {
   const { active, step, setStep, blink } = useWorkspaceOnboarding();
+  const isPhone = useIsPhoneLayout();
   const [taskName, setTaskName] = useState("");
   const [nameClicked, setNameClicked] = useState(false);
   const [description, setDescription] = useState("");
   const [descClicked, setDescClicked] = useState(false);
   const [priority, setPriority] = useState("");
+  const [duePickerOpen, setDuePickerOpen] = useState(false);
   const [cadence, setCadence] = useState<"" | "daily" | "weekly" | "monthly">(
     "",
   );
@@ -56,6 +73,17 @@ export function GuidedCreateTaskForm({
     () => Array.from({ length: 31 }, (_, i) => i + 1),
     [],
   );
+
+  const promptLayer =
+    isPhone || duePickerOpen ? ("foreground" as const) : ("inline" as const);
+
+  const dueSheetPrompt =
+    active && (step === "due-date" || duePickerOpen) ? (
+      <OnboardingPromptBody
+        title="Pick a due date"
+        body="Optional — tap a day, or Clear / Done if you don’t need one. This tip stays on top of the calendar."
+      />
+    ) : null;
 
   function toggleWeek(day: number) {
     setWeekDays((prev) =>
@@ -160,8 +188,19 @@ export function GuidedCreateTaskForm({
           blink={blink("due-date")}
           blinkReset={blink("due-reset")}
           blinkClear={blink("due-clear")}
+          sheetPrompt={dueSheetPrompt}
+          onPickerOpenChange={(open) => {
+            setDuePickerOpen(open);
+            if (!open && active && step === "due-date" && isPhone) {
+              setStep("due-reset");
+            }
+          }}
           onFieldActivate={() => {
-            if (active && step === "due-date") setStep("due-reset");
+            // Stay on due-date while the in-app calendar is open so the tip
+            // remains the foreground coach; advance after close / Reset.
+            if (active && step === "due-date" && !isPhone) {
+              setStep("due-reset");
+            }
           }}
           onReset={() => {
             if (active && (step === "due-reset" || step === "due-date")) {
@@ -169,7 +208,7 @@ export function GuidedCreateTaskForm({
             }
           }}
           onClear={() => {
-            if (active && (step === "due-clear" || step === "due-reset")) {
+            if (active && (step === "due-clear" || step === "due-reset" || step === "due-date")) {
               setStep("claim-pool");
             }
           }}
@@ -361,18 +400,27 @@ export function GuidedCreateTaskForm({
         </div>
       </InlineActionForm>
 
-      {active && step === "due-reset" ? (
+      {active && step === "due-date" && !duePickerOpen ? (
+        <OnboardingPrompt
+          title="Due date"
+          body="Optional. Tap Due Date to open the calendar — the tip stays on top while you pick."
+          layer={promptLayer}
+        />
+      ) : null}
+      {active && step === "due-reset" && !duePickerOpen ? (
         <OnboardingPrompt
           title="Reset due date"
           body="This button will reset it to Today’s Date. Click Reset to continue, or Next."
           onNext={() => setStep("due-clear")}
+          layer={promptLayer}
         />
       ) : null}
-      {active && step === "due-clear" ? (
+      {active && step === "due-clear" && !duePickerOpen ? (
         <OnboardingPrompt
           title="Clear due date"
           body="This button will clear any due date if you don’t want one. Click Clear to continue, or Next."
           onNext={() => setStep("claim-pool")}
+          layer={promptLayer}
         />
       ) : null}
       {active && step === "claim-pool-info" ? (
@@ -380,6 +428,7 @@ export function GuidedCreateTaskForm({
           title="Claim pool"
           body="This is used to auto-assign any member to a task. Leave Claim pool (optional) unless you want a specific person."
           onNext={() => setStep("tags")}
+          layer={promptLayer}
         />
       ) : null}
       {active && step === "tags-info" ? (
@@ -387,6 +436,7 @@ export function GuidedCreateTaskForm({
           title="Tags"
           body="Type a tag and pick from suggestions, or add several with commas. Later, use the Tag filter in search to find matching tasks."
           onNext={() => setStep("one-off")}
+          layer={promptLayer}
         />
       ) : null}
       {active && step === "one-off-info" ? (
@@ -394,6 +444,7 @@ export function GuidedCreateTaskForm({
           title="One-off"
           body="A one-off task happens once — no automatic follow-up when it’s done."
           onNext={() => setStep("daily")}
+          layer={promptLayer}
         />
       ) : null}
       {active && step === "daily-info" ? (
@@ -401,6 +452,7 @@ export function GuidedCreateTaskForm({
           title="Daily"
           body="Daily tasks spawn again on a schedule so recurring work doesn’t fall through the cracks."
           onNext={() => setStep("weekly")}
+          layer={promptLayer}
         />
       ) : null}
       {active && step === "weekly-info" ? (
@@ -408,6 +460,7 @@ export function GuidedCreateTaskForm({
           title="Weekly"
           body="Weekly lets you pick which weekdays the task should repeat on."
           onNext={() => setStep("monthly")}
+          layer={promptLayer}
         />
       ) : null}
       {active && step === "monthly-info" ? (
@@ -415,6 +468,7 @@ export function GuidedCreateTaskForm({
           title="Monthly"
           body="Monthly repeats on chosen days of the month — great for reports and check-ins."
           onNext={() => setStep("submit")}
+          layer={promptLayer}
         />
       ) : null}
     </div>

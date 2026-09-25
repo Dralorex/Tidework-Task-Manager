@@ -6,6 +6,7 @@ import { WorkspaceTaskList } from "@/app/components/workspace-task-list";
 import { WorkspacePulseStrip } from "@/app/components/workspace-pulse-strip";
 import { WorkspaceSetupChecklist } from "@/app/components/workspace-setup-checklist";
 import { OnboardingChooser } from "@/app/components/onboarding-chooser";
+import { OnboardingScrollToBlink } from "@/app/components/onboarding-scroll-to-blink";
 import { inviteMemberAction } from "@/app/actions/workspaces";
 import { FriendInvitePicker } from "@/app/components/friend-invite-picker";
 import { PendingInvitesDropdown } from "@/app/components/pending-invites-dropdown";
@@ -643,6 +644,7 @@ export default async function WorkspacePage({
       ) : null}
 
       <OnboardingChooser />
+      <OnboardingScrollToBlink />
 
       <WorkspaceSetupChecklist
         workspaceId={workspaceId}
