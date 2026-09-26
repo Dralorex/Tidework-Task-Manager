@@ -164,7 +164,7 @@ export function RecurrenceFields() {
               defaultValue="pool"
               className="rowgon-input mt-1 min-h-11 text-sm"
             >
-              <option value="pool">Claim pool</option>
+              <option value="pool">Manual Assign</option>
               <option value="same">Same person</option>
               <option value="clear">Cleared (no assignee)</option>
             </select>

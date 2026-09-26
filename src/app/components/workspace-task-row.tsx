@@ -837,7 +837,7 @@ export function WorkspaceTaskRow({
                     className="rowgon-input text-sm"
                     defaultValue={task.assigneeId ?? ""}
                   >
-                    <option value="">Claim pool (anyone)</option>
+                    <option value="">Manual Assign (anyone)</option>
                     {assignableMembers.map((m) => (
                       <option key={m.id} value={m.id}>
                         @{m.username}

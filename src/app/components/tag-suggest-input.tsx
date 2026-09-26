@@ -194,12 +194,40 @@ export function TagSuggestInput({
     };
   }, []);
 
+  function commitTypedTagFromInput() {
+    const piece = (inputRef.current?.value ?? "").trim();
+    if (!piece) return;
+
+    if (useChips) {
+      addChip(piece, false);
+      return;
+    }
+
+    if (!allowMultiple) return;
+
+    const current = inputRef.current?.value ?? value;
+    const parts = current.split(",");
+    const last = (parts[parts.length - 1] ?? "").trim();
+    if (!last) return;
+    const prior = parts
+      .slice(0, -1)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (prior.some((p) => p.toLowerCase() === last.toLowerCase())) {
+      setValue(prior.join(", "));
+      return;
+    }
+    setValue([...prior, last].join(", "));
+  }
+
   function scheduleCloseOnBlur() {
     if (blurCloseTimer.current) clearTimeout(blurCloseTimer.current);
     blurCloseTimer.current = setTimeout(() => {
       blurCloseTimer.current = null;
       if (pickingRef.current) return;
       if (document.activeElement === inputRef.current) return;
+      // Phone Done/check dismisses the keyboard via blur — apply typed tags.
+      commitTypedTagFromInput();
       setOpen(false);
     }, 160);
   }
@@ -223,14 +251,16 @@ export function TagSuggestInput({
   function addChip(tag: string, keepOpen: boolean) {
     const trimmed = tag.trim();
     if (!trimmed) return;
-    if (taken.has(trimmed.toLowerCase())) {
-      setDraft("");
-      if (!keepOpen) setOpen(false);
-      return;
-    }
-    setChips((prev) => [...prev, trimmed]);
+    let added = false;
+    setChips((prev) => {
+      if (prev.some((t) => t.toLowerCase() === trimmed.toLowerCase())) {
+        return prev;
+      }
+      added = true;
+      return [...prev, trimmed];
+    });
     setDraft("");
-    if (keepOpen) {
+    if (keepOpen && added) {
       setOpen(true);
       requestAnimationFrame(() => {
         const el = inputRef.current;
@@ -238,7 +268,7 @@ export function TagSuggestInput({
         el.focus();
         place();
       });
-    } else {
+    } else if (!keepOpen) {
       setOpen(false);
     }
   }

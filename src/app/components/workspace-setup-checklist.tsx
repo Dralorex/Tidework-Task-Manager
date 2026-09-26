@@ -290,16 +290,16 @@ export function WorkspaceSetupChecklist({
 
       {step === "claim-pool" ? (
         <OnboardingPrompt
-          title="Claim pool"
-          body="Claim Pool (optional) is blinking in Add Task. Open it if you want to assign someone now, or Next to learn what it does."
+          title="Manual Assign"
+          body="Manual Assign (optional) is blinking in Add Task. Open it if you want to assign someone now, or Next to learn what it does."
           onNext={() => setStep("claim-pool-info")}
         />
       ) : null}
 
       {step === "claim-pool-info" ? (
         <OnboardingPrompt
-          title="What Claim pool does"
-          body="Leave it on Claim Pool (optional) so anyone can claim the task. Pick a person only when you want it auto-assigned. Then Next to continue to tags."
+          title="What Manual Assign does"
+          body="Leave it on Manual Assign (optional) so anyone can claim the task. Pick a person only when you want it assigned up front. Then Next to continue to tags."
           onNext={() => setStep("tags")}
         />
       ) : null}
