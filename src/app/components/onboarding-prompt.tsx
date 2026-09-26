@@ -3,18 +3,23 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
-/** Floating coach prompt with optional Next for guided onboarding. */
+/**
+ * Coach prompt for guided onboarding.
+ *
+ * Default `layer="foreground"`: fixed to the bottom of the viewport (with a
+ * small gap / safe-area), portaled to `document.body` so it stays visible
+ * while the page scrolls and never nests inside a panel bubble.
+ * Use this for ALL info prompts — including new ones.
+ *
+ * `embedded` — rare: compact content inside another sheet (no outer chrome).
+ * `inline` — opt-in only when a tip must live in document flow.
+ */
 export function OnboardingPrompt({
   title,
   body,
   onNext,
   nextLabel = "Next",
-  /**
-   * `inline` — in document flow (default).
-   * `foreground` — fixed high-z portal so tips stay above sheets/pickers on phone.
-   * `embedded` — compact block for inside a sheet (no outer chrome duplication).
-   */
-  layer = "inline",
+  layer = "foreground",
 }: {
   title: string;
   body: string;
@@ -53,25 +58,32 @@ export function OnboardingPrompt({
     <div
       role="status"
       className={`rounded-xl border border-[#93c5fd] bg-[#E8F1FF] px-3 py-3 text-sm text-[#0A3D45] shadow-md ${
-        layer === "foreground" ? "" : "mt-3"
+        layer === "inline" ? "mt-3" : ""
       }`}
     >
       {inner}
     </div>
   );
 
-  if (layer === "foreground" && mounted && typeof document !== "undefined") {
-    return createPortal(
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[90] flex justify-center p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:bottom-4">
-        <div className="pointer-events-auto w-full max-w-lg rounded-xl bg-[#E8F1FF] shadow-lg">
-          {card}
-        </div>
-      </div>,
-      document.body,
-    );
+  if (layer === "inline") {
+    return card;
   }
 
-  return card;
+  // foreground (default): locked to the bottom of the screen
+  if (!mounted || typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-[90] flex justify-center px-3"
+      style={{
+        paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))",
+      }}
+      data-onboarding-prompt="foreground"
+    >
+      <div className="pointer-events-auto w-full max-w-lg shadow-lg">{card}</div>
+    </div>,
+    document.body,
+  );
 }
 
 export function blinkRing(active: boolean) {

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { GuidedCreateFolderForm } from "@/app/components/guided-create-folder-form";
 import { FolderBubble } from "@/app/components/folder-bubble";
 import { FolderTemplatesPanel } from "@/app/components/folder-templates-panel";
+import { OnboardingPrompt } from "@/app/components/onboarding-prompt";
 import { WorkspaceCollapsible } from "@/app/components/workspace-collapsible";
 import { useWorkspaceOnboarding } from "@/app/components/workspace-onboarding-context";
 import {
@@ -159,15 +160,12 @@ export function WorkspaceFoldersPanel({
                 blink={blink("folder-bubble") && !f.locked}
               />
               {i === openFolderHintIndex ? (
-                <p
-                  role="status"
-                  className="mt-2 rounded-lg border border-[#93c5fd] bg-[#E8F1FF] px-3 py-2 text-xs leading-snug text-[#0A3D45]"
-                >
-                  <span className="font-semibold">How to open a folder:</span>{" "}
-                  tap the card above
-                  {openableCount > 1 ? " (any blinking one works)" : ""} — empty
-                  space opens it.
-                </p>
+                <OnboardingPrompt
+                  title="How to open a folder"
+                  body={`Tap the card above${
+                    openableCount > 1 ? " (any blinking one works)" : ""
+                  } — empty space opens it.`}
+                />
               ) : null}
             </li>
           ))}
