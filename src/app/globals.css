@@ -185,11 +185,25 @@ input[type="date"].tide-input::-webkit-datetime-edit {
   animation-fill-mode: none;
 }
 
-/**
- * Surfaces that only exist to show the blink (e.g. collapsible empty stretch).
- * Transparent baseline so removing the animation never leaves a blue patch.
- */
+/* Hard-clear animated fill if a blink class is torn down mid-keyframe */
 .tide-blink-surface {
   background-color: transparent;
   box-shadow: none;
+}
+
+@keyframes tide-blink-ring {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.25);
+  }
+  50% {
+    box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.85);
+  }
+}
+
+/** Compact control blink (checkboxes) — ring only, no fill that can freeze. */
+.animate-tide-blink-ring {
+  animation: tide-blink-ring 2.4s ease-in-out infinite;
+  animation-fill-mode: none;
+  background-color: transparent;
 }

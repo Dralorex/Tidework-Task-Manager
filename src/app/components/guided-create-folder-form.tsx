@@ -13,6 +13,11 @@ function blinkClass(on: boolean) {
     : "";
 }
 
+/** Remount when blink ends so Safari can’t leave a frozen blue fill. */
+function blinkKey(on: boolean, id: string) {
+  return on ? `${id}-blink` : id;
+}
+
 /** Create-folder form with guided onboarding blinks (mirrors Add Task tour). */
 export function GuidedCreateFolderForm({
   workspaceId,
@@ -99,20 +104,28 @@ export function GuidedCreateFolderForm({
             />
           </div>
           <label
-            className={`flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1 text-xs text-[color:var(--tide-deep)] ${blinkClass(blink("folder-hide"))}`}
+            className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1 text-xs text-[color:var(--tide-deep)]"
             onClick={() => {
               if (active && step === "folder-hide") advanceFrom("folder-hide");
             }}
           >
-            <input
-              type="checkbox"
-              name="hideFromUnauthorized"
-              value="1"
-              className="mt-0.5"
-              onChange={() => {
-                if (active && step === "folder-hide") advanceFrom("folder-hide");
-              }}
-            />
+            <span
+              key={blinkKey(blink("folder-hide"), "folder-hide")}
+              className={`mt-0.5 inline-flex shrink-0 rounded-md p-0.5 ${
+                blink("folder-hide") ? "animate-tide-blink-ring" : ""
+              }`}
+            >
+              <input
+                type="checkbox"
+                name="hideFromUnauthorized"
+                value="1"
+                className="mt-0"
+                onChange={() => {
+                  if (active && step === "folder-hide")
+                    advanceFrom("folder-hide");
+                }}
+              />
+            </span>
             <span>
               Hide from unauthorized
               <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--tide-deep)]/50">
@@ -121,22 +134,27 @@ export function GuidedCreateFolderForm({
             </span>
           </label>
           <label
-            className={`flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1 text-xs text-[color:var(--tide-deep)] ${blinkClass(blink("folder-always"))}`}
+            className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1 text-xs text-[color:var(--tide-deep)]"
             onClick={() => {
               if (active && step === "folder-always")
                 advanceFrom("folder-always");
             }}
           >
-            <input
-              type="checkbox"
-              name="alwaysVisible"
-              value="1"
-              className="mt-0.5"
-              onChange={() => {
-                if (active && step === "folder-always")
-                  advanceFrom("folder-always");
-              }}
-            />
+            <span
+              key={blinkKey(blink("folder-always"), "folder-always")}
+              className={`mt-0.5 inline-flex shrink-0 rounded-md p-0.5 ${blinkClass(blink("folder-always"))}`}
+            >
+              <input
+                type="checkbox"
+                name="alwaysVisible"
+                value="1"
+                className="mt-0"
+                onChange={() => {
+                  if (active && step === "folder-always")
+                    advanceFrom("folder-always");
+                }}
+              />
+            </span>
             <span>
               Always show
               <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--tide-deep)]/50">
