@@ -1,10 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  readFoldersOpenPreference,
-  writeFoldersOpenPreference,
-} from "@/lib/workspace-onboarding";
+import { useState } from "react";
 
 /**
  * Workspace main-panel collapsible: whole header is clickable
@@ -19,9 +15,6 @@ export function WorkspaceCollapsible({
   defaultOpen = false,
   blinkEmpty = false,
   className = "",
-  persistKey,
-  /** When set, overrides initial open (e.g. force closed during onboarding). */
-  forceInitialOpen,
   open: openControlled,
   onOpenChange,
 }: {
@@ -33,9 +26,6 @@ export function WorkspaceCollapsible({
   /** Slow blue pulse on the header’s empty space (onboarding). */
   blinkEmpty?: boolean;
   className?: string;
-  /** localStorage key suffix scope — pass workspaceId for Folders persistence. */
-  persistKey?: string;
-  forceInitialOpen?: boolean | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
@@ -43,22 +33,9 @@ export function WorkspaceCollapsible({
   const controlled = openControlled !== undefined;
   const open = controlled ? openControlled : openInternal;
 
-  useEffect(() => {
-    if (controlled) return;
-    if (forceInitialOpen != null) {
-      setOpenInternal(forceInitialOpen);
-      return;
-    }
-    if (persistKey) {
-      const stored = readFoldersOpenPreference(persistKey);
-      if (stored != null) setOpenInternal(stored);
-    }
-  }, [controlled, forceInitialOpen, persistKey]);
-
   function setOpen(next: boolean) {
     if (!controlled) setOpenInternal(next);
     onOpenChange?.(next);
-    if (persistKey) writeFoldersOpenPreference(persistKey, next);
   }
 
   return (

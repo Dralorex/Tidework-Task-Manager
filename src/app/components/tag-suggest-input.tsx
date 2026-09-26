@@ -49,6 +49,8 @@ export function TagSuggestInput({
    * typing field instead of submitting the parent form (create-task flow).
    */
   commitTagOnEnter = false,
+  /** Optional marker on the visible input for onboarding focus targets. */
+  dataOnboarding,
 }: {
   tags: string[];
   name?: string;
@@ -71,6 +73,7 @@ export function TagSuggestInput({
    */
   keepOpenOnPick?: boolean;
   commitTagOnEnter?: boolean;
+  dataOnboarding?: string;
 }) {
   const useChips = Boolean(commitTagOnEnter && allowMultiple);
   const [open, setOpen] = useState(false);
@@ -454,6 +457,7 @@ export function TagSuggestInput({
         <input
           ref={inputRef}
           name={useChips ? undefined : name}
+          data-onboarding={dataOnboarding}
           value={useChips ? draft : value}
           required={required && !(useChips ? formValue.trim() : value.trim())}
           autoComplete="off"

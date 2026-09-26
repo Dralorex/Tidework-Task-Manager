@@ -80,10 +80,14 @@ export function GuidedCreateTaskForm({
     setFormEpoch((n) => n + 1);
   }, []);
 
-  /** Skip chip-click gates — jump straight to each cadence info prompt. */
+  /** Normalize vestigial chip/gate steps onto their info prompts. */
   useEffect(() => {
     if (!active) return;
 
+    if (step === "tags") {
+      setStep("tags-info");
+      return;
+    }
     if (step === "one-off") {
       setCadence("");
       setStep("one-off-info");
@@ -134,18 +138,10 @@ export function GuidedCreateTaskForm({
     if (value === "daily") setWeekDays([0, 1, 2, 3, 4, 5, 6]);
     if (!active) return;
     // Manual chip tap can still skip ahead during the tour
-    if (value === "" && (step === "one-off" || step === "one-off-info")) {
-      setStep("daily-info");
-    }
-    if (value === "daily" && (step === "daily" || step === "daily-info")) {
-      setStep("weekly-info");
-    }
-    if (value === "weekly" && (step === "weekly" || step === "weekly-info")) {
-      setStep("monthly-info");
-    }
-    if (value === "monthly" && (step === "monthly" || step === "monthly-info")) {
-      finishCadenceTour();
-    }
+    if (value === "" && step === "one-off-info") setStep("daily-info");
+    if (value === "daily" && step === "daily-info") setStep("weekly-info");
+    if (value === "weekly" && step === "weekly-info") setStep("monthly-info");
+    if (value === "monthly" && step === "monthly-info") finishCadenceTour();
   }
 
   function finishCadenceTour() {
@@ -192,15 +188,11 @@ export function GuidedCreateTaskForm({
           value={priority}
           aria-label="Priority Level"
           className={`rowgon-input ${!priority ? "rowgon-input-hint" : ""} ${blinkClass(blink("priority"))}`}
-          onFocus={() => {
-            if (active && step === "priority") setStep("description");
-          }}
-          onClick={() => {
-            if (active && step === "priority") setStep("description");
-          }}
           onChange={(e) => {
             setPriority(e.target.value);
-            if (active && step === "priority") setStep("description");
+            if (active && step === "priority" && e.target.value) {
+              setStep("description");
+            }
           }}
         >
           <option value="" disabled>
@@ -236,8 +228,9 @@ export function GuidedCreateTaskForm({
           blink={blink("due-date")}
           blinkReset={blink("due-reset")}
           blinkClear={blink("due-clear")}
-          onFieldActivate={() => {
-            if (active && step === "due-date") setStep("due-reset");
+          onValueChange={(v) => {
+            // Only advance after a real date pick — not on focus from “Open Due Date”.
+            if (active && step === "due-date" && v) setStep("due-reset");
           }}
           onReset={() => {
             // Clicking Reset shows what it does; Next advances to Clear.
@@ -272,12 +265,6 @@ export function GuidedCreateTaskForm({
             setAssignTo(e.target.value);
             if (active && step === "claim-pool") setStep("claim-pool-info");
           }}
-          onFocus={() => {
-            if (active && step === "claim-pool") setStep("claim-pool-info");
-          }}
-          onClick={() => {
-            if (active && step === "claim-pool") setStep("claim-pool-info");
-          }}
         >
           <option value="">Manual Assign (optional)</option>
           {assignableMembers.map((m) => (
@@ -287,15 +274,7 @@ export function GuidedCreateTaskForm({
           ))}
         </select>
 
-        <div
-          className="sm:col-span-2"
-          onFocusCapture={() => {
-            if (active && step === "tags") setStep("tags-info");
-          }}
-          onClick={() => {
-            if (active && step === "tags") setStep("tags-info");
-          }}
-        >
+        <div className="sm:col-span-2">
           <TagSuggestInput
             key={`tags-${formEpoch}`}
             name="tags"
@@ -310,6 +289,7 @@ export function GuidedCreateTaskForm({
             allowMultiple
             keepOpenOnPick
             commitTagOnEnter
+            dataOnboarding="tags"
             inputClassName={`rowgon-input text-sm ${blinkClass(blink("tags"))}`}
           />
         </div>
@@ -489,6 +469,22 @@ export function GuidedCreateTaskForm({
           onNext={() => setStep("due-date")}
         />
       ) : null}
+      {active && step === "claim-pool" ? (
+        <OnboardingPrompt
+          title="Manual Assign"
+          body="Optional: assign someone now, or leave Manual Assign so anyone can claim the task."
+          actionLabel="Open Manual Assign"
+          onAction={() => focusOnboardingStep("claim-pool")}
+          onNext={() => setStep("claim-pool-info")}
+        />
+      ) : null}
+      {active && step === "claim-pool-info" ? (
+        <OnboardingPrompt
+          title="What Manual Assign does"
+          body="Leave it on Manual Assign (optional) so anyone can claim the task. Pick a person only when you want it assigned up front."
+          onNext={() => setStep("tags-info")}
+        />
+      ) : null}
       {active && step === "due-date" ? (
         <OnboardingPrompt
           title="Due date"
@@ -531,7 +527,7 @@ export function GuidedCreateTaskForm({
             focusOnboardingStep("tags");
             if (step === "tags") setStep("tags-info");
           }}
-          onNext={() => setStep("one-off")}
+          onNext={() => setStep("one-off-info")}
         />
       ) : null}
       {active && step === "one-off-info" ? (

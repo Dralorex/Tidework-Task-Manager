@@ -8,18 +8,13 @@ import {
   setWorkspaceRoleHideFoldersAction,
 } from "@/app/actions/roles";
 import { ChatSidebarSection } from "@/app/components/chat-sidebar-section";
+import { blinkRing } from "@/app/components/onboarding-prompt";
 import { useWorkspaceOnboarding } from "@/app/components/workspace-onboarding-context";
 import {
   isRoleCreateStep,
   nextRoleCreateStep,
 } from "@/lib/workspace-onboarding";
 import { confirmDelete } from "@/lib/confirm";
-
-function blinkRing(on: boolean) {
-  return on
-    ? "animate-rowgon-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
-    : "";
-}
 
 export function WorkspaceRolesPanel({
   workspaceId,

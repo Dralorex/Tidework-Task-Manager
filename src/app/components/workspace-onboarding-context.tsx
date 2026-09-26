@@ -35,7 +35,6 @@ type Ctx = {
   decline: (kind: "hard" | "soft") => void;
   skipSection: () => void;
   completeOnboarding: () => void;
-  dismiss: () => void;
   blink: (target: string) => boolean;
   canManageRoles: boolean;
   hasRole: boolean;
@@ -236,8 +235,6 @@ export function WorkspaceOnboardingProvider({
     completeOnboarding,
   ]);
 
-  const dismiss = completeOnboarding;
-
   const track: OnboardingTrack | null =
     pref.status === "full" || pref.status === "short" ? pref.status : null;
 
@@ -267,7 +264,6 @@ export function WorkspaceOnboardingProvider({
           "folder-bubble": ["open-folder"],
           "add-task-header": ["open-add-task"],
           "task-name": ["task-name"],
-          "task-menu-info": ["task-menu-info"],
           submit: ["submit", "task-menu-info"],
         };
         return (shortMap[target] ?? []).includes(step);
@@ -318,7 +314,6 @@ export function WorkspaceOnboardingProvider({
       decline,
       skipSection,
       completeOnboarding,
-      dismiss,
       blink,
       canManageRoles,
       hasRole,
@@ -333,7 +328,6 @@ export function WorkspaceOnboardingProvider({
       decline,
       skipSection,
       completeOnboarding,
-      dismiss,
       blink,
       canManageRoles,
       hasRole,
@@ -360,7 +354,6 @@ export function useWorkspaceOnboarding() {
       decline: (_: "hard" | "soft") => {},
       skipSection: () => {},
       completeOnboarding: () => {},
-      dismiss: () => {},
       blink: (_: string) => false,
       canManageRoles: false,
       hasRole: false,

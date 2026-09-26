@@ -18,7 +18,8 @@ export function selectorForStep(
     "roles-folder-bridge": "#workspace-roles",
     "create-folder": "#workspace-folders > button[aria-expanded]",
     "folder-name": '#workspace-folders input[name="name"]',
-    "folder-roles": '#workspace-folders input[name="roles"]',
+    "folder-roles":
+      '#workspace-folders input[data-onboarding="folder-roles"], #workspace-folders input[name="roles"]:not([type="hidden"])',
     "folder-hide":
       '#workspace-folders input[name="hideFromUnauthorized"]',
     "folder-always": '#workspace-folders input[name="alwaysVisible"]',
@@ -37,8 +38,8 @@ export function selectorForStep(
     "due-clear": '#workspace-add-task [data-onboarding="due-clear"]',
     "claim-pool": '#workspace-add-task select[name="assignTo"]',
     "claim-pool-info": '#workspace-add-task select[name="assignTo"]',
-    tags: '#workspace-add-task input[name="tags"]',
-    "tags-info": '#workspace-add-task input[name="tags"]',
+    tags: '#workspace-add-task input[data-onboarding="tags"]',
+    "tags-info": '#workspace-add-task input[data-onboarding="tags"]',
     "one-off": '#workspace-add-task [data-onboarding="cadence-one-off"]',
     "one-off-info":
       '#workspace-add-task [data-onboarding="cadence-one-off"]',

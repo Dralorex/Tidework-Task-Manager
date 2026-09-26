@@ -1,31 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import {
-  ONBOARDING_PREF_KEY,
-  type OnboardingPreference,
-} from "@/lib/workspace-onboarding";
-
-function readPref(): OnboardingPreference {
-  try {
-    const raw = localStorage.getItem(ONBOARDING_PREF_KEY);
-    if (!raw) return { status: "unset" };
-    const parsed = JSON.parse(raw) as OnboardingPreference;
-    if (
-      parsed &&
-      (parsed.status === "unset" ||
-        parsed.status === "full" ||
-        parsed.status === "short" ||
-        parsed.status === "declined" ||
-        parsed.status === "completed")
-    ) {
-      return parsed;
-    }
-  } catch {
-    /* private mode / bad JSON */
-  }
-  return { status: "unset" };
-}
+import { readOnboardingPreference } from "@/lib/workspace-onboarding";
 
 /**
  * Wraps the Start here bubble with a circling blue glow while first-time
@@ -49,7 +25,7 @@ export function StartHereWorkspaceGlow({
       return;
     }
     function sync() {
-      const pref = readPref();
+      const pref = readOnboardingPreference();
       setGlow(pref.status !== "completed" && pref.status !== "declined");
     }
     sync();

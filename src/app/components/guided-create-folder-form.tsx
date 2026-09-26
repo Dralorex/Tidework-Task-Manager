@@ -81,10 +81,9 @@ export function GuidedCreateFolderForm({
       {canSetAccess && track !== "short" ? (
         <>
           <div
-            onFocusCapture={() => {
-              if (active && step === "folder-roles") advanceFrom("folder-roles");
-            }}
-            onClick={() => {
+            onInputCapture={() => {
+              // Advance after the user types/picks a role — not on bare focus
+              // from the “Pick Roles” info-prompt action.
               if (active && step === "folder-roles") advanceFrom("folder-roles");
             }}
           >
@@ -94,6 +93,7 @@ export function GuidedCreateFolderForm({
               placeholder="Roles (optional)"
               allowMultiple
               keepOpenOnPick
+              dataOnboarding="folder-roles"
               inputClassName={`rowgon-input text-sm ${blinkClass(blink("folder-roles"))}`}
               emptyMessage={
                 roleNames.length === 0

@@ -5,7 +5,8 @@ import { useWorkspaceOnboarding } from "@/app/components/workspace-onboarding-co
 import { selectorForStep } from "@/lib/onboarding-targets";
 import type { WorkspaceOnboardingStep } from "@/lib/workspace-onboarding";
 
-function isPhone() {
+/** Narrow / phone layout — not the same as PWA homescreen launch. */
+function isNarrowViewport() {
   return window.matchMedia("(max-width: 640px)").matches;
 }
 
@@ -80,7 +81,7 @@ export function OnboardingScrollToBlink() {
   // Center when the guided step advances (unless a field is focused)
   useEffect(() => {
     if (!active || step === "done") return;
-    if (typeof window === "undefined" || !isPhone()) return;
+    if (typeof window === "undefined" || !isNarrowViewport()) return;
     if (editingRef.current) return;
     if (document.activeElement && isOnboardingTextField(document.activeElement)) {
       return;
@@ -102,7 +103,7 @@ export function OnboardingScrollToBlink() {
     let blurTimer: ReturnType<typeof setTimeout> | null = null;
 
     function onFocusIn(e: FocusEvent) {
-      if (!isPhone()) return;
+      if (!isNarrowViewport()) return;
       if (!isOnboardingTextField(e.target)) return;
       if (blurTimer) {
         clearTimeout(blurTimer);
@@ -117,7 +118,7 @@ export function OnboardingScrollToBlink() {
     }
 
     function onFocusOut(e: FocusEvent) {
-      if (!isPhone()) return;
+      if (!isNarrowViewport()) return;
       if (!isOnboardingTextField(e.target)) return;
 
       if (blurTimer) clearTimeout(blurTimer);

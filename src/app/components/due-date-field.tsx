@@ -19,6 +19,7 @@ export function DueDateField({
   blinkReset = false,
   blinkClear = false,
   onFieldActivate,
+  onValueChange,
   onReset,
   onClear,
 }: {
@@ -29,6 +30,8 @@ export function DueDateField({
   blinkReset?: boolean;
   blinkClear?: boolean;
   onFieldActivate?: () => void;
+  /** Fires when the user picks/clears a date (not merely on focus). */
+  onValueChange?: (value: string) => void;
   onReset?: () => void;
   onClear?: () => void;
 }) {
@@ -79,7 +82,11 @@ export function DueDateField({
           type="date"
           name={name}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => {
+            const next = e.target.value;
+            setValue(next);
+            onValueChange?.(next);
+          }}
           onFocus={() => {
             setFocused(true);
             onFieldActivate?.();
@@ -107,7 +114,9 @@ export function DueDateField({
               : ""
           }`}
           onClick={() => {
-            setValue(todayIso());
+            const next = todayIso();
+            setValue(next);
+            onValueChange?.(next);
             onReset?.();
           }}
         >
@@ -123,6 +132,7 @@ export function DueDateField({
           }`}
           onClick={() => {
             setValue("");
+            onValueChange?.("");
             onClear?.();
           }}
         >

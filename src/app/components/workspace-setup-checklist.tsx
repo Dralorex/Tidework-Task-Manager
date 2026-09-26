@@ -2,10 +2,7 @@
 
 import { OnboardingPrompt } from "@/app/components/onboarding-prompt";
 import { useWorkspaceOnboarding } from "@/app/components/workspace-onboarding-context";
-import {
-  clickOnboardingStep,
-  focusOnboardingStep,
-} from "@/lib/onboarding-targets";
+import { clickOnboardingStep, focusOnboardingStep } from "@/lib/onboarding-targets";
 
 export function WorkspaceSetupChecklist({
   workspaceId,
@@ -300,16 +297,15 @@ export function WorkspaceSetupChecklist({
           }
           actionLabel="Open Folder"
           onAction={() => {
-            const sel =
-              '#workspace-folders [data-onboarding="folder-bubble"]';
-            const el = document.querySelector(sel);
-            if (el instanceof HTMLElement) {
-              el.click();
-              return;
-            }
-            if (firstFolderId) {
+            clickOnboardingStep("open-folder");
+            // Fallback if no blinkable card is in the DOM yet
+            window.setTimeout(() => {
+              const hit = document.querySelector(
+                '#workspace-folders [data-onboarding="folder-bubble"]',
+              );
+              if (hit || !firstFolderId) return;
               window.location.href = `/app/w/${workspaceId}?folder=${firstFolderId}`;
-            }
+            }, 220);
           }}
         />
       ) : null}
@@ -320,24 +316,6 @@ export function WorkspaceSetupChecklist({
           body="Expand Add Task to name your first task. Tap the ▸ arrow or the blinking empty space on the bar."
           actionLabel="Open Add Task"
           onAction={() => clickOnboardingStep("open-add-task")}
-        />
-      ) : null}
-
-      {step === "claim-pool" ? (
-        <OnboardingPrompt
-          title="Manual Assign"
-          body="Optional: assign someone now, or leave Manual Assign so anyone can claim the task."
-          actionLabel="Open Manual Assign"
-          onAction={() => focusOnboardingStep("claim-pool")}
-          onNext={() => setStep("claim-pool-info")}
-        />
-      ) : null}
-
-      {step === "claim-pool-info" ? (
-        <OnboardingPrompt
-          title="What Manual Assign does"
-          body="Leave it on Manual Assign (optional) so anyone can claim the task. Pick a person only when you want it assigned up front."
-          onNext={() => setStep("tags")}
         />
       ) : null}
     </div>

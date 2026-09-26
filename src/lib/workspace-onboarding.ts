@@ -137,19 +137,6 @@ const FOLDER_CREATE_STEPS: WorkspaceOnboardingStep[] = [
   "folder-submit",
 ];
 
-/** Short track: fewer micro-steps, still blinks. Skips the roles tour. */
-export const SHORT_TRACK_STEPS: WorkspaceOnboardingStep[] = [
-  "create-folder",
-  "folder-name",
-  "folder-submit",
-  "open-folder",
-  "open-add-task",
-  "task-name",
-  "task-menu-info",
-  "submit",
-  "done",
-];
-
 export function isRoleCreateStep(step: WorkspaceOnboardingStep) {
   return ROLE_CREATE_STEPS.includes(step);
 }
