@@ -67,6 +67,7 @@ function selectorForStep(
     description: '#workspace-add-task input[name="description"]',
     "due-date": '#workspace-add-task input[name="dueDate"]',
     "due-reset": "#workspace-add-task",
+    "due-reset-info": "#workspace-add-task",
     "due-clear": "#workspace-add-task",
     "claim-pool": '#workspace-add-task select[name="assignTo"]',
     "claim-pool-info": '#workspace-add-task select[name="assignTo"]',

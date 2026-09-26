@@ -23,6 +23,7 @@ export type WorkspaceOnboardingStep =
   | "description"
   | "due-date"
   | "due-reset"
+  | "due-reset-info"
   | "due-clear"
   | "claim-pool"
   | "claim-pool-info"
@@ -94,6 +95,7 @@ const ALL_STEPS: WorkspaceOnboardingStep[] = [
   "description",
   "due-date",
   "due-reset",
+  "due-reset-info",
   "due-clear",
   "claim-pool",
   "claim-pool-info",
@@ -336,6 +338,7 @@ export function skipToNextSection(
     step === "description" ||
     step === "due-date" ||
     step === "due-reset" ||
+    step === "due-reset-info" ||
     step === "due-clear"
   ) {
     return "claim-pool";

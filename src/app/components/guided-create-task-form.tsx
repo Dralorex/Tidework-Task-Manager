@@ -236,12 +236,24 @@ export function GuidedCreateTaskForm({
             if (active && step === "due-date") setStep("due-reset");
           }}
           onReset={() => {
-            if (active && (step === "due-reset" || step === "due-date")) {
-              setStep("due-clear");
+            // Clicking Reset shows what it does; Next advances to Clear.
+            if (
+              active &&
+              (step === "due-reset" ||
+                step === "due-date" ||
+                step === "due-reset-info")
+            ) {
+              setStep("due-reset-info");
             }
           }}
           onClear={() => {
-            if (active && (step === "due-clear" || step === "due-reset" || step === "due-date")) {
+            if (
+              active &&
+              (step === "due-clear" ||
+                step === "due-reset" ||
+                step === "due-reset-info" ||
+                step === "due-date")
+            ) {
               setStep("claim-pool");
             }
           }}
@@ -446,20 +458,26 @@ export function GuidedCreateTaskForm({
       {active && step === "due-date" ? (
         <OnboardingPrompt
           title="Due date"
-          body="Optional. Tap Due Date to open the calendar picker, then use Reset or Clear below."
+          body="Optional. Tap Due Date to open the calendar picker, then we’ll cover Reset and Clear below."
         />
       ) : null}
       {active && step === "due-reset" ? (
         <OnboardingPrompt
-          title="Reset due date"
-          body="This button will reset it to Today’s Date. Click Reset to continue, or Next."
+          title="Try Reset"
+          body="The Reset button is blinking — click it. We’ll explain what it does before moving on."
+        />
+      ) : null}
+      {active && step === "due-reset-info" ? (
+        <OnboardingPrompt
+          title="What Reset does"
+          body="Reset sets the due date to today’s date. Handy when you want a due date quickly without picking from the calendar. Click Next to see Clear."
           onNext={() => setStep("due-clear")}
         />
       ) : null}
       {active && step === "due-clear" ? (
         <OnboardingPrompt
-          title="Clear due date"
-          body="This button will clear any due date if you don’t want one. Click Clear to continue, or Next."
+          title="What Clear does"
+          body="Clear removes the due date entirely — the task won’t have one. Click Clear to try it, or Next to continue."
           onNext={() => setStep("claim-pool")}
         />
       ) : null}

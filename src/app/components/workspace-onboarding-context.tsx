@@ -293,6 +293,7 @@ export function WorkspaceOnboardingProvider({
         "due-date": ["due-date"],
         "due-reset": ["due-reset"],
         "due-clear": ["due-clear"],
+        // due-reset-info: no blink — explanation prompt only
         "claim-pool": ["claim-pool"],
         tags: ["tags"],
         "one-off": ["one-off", "one-off-info"],
