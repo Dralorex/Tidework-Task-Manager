@@ -249,7 +249,8 @@ export function GuidedCreateTaskForm({
 
         <select
           name="assignTo"
-          className={`rowgon-input ${blinkClass(blink("claim-pool"))}`}
+          aria-label="Claim pool (optional)"
+          className={`rowgon-input ${!assignTo ? "rowgon-input-hint" : ""} ${blinkClass(blink("claim-pool"))}`}
           value={assignTo}
           onChange={(e) => {
             setAssignTo(e.target.value);
@@ -262,7 +263,7 @@ export function GuidedCreateTaskForm({
             if (active && step === "claim-pool") setStep("claim-pool-info");
           }}
         >
-          <option value="">Claim pool (optional)</option>
+          <option value="">Claim Pool (optional)</option>
           {assignableMembers.map((m) => (
             <option key={m.id} value={m.id}>
               Assign @{m.username}
