@@ -85,33 +85,32 @@ export function GuidedCreateFolderForm({
 
       {canSetAccess && track !== "short" ? (
         <>
-          <div
-            onInputCapture={() => {
-              // Advance after the user types/picks a role — not on bare focus
-              // from the “Pick Roles” info-prompt action.
-              if (active && step === "folder-roles") advanceFrom("folder-roles");
+          <TagSuggestInput
+            name="roles"
+            tags={roleNames}
+            placeholder="Roles (optional)"
+            allowMultiple
+            keepOpenOnPick
+            dataOnboarding="folder-roles"
+            inputClassName={`rowgon-input text-sm ${blinkClass(blink("folder-roles"))}`}
+            emptyMessage={
+              roleNames.length === 0
+                ? "No roles yet — create one in Roles first"
+                : "No matching roles"
+            }
+            hint={
+              active
+                ? undefined
+                : "Leave empty for all members. Pick roles to restrict access."
+            }
+            onCommittedTagsChange={(list) => {
+              // Advance only when a role is actually picked/committed — not
+              // on keystrokes or Enter (which now moves focus like Tab).
+              if (active && step === "folder-roles" && list.length > 0) {
+                advanceFrom("folder-roles");
+              }
             }}
-          >
-            <TagSuggestInput
-              name="roles"
-              tags={roleNames}
-              placeholder="Roles (optional)"
-              allowMultiple
-              keepOpenOnPick
-              dataOnboarding="folder-roles"
-              inputClassName={`rowgon-input text-sm ${blinkClass(blink("folder-roles"))}`}
-              emptyMessage={
-                roleNames.length === 0
-                  ? "No roles yet — create one in Roles first"
-                  : "No matching roles"
-              }
-              hint={
-                active
-                  ? undefined
-                  : "Leave empty for all members. Pick roles to restrict access."
-              }
-            />
-          </div>
+          />
           <label
             className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1 text-xs text-[color:var(--rowgon-deep)]"
             onClick={() => {

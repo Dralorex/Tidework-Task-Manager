@@ -253,8 +253,8 @@ export function WorkspaceSetupChecklist({
           title="Who can see this folder?"
           body={
             hasRole
-              ? "Pick the role you created (or leave empty for everyone). This is how folder access uses the Roles panel."
-              : "Roles is optional — leave empty for everyone, or pick roles to restrict access."
+              ? "Pick the role you created from the suggestions (or leave empty for everyone). The tip moves on once a role is added — not when you press Enter."
+              : "Roles is optional — leave empty for everyone, or pick roles from the list to restrict access."
           }
           actionLabel="Pick Roles"
           onAction={() => focusOnboardingStep("folder-roles")}

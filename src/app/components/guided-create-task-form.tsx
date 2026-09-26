@@ -299,7 +299,7 @@ export function GuidedCreateTaskForm({
             hint={
               active
                 ? undefined
-                : "Optional. Type a tag and press Enter to add it — or separate with commas."
+                : "Optional. Type a tag and pick a suggestion, or leave the field to add it as a chip."
             }
             emptyMessage="No public tags in this folder yet — type a new one"
             allowMultiple
@@ -307,6 +307,15 @@ export function GuidedCreateTaskForm({
             commitTagOnEnter
             dataOnboarding="tags"
             inputClassName={`rowgon-input text-sm ${blinkClass(blink("tags"))}`}
+            onCommittedTagsChange={(list) => {
+              if (!active) return;
+              if (
+                (step === "tags" || step === "tags-info") &&
+                list.length > 0
+              ) {
+                setStep("one-off-info");
+              }
+            }}
           />
         </div>
 
@@ -537,7 +546,7 @@ export function GuidedCreateTaskForm({
       {active && (step === "tags" || step === "tags-info") ? (
         <OnboardingPrompt
           title="Tags"
-          body="Type a tag and press Enter to add it (the field clears for the next one). Or pick from suggestions. Later, use the Tag filter in search to find matching tasks."
+          body="Type a tag and pick a suggestion (or finish typing and leave the field) to add a chip. The tip moves on once a tag is added. Later, use the Tag filter in search to find matching tasks."
           actionLabel="Add Tag"
           onAction={() => {
             focusOnboardingStep("tags");

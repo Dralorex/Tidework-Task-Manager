@@ -45,12 +45,17 @@ export function TagSuggestInput({
   allowMultiple = false,
   keepOpenOnPick = false,
   /**
-   * When true, Enter commits the current tag into the list and clears the
-   * typing field instead of submitting the parent form (create-task flow).
+   * When true with allowMultiple, use chip UI. Tags commit on suggestion
+   * pick or blur (phone Done) — not Enter, which advances focus like Tab.
    */
   commitTagOnEnter = false,
   /** Optional marker on the visible input for onboarding focus targets. */
   dataOnboarding,
+  /**
+   * Fired when a tag/role is actually committed (chip added, suggestion
+   * picked, or blur-applied) — not on every keystroke or bare Enter.
+   */
+  onCommittedTagsChange,
 }: {
   tags: string[];
   name?: string;
@@ -74,6 +79,7 @@ export function TagSuggestInput({
   keepOpenOnPick?: boolean;
   commitTagOnEnter?: boolean;
   dataOnboarding?: string;
+  onCommittedTagsChange?: (tags: string[]) => void;
 }) {
   const useChips = Boolean(commitTagOnEnter && allowMultiple);
   const [open, setOpen] = useState(false);
@@ -118,6 +124,13 @@ export function TagSuggestInput({
     ? [...chips, ...(draft.trim() ? [draft.trim()] : [])].join(", ")
     : value;
 
+  const onCommittedTagsChangeRef = useRef(onCommittedTagsChange);
+  onCommittedTagsChangeRef.current = onCommittedTagsChange;
+
+  function emitCommitted(list: string[]) {
+    onCommittedTagsChangeRef.current?.(list);
+  }
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -130,6 +143,12 @@ export function TagSuggestInput({
       setValue(defaultValue);
     }
   }, [defaultValue, useChips]);
+
+  // Chip mode: notify when the committed chip list changes (pick / blur / Enter).
+  useEffect(() => {
+    if (!useChips) return;
+    emitCommitted(chips);
+  }, [chips, useChips]);
 
   const place = useCallback(() => {
     const input = inputRef.current;
@@ -206,7 +225,10 @@ export function TagSuggestInput({
       return;
     }
 
-    if (!allowMultiple) return;
+    if (!allowMultiple) {
+      emitCommitted(parseDefaultTags(piece, false));
+      return;
+    }
 
     const current = inputRef.current?.value ?? value;
     const parts = current.split(",");
@@ -218,9 +240,12 @@ export function TagSuggestInput({
       .filter(Boolean);
     if (prior.some((p) => p.toLowerCase() === last.toLowerCase())) {
       setValue(prior.join(", "));
+      emitCommitted(prior);
       return;
     }
-    setValue([...prior, last].join(", "));
+    const next = [...prior, last];
+    setValue(next.join(", "));
+    emitCommitted(next);
   }
 
   function scheduleCloseOnBlur() {
@@ -246,6 +271,7 @@ export function TagSuggestInput({
       setValue(next);
       setOpen(false);
     });
+    emitCommitted(parseDefaultTags(next, allowMultiple));
     if (submit) {
       inputRef.current?.form?.requestSubmit();
     }
@@ -297,8 +323,10 @@ export function TagSuggestInput({
     }
 
     if (keepOpenOnPick) {
-      const next = `${[...head, tag].join(", ")}, `;
+      const committed = [...head, tag];
+      const next = `${committed.join(", ")}, `;
       setValue(next);
+      emitCommitted(committed);
       setOpen(true);
       requestAnimationFrame(() => {
         const el = inputRef.current;
@@ -317,34 +345,11 @@ export function TagSuggestInput({
 
   function onEnterKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key !== "Enter") return;
+    // Never commit or submit on Enter — parent create forms treat Enter as
+    // Tab. Tags/roles are added via suggestion pick or blur (phone Done).
     if (e.nativeEvent.isComposing) return;
-    if (!commitTagOnEnter) return;
-
-    // Block form submit. Commit a chip when there’s a draft; otherwise let
-    // the event bubble so create forms can advance focus like Tab.
+    if (!commitTagOnEnter && !allowMultiple) return;
     e.preventDefault();
-
-    const piece = useChips
-      ? draft.trim()
-      : (segments[segments.length - 1] ?? "").trim();
-
-    if (!piece) return;
-
-    e.stopPropagation();
-
-    if (useChips) {
-      // Commit + clear draft; close menu so the empty list doesn’t cover the hint.
-      addChip(piece, false);
-      return;
-    }
-
-    if (taken.has(piece.toLowerCase())) {
-      setValue(head.length ? `${head.join(", ")}, ` : "");
-      return;
-    }
-    const next = [...head, piece];
-    setValue(keepOpenOnPick ? `${next.join(", ")}, ` : next.join(", "));
-    setOpen(true);
   }
 
   const listMaxHeight = `${MAX_VISIBLE_SUGGESTIONS * SUGGESTION_ROW_REM}rem`;
