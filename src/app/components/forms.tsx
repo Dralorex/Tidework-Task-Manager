@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import type { ActionResult } from "@/app/actions/auth";
+import { enterAdvancesFocus } from "@/lib/form-keyboard";
 
 export type { ActionResult };
 
@@ -94,7 +95,11 @@ export function InlineActionForm({
   }, [state, onSuccess]);
 
   return (
-    <form className={className ?? "flex flex-col gap-3"} action={formAction}>
+    <form
+      className={className ?? "flex flex-col gap-3"}
+      action={formAction}
+      onKeyDown={enterAdvancesFocus}
+    >
       {children}
       {state && !state.ok ? (
         <p className="text-sm text-[#9b2f22]">{state.error}</p>

@@ -317,15 +317,20 @@ export function TagSuggestInput({
 
   function onEnterKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key !== "Enter") return;
+    if (e.nativeEvent.isComposing) return;
     if (!commitTagOnEnter) return;
+
+    // Block form submit. Commit a chip when there’s a draft; otherwise let
+    // the event bubble so create forms can advance focus like Tab.
     e.preventDefault();
-    e.stopPropagation();
 
     const piece = useChips
       ? draft.trim()
       : (segments[segments.length - 1] ?? "").trim();
 
     if (!piece) return;
+
+    e.stopPropagation();
 
     if (useChips) {
       // Commit + clear draft; close menu so the empty list doesn’t cover the hint.

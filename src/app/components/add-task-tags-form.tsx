@@ -7,8 +7,9 @@ import {
   addPrivateTagAction,
   addPublicTagAction,
 } from "@/app/actions/tasks";
+import { enterAdvancesFocus } from "@/lib/form-keyboard";
 
-/** Add one or more tags; applies only on Enter or the add button. */
+/** Add one or more tags; only the add button submits (Enter advances focus). */
 export function AddTaskTagsForm({
   workspaceId,
   taskId,
@@ -47,7 +48,11 @@ export function AddTaskTagsForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-2">
+    <form
+      onSubmit={onSubmit}
+      onKeyDown={enterAdvancesFocus}
+      className="flex flex-col gap-2"
+    >
       <input type="hidden" name="workspaceId" value={workspaceId} />
       <input type="hidden" name="taskId" value={taskId} />
       <TagSuggestInput
@@ -56,7 +61,7 @@ export function AddTaskTagsForm({
         required
         tags={tags}
         placeholder="add tags: example, test, help"
-        hint="Separate multiple tags with commas. Press Enter or the button to add."
+        hint="Separate multiple tags with commas. Use the button to add."
         emptyMessage={
           isPublic
             ? "No public tags in this folder yet — type a new one"

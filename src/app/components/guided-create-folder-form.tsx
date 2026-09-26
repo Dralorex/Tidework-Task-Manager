@@ -59,7 +59,7 @@ export function GuidedCreateFolderForm({
       <input
         type="text"
         inputMode="text"
-        enterKeyHint="done"
+        enterKeyHint="next"
         autoCapitalize="sentences"
         name="name"
         data-onboarding="folder-name"

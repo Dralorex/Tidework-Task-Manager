@@ -219,7 +219,7 @@ export function GuidedCreateTaskForm({
         <input
           type="text"
           inputMode="text"
-          enterKeyHint="done"
+          enterKeyHint="next"
           autoCapitalize="sentences"
           name="description"
           data-onboarding="description"

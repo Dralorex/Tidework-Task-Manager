@@ -15,6 +15,7 @@ import {
   nextRoleCreateStep,
 } from "@/lib/workspace-onboarding";
 import { confirmDelete } from "@/lib/confirm";
+import { enterAdvancesFocus } from "@/lib/form-keyboard";
 
 export function WorkspaceRolesPanel({
   workspaceId,
@@ -194,11 +195,15 @@ export function WorkspaceRolesPanel({
         </ul>
 
         {canManage ? (
-          <form onSubmit={create} className="mt-3 flex flex-col gap-2">
+          <form
+            onSubmit={create}
+            onKeyDown={enterAdvancesFocus}
+            className="mt-3 flex flex-col gap-2"
+          >
             <input
               type="text"
               inputMode="text"
-              enterKeyHint="done"
+              enterKeyHint="next"
               autoCapitalize="sentences"
               value={name}
               data-onboarding="roles-name"

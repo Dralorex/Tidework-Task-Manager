@@ -28,6 +28,7 @@ import {
   toggleChecklistItemForm,
   updateTaskAction,
 } from "@/app/actions/tasks";
+import { enterAdvancesFocus } from "@/lib/form-keyboard";
 import { personLabel } from "@/lib/utils";
 import { confirmDelete } from "@/lib/confirm";
 import type { TaskPriority, TaskStatus } from "@/generated/prisma/client";
@@ -235,7 +236,11 @@ function TaskEditorMenu({
       ) : null}
 
       {panel === "edit" ? (
-        <form className="space-y-2 px-3 py-2" onSubmit={saveEdit}>
+        <form
+          className="space-y-2 px-3 py-2"
+          onSubmit={saveEdit}
+          onKeyDown={enterAdvancesFocus}
+        >
           <p className="text-xs font-semibold text-[#0A3D45]">Edit task</p>
           <input
             value={name}
@@ -289,7 +294,11 @@ function TaskEditorMenu({
       ) : null}
 
       {panel === "forceUnclaim" ? (
-        <form className="space-y-2 px-3 py-2" onSubmit={forceUnclaim}>
+        <form
+          className="space-y-2 px-3 py-2"
+          onSubmit={forceUnclaim}
+          onKeyDown={enterAdvancesFocus}
+        >
           <p className="text-xs font-semibold text-[#0A3D45]">Force unclaim</p>
           <p className="text-[11px] text-[#0A3D45]/60">
             Removes{" "}
