@@ -527,7 +527,7 @@ export function GuidedCreateTaskForm({
       {active && step === "task-menu-info" ? (
         <OnboardingPrompt
           title="Edit or delete a task"
-          body="After a task exists, open its ··· menu on the right. Use Rename / Replace to change the name, description, priority, or due date — or Delete to remove it."
+          body="After a task exists, open its ⋮ menu beside Claim Task. Use Rename / Replace to change the name, description, priority, or due date — or Delete to remove it."
           onNext={() => setStep("submit")}
           layer={promptLayer}
         />

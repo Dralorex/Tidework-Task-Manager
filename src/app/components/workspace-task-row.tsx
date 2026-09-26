@@ -178,14 +178,14 @@ function TaskEditorMenu({
           type="button"
           aria-label="Task options"
           aria-expanded={open}
-          className="rounded-md px-1.5 py-0.5 text-[#0A3D45]/70 transition hover:bg-[#0A3D45]/8 hover:text-[#0A3D45]"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-lg leading-none text-[#0A3D45]/70 transition hover:bg-[#0A3D45]/8 hover:text-[#0A3D45]"
           onClick={() => {
             setOpen((v) => !v);
             setPanel("menu");
             setError(null);
           }}
         >
-          ···
+          ⋮
         </button>
       )}
     >
@@ -547,15 +547,6 @@ export function WorkspaceTaskRow({
                 {task.status.replace("_", " ")}
               </span>
             )}
-            {canEdit ? (
-              <span
-                className="ml-auto inline-flex"
-                onClick={(e) => e.stopPropagation()}
-                onKeyDown={(e) => e.stopPropagation()}
-              >
-                <TaskEditorMenu workspaceId={workspaceId} task={task} />
-              </span>
-            ) : null}
           </div>
 
           {expanded ? (
@@ -745,19 +736,24 @@ export function WorkspaceTaskRow({
         </div>
 
         <div className="flex max-w-full shrink-0 flex-col items-end gap-2">
-          {!expanded && canClaim ? (
+          {!expanded && (canClaim || canEdit) ? (
             <div
               className="flex flex-wrap items-center justify-end gap-2"
               onClick={(e) => e.stopPropagation()}
             >
-              <InlineActionForm
-                className="flex flex-row items-center gap-2"
-                action={claimTaskAction}
-                submitLabel={claimLabel}
-              >
-                <input type="hidden" name="workspaceId" value={workspaceId} />
-                <input type="hidden" name="taskId" value={task.id} />
-              </InlineActionForm>
+              {canClaim ? (
+                <InlineActionForm
+                  className="flex flex-row items-center gap-2"
+                  action={claimTaskAction}
+                  submitLabel={claimLabel}
+                >
+                  <input type="hidden" name="workspaceId" value={workspaceId} />
+                  <input type="hidden" name="taskId" value={task.id} />
+                </InlineActionForm>
+              ) : null}
+              {canEdit ? (
+                <TaskEditorMenu workspaceId={workspaceId} task={task} />
+              ) : null}
             </div>
           ) : null}
 
@@ -881,20 +877,25 @@ export function WorkspaceTaskRow({
                 </div>
               ) : null}
 
-              {canClaim ? (
-                <div className="flex justify-end">
-                  <InlineActionForm
-                    className="flex flex-row items-center gap-2"
-                    action={claimTaskAction}
-                    submitLabel={claimLabel}
-                  >
-                    <input
-                      type="hidden"
-                      name="workspaceId"
-                      value={workspaceId}
-                    />
-                    <input type="hidden" name="taskId" value={task.id} />
-                  </InlineActionForm>
+              {canClaim || canEdit ? (
+                <div className="flex items-center justify-end gap-2">
+                  {canClaim ? (
+                    <InlineActionForm
+                      className="flex flex-row items-center gap-2"
+                      action={claimTaskAction}
+                      submitLabel={claimLabel}
+                    >
+                      <input
+                        type="hidden"
+                        name="workspaceId"
+                        value={workspaceId}
+                      />
+                      <input type="hidden" name="taskId" value={task.id} />
+                    </InlineActionForm>
+                  ) : null}
+                  {canEdit ? (
+                    <TaskEditorMenu workspaceId={workspaceId} task={task} />
+                  ) : null}
                 </div>
               ) : null}
 
