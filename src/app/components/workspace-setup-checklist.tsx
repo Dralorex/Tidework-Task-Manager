@@ -1,24 +1,29 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { OnboardingPrompt } from "@/app/components/onboarding-prompt";
 import { useWorkspaceOnboarding } from "@/app/components/workspace-onboarding-context";
 import { clickOnboardingStep, focusOnboardingStep } from "@/lib/onboarding-targets";
 
+/** Steps where Continue hides the tip until the user opens the tab/folder. */
+const OPEN_TAB_STEPS = new Set([
+  "roles-open",
+  "create-folder",
+  "open-folder",
+  "open-add-task",
+]);
+
 export function WorkspaceSetupChecklist({
-  workspaceId,
   hasFolder,
   hasTask,
   hasInvite,
   canInvite,
-  firstFolderId,
   inFolder,
 }: {
-  workspaceId: string;
   hasFolder: boolean;
   hasTask: boolean;
   hasInvite: boolean;
   canInvite: boolean;
-  firstFolderId: string | null;
   inFolder: boolean;
 }) {
   const {
@@ -32,7 +37,15 @@ export function WorkspaceSetupChecklist({
     hasRole,
   } = useWorkspaceOnboarding();
 
+  /** After Continue on an open-tab step, hide the tip until they open it. */
+  const [tipPaused, setTipPaused] = useState(false);
+  useEffect(() => {
+    setTipPaused(false);
+  }, [step]);
+
   if (!active) return null;
+
+  const showOpenTabTip = OPEN_TAB_STEPS.has(step) && !tipPaused;
 
   const showRolesTour = track === "full" && canManageRoles;
 
@@ -139,12 +152,12 @@ export function WorkspaceSetupChecklist({
         ))}
       </ol>
 
-      {step === "roles-open" ? (
+      {step === "roles-open" && showOpenTabTip ? (
         <OnboardingPrompt
           title="Start with Roles"
-          body="Custom roles decide who can open which folders. Open the blinking Roles header in the left sidebar to begin."
-          actionLabel="Open Roles"
-          onAction={() => clickOnboardingStep("roles-open")}
+          body="Custom roles decide who can open which folders. After Continue, open the blinking Roles header in the left sidebar (▸)."
+          onNext={() => setTipPaused(true)}
+          nextLabel="Continue"
         />
       ) : null}
 
@@ -216,12 +229,12 @@ export function WorkspaceSetupChecklist({
         />
       ) : null}
 
-      {step === "create-folder" ? (
+      {step === "create-folder" && showOpenTabTip ? (
         <OnboardingPrompt
           title="Open Folders"
-          body="Open the Folders panel to create your first folder. Tap the ▸ arrow or the blinking empty space on the header."
-          actionLabel="Open Folders"
-          onAction={() => clickOnboardingStep("create-folder")}
+          body="After Continue, open the blinking Folders header (▸ or the empty space) to create your first folder."
+          onNext={() => setTipPaused(true)}
+          nextLabel="Continue"
         />
       ) : null}
 
@@ -287,35 +300,21 @@ export function WorkspaceSetupChecklist({
         />
       ) : null}
 
-      {step === "open-folder" ? (
+      {step === "open-folder" && showOpenTabTip ? (
         <OnboardingPrompt
           title="Open a folder"
-          body={
-            firstFolderId
-              ? "Tap a blinking folder card — empty space opens it. Or use Open Folder below."
-              : "Tap a blinking folder card — empty space opens it."
-          }
-          actionLabel="Open Folder"
-          onAction={() => {
-            clickOnboardingStep("open-folder");
-            // Fallback if no blinkable card is in the DOM yet
-            window.setTimeout(() => {
-              const hit = document.querySelector(
-                '#workspace-folders [data-onboarding="folder-bubble"]',
-              );
-              if (hit || !firstFolderId) return;
-              window.location.href = `/app/w/${workspaceId}?folder=${firstFolderId}`;
-            }, 220);
-          }}
+          body="After Continue, tap a blinking folder card — empty space opens it."
+          onNext={() => setTipPaused(true)}
+          nextLabel="Continue"
         />
       ) : null}
 
-      {step === "open-add-task" ? (
+      {step === "open-add-task" && showOpenTabTip ? (
         <OnboardingPrompt
           title="Open Add Task"
-          body="Expand Add Task to name your first task. Tap the ▸ arrow or the blinking empty space on the bar."
-          actionLabel="Open Add Task"
-          onAction={() => clickOnboardingStep("open-add-task")}
+          body="After Continue, open the blinking Add Task bar (▸ or the empty space) to name your first task."
+          onNext={() => setTipPaused(true)}
+          nextLabel="Continue"
         />
       ) : null}
     </div>

@@ -510,8 +510,6 @@ export default async function WorkspacePage({
   const taskCount = allWorkspaceTasks.length;
   const memberCount = workspaceMembers.length;
   const hasInviteActivity = pendingInvites.length > 0 || memberCount > 1;
-  const firstFolderId =
-    activeFolders.find((f) => accessibleFolderIds.has(f.id))?.id ?? null;
 
   const templateParentFolder =
     currentFolder && !isArchived(currentFolder) ? currentFolder : null;
@@ -651,12 +649,10 @@ export default async function WorkspacePage({
       <OnboardingScrollToBlink />
 
       <WorkspaceSetupChecklist
-        workspaceId={workspaceId}
         hasFolder={activeFolders.length > 0}
         hasTask={taskCount > 0}
         hasInvite={hasInviteActivity}
         canInvite={canInvite}
-        firstFolderId={firstFolderId}
         inFolder={Boolean(currentFolder)}
       />
 

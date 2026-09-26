@@ -40,9 +40,18 @@ export function WorkspaceRolesPanel({
   const guidingRoles =
     active && track === "full" && canManage && isRoleCreateStep(step);
 
+  // Keep Roles open during the tour after the user opens it themselves
+  // (do not auto-open on roles-open — they tap Continue, then open the tab).
   useEffect(() => {
-    if (guidingRoles) setOpen(true);
+    if (guidingRoles && step !== "roles-open") setOpen(true);
   }, [guidingRoles, step]);
+
+  // If Roles is already expanded when we land on roles-open, advance.
+  useEffect(() => {
+    if (active && step === "roles-open" && open) {
+      setStep("roles-intro");
+    }
+  }, [active, step, open, setStep]);
 
   function advanceFrom(current: typeof step) {
     if (!active || track !== "full") return;

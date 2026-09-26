@@ -19,7 +19,8 @@ export function WorkspaceAddTaskPanel({
   const { active, step, setStep, blink } = useWorkspaceOnboarding();
   const [open, setOpen] = useState(false);
 
-  // Keep Add Task open once the guided tour is past the header step
+  // Keep Add Task open once the guided tour is past the header step.
+  // Do not auto-open on open-add-task — user taps Continue, then opens it.
   useEffect(() => {
     if (!active) return;
     const stayOpen =
@@ -29,6 +30,13 @@ export function WorkspaceAddTaskPanel({
       step !== "done";
     if (stayOpen) setOpen(true);
   }, [active, step]);
+
+  // Already expanded when we ask them to open Add Task → advance.
+  useEffect(() => {
+    if (active && step === "open-add-task" && open) {
+      setStep("task-name");
+    }
+  }, [active, step, open, setStep]);
 
   function onOpenChange(next: boolean) {
     setOpen(next);

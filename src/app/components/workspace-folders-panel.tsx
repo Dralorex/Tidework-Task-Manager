@@ -95,14 +95,24 @@ export function WorkspaceFoldersPanel({
     setHydrated(true);
   }, [workspaceId, active, needsChooser]);
 
-  // Keep Folders open while guiding through create form or folder pick
+  // Keep Folders open during the create form / open-folder pick — but never
+  // auto-open on create-folder; the user opens that tab after Continue.
   useEffect(() => {
     if (!hydrated) return;
+    if (step === "create-folder") return;
     if (step === "open-folder" || FOLDER_FORM_STEPS.has(step)) {
       setOpen(true);
       writeFoldersOpenPreference(workspaceId, true);
     }
   }, [step, hydrated, workspaceId]);
+
+  // Already expanded when we ask them to open Folders → advance.
+  useEffect(() => {
+    if (!hydrated) return;
+    if (active && step === "create-folder" && open) {
+      setStep("folder-name");
+    }
+  }, [active, step, open, hydrated, setStep]);
 
   function onOpenChange(next: boolean) {
     setOpen(next);
