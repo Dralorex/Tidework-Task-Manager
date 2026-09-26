@@ -10,9 +10,9 @@
   --rowgon-ink: #10262a;
   --background: var(--rowgon-foam);
   --foreground: var(--rowgon-ink);
-  /* Opaque menu surfaces — ⋮ menus must not show content through */
+  /* Frosted menu surfaces (chat + ⋮) — translucent fill, heavy blur */
   --panel-border: rgba(10, 61, 69, 0.14);
-  --menu-bg: #ffffff;
+  --menu-bg: rgba(255, 255, 255, 0.72);
 }
 
 @theme inline {
@@ -157,14 +157,14 @@ input[type="date"].rowgon-input-date::-webkit-calendar-picker-indicator {
 }
 
 /**
- * Open ⋮ / chat-style popovers: solid fill + heavy blur of content behind
- * so list text never reads through the menu.
+ * Open ⋮ / chat popovers: frosted glass — translucent fill + heavy blur
+ * (stronger than backdrop-blur-md) so content behind softens, not solid white.
  */
 .rowgon-menu-popover {
-  background-color: var(--menu-bg, #ffffff);
+  background-color: var(--menu-bg, rgba(255, 255, 255, 0.72));
   border: 1px solid var(--panel-border, rgba(10, 61, 69, 0.14));
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(28px) saturate(1.25);
+  backdrop-filter: blur(28px) saturate(1.25);
   box-shadow: 0 18px 50px rgba(10, 61, 69, 0.18);
 }
 
