@@ -1,28 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { InlineActionForm } from "@/app/components/forms";
 import { DueDateField } from "@/app/components/due-date-field";
-import {
-  OnboardingPrompt,
-  OnboardingPromptBody,
-} from "@/app/components/onboarding-prompt";
+import { OnboardingPrompt } from "@/app/components/onboarding-prompt";
 import { TagSuggestInput } from "@/app/components/tag-suggest-input";
 import { useWorkspaceOnboarding } from "@/app/components/workspace-onboarding-context";
 import { createTaskAction } from "@/app/actions/tasks";
 import { PRIORITY_LABELS, TASK_PRIORITIES } from "@/lib/urgency";
-
-function useIsPhoneLayout() {
-  const [phone, setPhone] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 640px), (pointer: coarse)");
-    const sync = () => setPhone(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
-  return phone;
-}
 
 const WEEKDAYS = [
   { value: 0, label: "Sun" },
@@ -57,13 +42,15 @@ export function GuidedCreateTaskForm({
   assignableMembers: Assignable[];
 }) {
   const { active, step, setStep, blink, track } = useWorkspaceOnboarding();
-  const isPhone = useIsPhoneLayout();
   const [taskName, setTaskName] = useState("");
   const [nameClicked, setNameClicked] = useState(false);
   const [description, setDescription] = useState("");
   const [descClicked, setDescClicked] = useState(false);
   const [priority, setPriority] = useState("");
-  const [duePickerOpen, setDuePickerOpen] = useState(false);
+  const [assignTo, setAssignTo] = useState("");
+  const [spawnMode, setSpawnMode] = useState("complete");
+  const [nextAssignee, setNextAssignee] = useState("pool");
+  const [formEpoch, setFormEpoch] = useState(0);
   const [cadence, setCadence] = useState<"" | "daily" | "weekly" | "monthly">(
     "",
   );
@@ -74,16 +61,20 @@ export function GuidedCreateTaskForm({
     [],
   );
 
-  const promptLayer =
-    isPhone || duePickerOpen ? ("foreground" as const) : ("inline" as const);
-
-  const dueSheetPrompt =
-    active && (step === "due-date" || duePickerOpen) ? (
-      <OnboardingPromptBody
-        title="Pick a due date"
-        body="Optional — tap a day, or Clear / Done if you don’t need one. This tip stays on top of the calendar."
-      />
-    ) : null;
+  const resetForm = useCallback(() => {
+    setTaskName("");
+    setNameClicked(false);
+    setDescription("");
+    setDescClicked(false);
+    setPriority("");
+    setAssignTo("");
+    setSpawnMode("complete");
+    setNextAssignee("pool");
+    setCadence("");
+    setWeekDays([]);
+    setMonthDays([]);
+    setFormEpoch((n) => n + 1);
+  }, []);
 
   /** Skip chip-click gates — jump straight to each cadence info prompt. */
   useEffect(() => {
@@ -168,8 +159,9 @@ export function GuidedCreateTaskForm({
       <InlineActionForm
         className="grid min-w-0 gap-2 sm:grid-cols-2"
         action={createTaskAction}
-        submitLabel="Add task"
+        submitLabel="Add Task"
         submitClassName={blinkClass(blink("submit"))}
+        onSuccess={resetForm}
       >
         <input type="hidden" name="workspaceId" value={workspaceId} />
         <input type="hidden" name="folderId" value={folderId} />
@@ -234,24 +226,14 @@ export function GuidedCreateTaskForm({
         />
 
         <DueDateField
+          key={`due-${formEpoch}`}
           name="dueDate"
-          className="min-w-0"
+          className="min-w-0 max-w-full"
           blink={blink("due-date")}
           blinkReset={blink("due-reset")}
           blinkClear={blink("due-clear")}
-          sheetPrompt={dueSheetPrompt}
-          onPickerOpenChange={(open) => {
-            setDuePickerOpen(open);
-            if (!open && active && step === "due-date" && isPhone) {
-              setStep("due-reset");
-            }
-          }}
           onFieldActivate={() => {
-            // Stay on due-date while the in-app calendar is open so the tip
-            // remains the foreground coach; advance after close / Reset.
-            if (active && step === "due-date" && !isPhone) {
-              setStep("due-reset");
-            }
+            if (active && step === "due-date") setStep("due-reset");
           }}
           onReset={() => {
             if (active && (step === "due-reset" || step === "due-date")) {
@@ -268,7 +250,11 @@ export function GuidedCreateTaskForm({
         <select
           name="assignTo"
           className={`rowgon-input ${blinkClass(blink("claim-pool"))}`}
-          defaultValue=""
+          value={assignTo}
+          onChange={(e) => {
+            setAssignTo(e.target.value);
+            if (active && step === "claim-pool") setStep("claim-pool-info");
+          }}
           onFocus={() => {
             if (active && step === "claim-pool") setStep("claim-pool-info");
           }}
@@ -294,13 +280,15 @@ export function GuidedCreateTaskForm({
           }}
         >
           <TagSuggestInput
+            key={`tags-${formEpoch}`}
             name="tags"
             tags={publicTagOptions}
             placeholder="add tags: example, test, help"
-            hint="Optional. Separate multiple tags with commas — same as Add Public Tag on a task."
+            hint="Optional. Type a tag and press Enter to add it — or separate with commas."
             emptyMessage="No public tags in this folder yet — type a new one"
             allowMultiple
             keepOpenOnPick
+            commitTagOnEnter
             inputClassName={`rowgon-input text-sm ${blinkClass(blink("tags"))}`}
           />
         </div>
@@ -427,7 +415,8 @@ export function GuidedCreateTaskForm({
                 Spawn next
                 <select
                   name="recurrenceSpawnMode"
-                  defaultValue="complete"
+                  value={spawnMode}
+                  onChange={(e) => setSpawnMode(e.target.value)}
                   className="rowgon-input mt-1 min-h-11 text-sm"
                 >
                   <option value="complete">On complete (approve)</option>
@@ -439,7 +428,8 @@ export function GuidedCreateTaskForm({
                 Next assignee
                 <select
                   name="recurrenceNextAssignee"
-                  defaultValue="pool"
+                  value={nextAssignee}
+                  onChange={(e) => setNextAssignee(e.target.value)}
                   className="rowgon-input mt-1 min-h-11 text-sm"
                 >
                   <option value="pool">Claim pool</option>
@@ -452,27 +442,24 @@ export function GuidedCreateTaskForm({
         </div>
       </InlineActionForm>
 
-      {active && step === "due-date" && !duePickerOpen ? (
+      {active && step === "due-date" ? (
         <OnboardingPrompt
           title="Due date"
-          body="Optional. Tap Due Date to open the calendar — the tip stays on top while you pick."
-          layer={promptLayer}
+          body="Optional. Tap Due Date to open the calendar picker, then use Reset or Clear below."
         />
       ) : null}
-      {active && step === "due-reset" && !duePickerOpen ? (
+      {active && step === "due-reset" ? (
         <OnboardingPrompt
           title="Reset due date"
           body="This button will reset it to Today’s Date. Click Reset to continue, or Next."
           onNext={() => setStep("due-clear")}
-          layer={promptLayer}
         />
       ) : null}
-      {active && step === "due-clear" && !duePickerOpen ? (
+      {active && step === "due-clear" ? (
         <OnboardingPrompt
           title="Clear due date"
           body="This button will clear any due date if you don’t want one. Click Clear to continue, or Next."
           onNext={() => setStep("claim-pool")}
-          layer={promptLayer}
         />
       ) : null}
       {active && step === "claim-pool-info" ? (
@@ -480,15 +467,13 @@ export function GuidedCreateTaskForm({
           title="Claim pool"
           body="This is used to auto-assign any member to a task. Leave Claim pool (optional) unless you want a specific person."
           onNext={() => setStep("tags")}
-          layer={promptLayer}
         />
       ) : null}
       {active && step === "tags-info" ? (
         <OnboardingPrompt
           title="Tags"
-          body="Type a tag and pick from suggestions, or add several with commas. Later, use the Tag filter in search to find matching tasks."
+          body="Type a tag and press Enter to add it (the field clears for the next one). Or pick from suggestions. Later, use the Tag filter in search to find matching tasks."
           onNext={() => setStep("one-off")}
-          layer={promptLayer}
         />
       ) : null}
       {active && step === "one-off-info" ? (
@@ -497,7 +482,6 @@ export function GuidedCreateTaskForm({
           body="A one-off task happens once — no automatic follow-up when it’s done."
           onNext={() => setStep("daily-info")}
           nextLabel="Next"
-          layer={promptLayer}
         />
       ) : null}
       {active && step === "daily-info" ? (
@@ -505,7 +489,6 @@ export function GuidedCreateTaskForm({
           title="Daily"
           body="Daily tasks spawn again on a schedule so recurring work doesn’t fall through the cracks."
           onNext={() => setStep("weekly-info")}
-          layer={promptLayer}
         />
       ) : null}
       {active && step === "weekly-info" ? (
@@ -513,7 +496,6 @@ export function GuidedCreateTaskForm({
           title="Weekly"
           body="Weekly lets you pick which weekdays the task should repeat on."
           onNext={() => setStep("monthly-info")}
-          layer={promptLayer}
         />
       ) : null}
       {active && step === "monthly-info" ? (
@@ -521,7 +503,6 @@ export function GuidedCreateTaskForm({
           title="Monthly"
           body="Monthly repeats on chosen days of the month — great for reports and check-ins."
           onNext={finishCadenceTour}
-          layer={promptLayer}
         />
       ) : null}
       {active && step === "task-menu-info" ? (
@@ -529,7 +510,6 @@ export function GuidedCreateTaskForm({
           title="Edit or delete a task"
           body="After a task exists, open its ⋮ menu beside Claim Task. Use Rename / Replace to change the name, description, priority, or due date — or Delete to remove it."
           onNext={() => setStep("submit")}
-          layer={promptLayer}
         />
       ) : null}
     </div>

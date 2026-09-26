@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import type { ActionResult } from "@/app/actions/auth";
 
@@ -70,6 +70,7 @@ export function InlineActionForm({
   className,
   submitVariant = "secondary",
   submitClassName,
+  onSuccess,
 }: {
   action: FormAction;
   submitLabel: string;
@@ -77,10 +78,20 @@ export function InlineActionForm({
   className?: string;
   submitVariant?: "primary" | "secondary";
   submitClassName?: string;
+  /** Called after a successful action result (e.g. reset local fields). */
+  onSuccess?: () => void;
 }) {
   const [state, formAction] = useActionState(action, null);
+  const handledSuccess = useRef<ActionResult | null>(null);
   const base =
     submitVariant === "primary" ? "rowgon-btn-primary text-sm" : "rowgon-btn-secondary text-sm";
+
+  useEffect(() => {
+    if (!state?.ok || !onSuccess) return;
+    if (handledSuccess.current === state) return;
+    handledSuccess.current = state;
+    onSuccess();
+  }, [state, onSuccess]);
 
   return (
     <form className={className ?? "flex flex-col gap-3"} action={formAction}>

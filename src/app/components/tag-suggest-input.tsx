@@ -14,6 +14,21 @@ import { createPortal, flushSync } from "react-dom";
 const SUGGESTION_ROW_REM = 2.25;
 const MAX_VISIBLE_SUGGESTIONS = 6;
 
+function parseDefaultTags(raw: string, allowMultiple: boolean): string[] {
+  if (!allowMultiple) return raw.trim() ? [raw.trim()] : [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of raw.split(",")) {
+    const t = part.trim();
+    if (!t) continue;
+    const key = t.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(t);
+  }
+  return out;
+}
+
 /** Text input with a clickable suggestion list of existing tags. */
 export function TagSuggestInput({
   tags,
@@ -29,6 +44,11 @@ export function TagSuggestInput({
   clearOptionLabel,
   allowMultiple = false,
   keepOpenOnPick = false,
+  /**
+   * When true, Enter commits the current tag into the list and clears the
+   * typing field instead of submitting the parent form (create-task flow).
+   */
+  commitTagOnEnter = false,
 }: {
   tags: string[];
   name?: string;
@@ -50,9 +70,15 @@ export function TagSuggestInput({
    * so another tag can be typed. Closes only if the tag is already selected.
    */
   keepOpenOnPick?: boolean;
+  commitTagOnEnter?: boolean;
 }) {
+  const useChips = Boolean(commitTagOnEnter && allowMultiple);
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(defaultValue);
+  const [chips, setChips] = useState<string[]>(() =>
+    useChips ? parseDefaultTags(defaultValue, true) : [],
+  );
+  const [draft, setDraft] = useState("");
   const [mounted, setMounted] = useState(false);
   const [coords, setCoords] = useState<{
     top: number;
@@ -64,14 +90,18 @@ export function TagSuggestInput({
   const panelRef = useRef<HTMLDivElement>(null);
   const listId = useId();
 
-  const segments = allowMultiple ? value.split(",") : [value];
-  const head = allowMultiple
+  const segments = allowMultiple && !useChips ? value.split(",") : [value];
+  const head = allowMultiple && !useChips
     ? segments
         .slice(0, -1)
         .map((s) => s.trim())
         .filter(Boolean)
-    : [];
-  const activeQuery = (segments[segments.length - 1] ?? "").trim().toLowerCase();
+    : useChips
+      ? chips
+      : [];
+  const activeQuery = useChips
+    ? draft.trim().toLowerCase()
+    : (segments[segments.length - 1] ?? "").trim().toLowerCase();
   const taken = new Set(head.map((s) => s.toLowerCase()));
 
   const filtered = tags.filter((t) => {
@@ -81,13 +111,22 @@ export function TagSuggestInput({
     return lower.includes(activeQuery);
   });
 
+  const formValue = useChips
+    ? [...chips, ...(draft.trim() ? [draft.trim()] : [])].join(", ")
+    : value;
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    setValue(defaultValue);
-  }, [defaultValue]);
+    if (useChips) {
+      setChips(parseDefaultTags(defaultValue, true));
+      setDraft("");
+    } else {
+      setValue(defaultValue);
+    }
+  }, [defaultValue, useChips]);
 
   const place = useCallback(() => {
     const input = inputRef.current;
@@ -123,7 +162,7 @@ export function TagSuggestInput({
       window.removeEventListener("resize", onReposition);
       window.removeEventListener("scroll", onReposition, true);
     };
-  }, [open, place, filtered.length, value, clearOptionLabel]);
+  }, [open, place, filtered.length, value, draft, chips, clearOptionLabel]);
 
   useEffect(() => {
     if (!open) return;
@@ -181,7 +220,39 @@ export function TagSuggestInput({
     }
   }
 
+  function addChip(tag: string, keepOpen: boolean) {
+    const trimmed = tag.trim();
+    if (!trimmed) return;
+    if (taken.has(trimmed.toLowerCase())) {
+      setDraft("");
+      if (!keepOpen) setOpen(false);
+      return;
+    }
+    setChips((prev) => [...prev, trimmed]);
+    setDraft("");
+    if (keepOpen) {
+      setOpen(true);
+      requestAnimationFrame(() => {
+        const el = inputRef.current;
+        if (!el) return;
+        el.focus();
+        place();
+      });
+    } else {
+      setOpen(false);
+    }
+  }
+
+  function removeChip(tag: string) {
+    setChips((prev) => prev.filter((t) => t.toLowerCase() !== tag.toLowerCase()));
+  }
+
   function pickSuggestion(tag: string) {
+    if (useChips) {
+      addChip(tag, Boolean(keepOpenOnPick));
+      return;
+    }
+
     if (!allowMultiple) {
       commit(tag, Boolean(submitOnPick));
       return;
@@ -211,6 +282,32 @@ export function TagSuggestInput({
     commit(next, Boolean(submitOnPick));
   }
 
+  function onEnterKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return;
+    if (!commitTagOnEnter) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const piece = useChips
+      ? draft.trim()
+      : (segments[segments.length - 1] ?? "").trim();
+
+    if (!piece) return;
+
+    if (useChips) {
+      addChip(piece, true);
+      return;
+    }
+
+    if (taken.has(piece.toLowerCase())) {
+      setValue(head.length ? `${head.join(", ")}, ` : "");
+      return;
+    }
+    const next = [...head, piece];
+    setValue(keepOpenOnPick ? `${next.join(", ")}, ` : next.join(", "));
+    setOpen(true);
+  }
+
   const listMaxHeight = `${MAX_VISIBLE_SUGGESTIONS * SUGGESTION_ROW_REM}rem`;
 
   const dropdown =
@@ -228,7 +325,7 @@ export function TagSuggestInput({
               visibility: coords ? "visible" : "hidden",
             }}
           >
-            {clearOptionLabel && value.trim() ? (
+            {clearOptionLabel && (useChips ? chips.length > 0 || draft.trim() : value.trim()) ? (
               <button
                 type="button"
                 role="option"
@@ -240,7 +337,14 @@ export function TagSuggestInput({
                 }}
                 onClick={() => {
                   pickingRef.current = false;
-                  commit("", Boolean(submitOnPick));
+                  if (useChips) {
+                    setChips([]);
+                    setDraft("");
+                    setOpen(false);
+                    if (submitOnPick) inputRef.current?.form?.requestSubmit();
+                  } else {
+                    commit("", Boolean(submitOnPick));
+                  }
                 }}
               >
                 {clearOptionLabel}
@@ -293,12 +397,34 @@ export function TagSuggestInput({
 
   return (
     <div className={className}>
-      <div ref={wrapRef} className="relative">
+      <div ref={wrapRef} className="relative space-y-1.5">
+        {useChips && chips.length > 0 ? (
+          <ul className="flex flex-wrap gap-1.5">
+            {chips.map((tag) => (
+              <li key={tag.toLowerCase()}>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-md bg-[#0A3D45]/8 px-2 py-0.5 text-xs font-medium text-[#0A3D45]"
+                  onClick={() => removeChip(tag)}
+                  aria-label={`Remove tag ${tag}`}
+                >
+                  {tag}
+                  <span aria-hidden className="text-[#0A3D45]/45">
+                    ×
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {useChips ? (
+          <input type="hidden" name={name} value={formValue} />
+        ) : null}
         <input
           ref={inputRef}
-          name={name}
-          value={value}
-          required={required}
+          name={useChips ? undefined : name}
+          value={useChips ? draft : value}
+          required={required && !(useChips ? formValue.trim() : value.trim())}
           autoComplete="off"
           aria-autocomplete="list"
           aria-expanded={open}
@@ -306,7 +432,8 @@ export function TagSuggestInput({
           placeholder={placeholder}
           className={inputClassName}
           onChange={(e) => {
-            setValue(e.target.value);
+            if (useChips) setDraft(e.target.value);
+            else setValue(e.target.value);
             setOpen(true);
           }}
           onFocus={() => {
@@ -315,6 +442,7 @@ export function TagSuggestInput({
           }}
           onClick={() => setOpen(true)}
           onBlur={scheduleCloseOnBlur}
+          onKeyDown={onEnterKey}
         />
       </div>
       {hint ? (

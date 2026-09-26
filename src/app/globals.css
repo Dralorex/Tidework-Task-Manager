@@ -107,14 +107,29 @@ body {
 }
 
 /* Keep native date pickers from overflowing narrow phone screens */
-input[type="date"].rowgon-input {
+input[type="date"].rowgon-input,
+input[type="date"].rowgon-input-date {
+  display: block;
+  width: 100%;
   min-width: 0;
   max-width: 100%;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
 }
 
-input[type="date"].rowgon-input::-webkit-datetime-edit {
+input[type="date"].rowgon-input::-webkit-datetime-edit,
+input[type="date"].rowgon-input-date::-webkit-datetime-edit {
+  min-width: 0;
   max-width: 100%;
   overflow: hidden;
+  padding: 0;
+}
+
+input[type="date"].rowgon-input::-webkit-calendar-picker-indicator,
+input[type="date"].rowgon-input-date::-webkit-calendar-picker-indicator {
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
 }
 
 .rowgon-input:focus {
