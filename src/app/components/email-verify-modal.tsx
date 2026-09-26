@@ -97,11 +97,18 @@ export function EmailVerifyModal({
           <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">
             Verification code
             <input
+              name="code"
+              type="text"
               inputMode="numeric"
-              pattern="\d{4}"
+              pattern="[0-9]*"
               maxLength={4}
               required
               autoFocus
+              autoComplete="one-time-code"
+              enterKeyHint="done"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               value={code}
               onChange={(e) =>
                 setCode(e.target.value.replace(/\D/g, "").slice(0, 4))

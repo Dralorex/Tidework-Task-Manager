@@ -81,11 +81,16 @@ export function PasswordResetForm() {
             Reset code
             <input
               name="code"
+              type="text"
               required
               inputMode="numeric"
-              pattern="\d{4}"
+              pattern="[0-9]*"
               maxLength={4}
               autoComplete="one-time-code"
+              enterKeyHint="done"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               placeholder="1234"
               className="rowgon-input tracking-[0.35em]"
               onChange={(e) => {
