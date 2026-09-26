@@ -17,7 +17,8 @@ export function selectorForStep(
     "roles-assign-info": "#workspace-roles",
     "roles-folder-bridge": "#workspace-roles",
     "create-folder": "#workspace-folders > button[aria-expanded]",
-    "folder-name": '#workspace-folders input[name="name"]',
+    "folder-name":
+      '#workspace-folders input[data-onboarding="folder-name"], #workspace-folders input[name="name"]:not([type="hidden"])',
     "folder-roles":
       '#workspace-folders input[data-onboarding="folder-roles"], #workspace-folders input[name="roles"]:not([type="hidden"])',
     "folder-hide":
@@ -29,9 +30,11 @@ export function selectorForStep(
     "open-folder":
       '#workspace-folders [data-onboarding="folder-bubble"]',
     "open-add-task": "#workspace-add-task > button[aria-expanded]",
-    "task-name": '#workspace-add-task input[name="name"]',
+    "task-name":
+      '#workspace-add-task input[data-onboarding="task-name"], #workspace-add-task input[name="name"]:not([type="hidden"])',
     priority: '#workspace-add-task select[name="priority"]',
-    description: '#workspace-add-task input[name="description"]',
+    description:
+      '#workspace-add-task input[data-onboarding="description"], #workspace-add-task input[name="description"]',
     "due-date": '#workspace-add-task input[name="dueDate"]',
     "due-reset": '#workspace-add-task [data-onboarding="due-reset"]',
     "due-reset-info": "#workspace-add-task",
@@ -61,35 +64,81 @@ function scrollToEl(el: HTMLElement) {
   el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
 }
 
+function isTextEntry(
+  el: HTMLElement,
+): el is HTMLInputElement | HTMLTextAreaElement {
+  if (el instanceof HTMLTextAreaElement) return true;
+  if (!(el instanceof HTMLInputElement)) return false;
+  const type = (el.type || "text").toLowerCase();
+  return (
+    type === "text" ||
+    type === "search" ||
+    type === "email" ||
+    type === "tel" ||
+    type === "url" ||
+    type === "password" ||
+    type === "number" ||
+    type === ""
+  );
+}
+
 /**
- * Scroll a guided field into view and focus it so the user can type/select.
- * Safe to call from info-prompt action buttons.
+ * Focus a guided field so the user can type immediately.
+ *
+ * Focus/click run synchronously in the caller’s user-gesture turn so mobile
+ * soft keyboards open. Scrolling happens afterward and must not delay focus.
  */
 export function focusOnboardingField(selector: string) {
   if (typeof document === "undefined") return;
   const el = document.querySelector(selector);
   if (!(el instanceof HTMLElement)) return;
 
-  scrollToEl(el);
+  if (el instanceof HTMLSelectElement) {
+    el.focus();
+    requestAnimationFrame(() => scrollToEl(el));
+    return;
+  }
 
-  window.setTimeout(() => {
-    if (el instanceof HTMLSelectElement) {
-      el.focus();
-      return;
+  if (el instanceof HTMLInputElement && el.type === "date") {
+    el.focus();
+    try {
+      el.showPicker?.();
+    } catch {
+      /* showPicker requires a user gesture; we’re in one */
     }
-    el.focus({ preventScroll: true });
-    if (
-      el instanceof HTMLInputElement ||
-      el instanceof HTMLTextAreaElement
-    ) {
+    requestAnimationFrame(() => scrollToEl(el));
+    return;
+  }
+
+  // Text fields: focus (+ click) in this same tap so iOS/Android open the keyboard.
+  el.focus();
+  if (isTextEntry(el)) {
+    try {
+      el.click();
+    } catch {
+      /* ignore */
+    }
+    try {
       const len = el.value.length;
-      try {
-        el.setSelectionRange(len, len);
-      } catch {
-        /* non-text inputs */
+      el.setSelectionRange(len, len);
+    } catch {
+      /* non-text */
+    }
+  }
+
+  requestAnimationFrame(() => {
+    scrollToEl(el);
+    if (document.activeElement !== el) {
+      el.focus({ preventScroll: true });
+      if (isTextEntry(el)) {
+        try {
+          el.click();
+        } catch {
+          /* ignore */
+        }
       }
     }
-  }, 180);
+  });
 }
 
 /** Click a guided control (open panel, Reset, Create role, etc.). */

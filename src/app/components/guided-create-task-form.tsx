@@ -166,7 +166,12 @@ export function GuidedCreateTaskForm({
         <input type="hidden" name="workspaceId" value={workspaceId} />
         <input type="hidden" name="folderId" value={folderId} />
         <input
+          type="text"
+          inputMode="text"
+          enterKeyHint="next"
+          autoCapitalize="sentences"
           name="name"
+          data-onboarding="task-name"
           required
           placeholder="Task Name"
           className={`rowgon-input ${blinkClass(showNameBlink)}`}
@@ -206,7 +211,12 @@ export function GuidedCreateTaskForm({
         </select>
 
         <input
+          type="text"
+          inputMode="text"
+          enterKeyHint="done"
+          autoCapitalize="sentences"
           name="description"
+          data-onboarding="description"
           placeholder="Description"
           className={`rowgon-input sm:col-span-2 ${blinkClass(showDescBlink)}`}
           value={description}

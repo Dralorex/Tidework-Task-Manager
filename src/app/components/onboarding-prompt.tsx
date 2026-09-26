@@ -22,7 +22,8 @@ import {
  * - Both: lift with the soft keyboard via visualViewport.
  *
  * Prefer an action button (`onAction` / `actionLabel`) when the user should
- * enter a field (e.g. “Add Title”, “Add Tag”) — that focuses the control.
+ * enter a field (e.g. “Add Title”, “Add Tag”). Call `focusOnboardingStep`
+ * synchronously from `onAction` so the mobile keyboard opens on tap.
  * Use `onNext` / `nextLabel` (“Next”) for informational steps.
  */
 function useOverlayBottom() {

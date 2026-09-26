@@ -57,7 +57,12 @@ export function GuidedCreateFolderForm({
       <input type="hidden" name="workspaceId" value={workspaceId} />
       {parentId ? <input type="hidden" name="parentId" value={parentId} /> : null}
       <input
+        type="text"
+        inputMode="text"
+        enterKeyHint="done"
+        autoCapitalize="sentences"
         name="name"
+        data-onboarding="folder-name"
         required
         placeholder="Folder Name"
         className={`rowgon-input text-sm ${blinkClass(showNameBlink)}`}

@@ -196,6 +196,10 @@ export function WorkspaceRolesPanel({
         {canManage ? (
           <form onSubmit={create} className="mt-3 flex flex-col gap-2">
             <input
+              type="text"
+              inputMode="text"
+              enterKeyHint="done"
+              autoCapitalize="sentences"
               value={name}
               data-onboarding="roles-name"
               onChange={(e) => {
