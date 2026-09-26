@@ -7,6 +7,7 @@ import {
   resetPasswordAction,
   type ActionResult,
 } from "@/app/actions/auth";
+import { EmailShortcutChips } from "@/app/components/email-field";
 import { PasswordFields } from "@/app/components/password-fields";
 
 function SubmitButton({ label }: { label: string }) {
@@ -29,6 +30,7 @@ function SubmitButton({ label }: { label: string }) {
 export function PasswordResetForm() {
   const [step, setStep] = useState<"request" | "confirm">("request");
   const [identifier, setIdentifier] = useState("");
+  const [identifierFocused, setIdentifierFocused] = useState(false);
   const [devCode, setDevCode] = useState<string | null>(null);
   const [requestState, requestAction] = useActionState(
     requestPasswordResetAction,
@@ -126,8 +128,18 @@ export function PasswordResetForm() {
           className="rowgon-input"
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
+          onFocus={() => setIdentifierFocused(true)}
+          onBlur={() => setIdentifierFocused(false)}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
         />
       </label>
+      <EmailShortcutChips
+        value={identifier}
+        onChange={setIdentifier}
+        visible={identifierFocused}
+      />
       {requestState && !requestState.ok ? (
         <p className="rounded-lg bg-[#E85D4C]/12 px-3 py-2 text-sm text-[#9b2f22]">
           {requestState.error}

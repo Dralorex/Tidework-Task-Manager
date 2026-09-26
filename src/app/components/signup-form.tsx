@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { ActionResult } from "@/app/actions/auth";
+import { EmailField } from "@/app/components/email-field";
 import { EmailVerifyModal } from "@/app/components/email-verify-modal";
 import { PasswordFields } from "@/app/components/password-fields";
 import { SignInDurationFields } from "@/app/components/sign-in-duration-fields";
@@ -92,28 +93,19 @@ export function SignUpForm({
           profile settings.
         </p>
         <PasswordFields />
-        <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">
-          Email{" "}
-          <span className="font-normal text-[#0A3D45]/55">(optional)</span>
-          <input
-            name="email"
-            type="email"
-            autoComplete="email"
-            className="rowgon-input"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              if (e.target.value.trim()) {
-                setAcked(false);
-                setShowWarning(false);
-              }
-            }}
-          />
-        </label>
-        <p className="text-xs leading-relaxed text-[#0A3D45]/60">
-          Add an email to verify with a 4-digit code and enable password resets.
-        </p>
+        <EmailField
+          name="email"
+          value={email}
+          placeholder="you@example.com"
+          hint="Add an email to verify with a 4-digit code and enable password resets. Tap @gmail then .com for a quick fill."
+          onChange={(next) => {
+            setEmail(next);
+            if (next.trim()) {
+              setAcked(false);
+              setShowWarning(false);
+            }
+          }}
+        />
 
         <SignInDurationFields />
 

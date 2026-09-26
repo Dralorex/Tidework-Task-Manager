@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { EmailShortcutChips } from "@/app/components/email-field";
 
 export type InviteFriendOption = {
   id: string;
@@ -44,6 +45,7 @@ export function FriendInvitePicker({
 
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [emailFocused, setEmailFocused] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -139,9 +141,17 @@ export function FriendInvitePicker({
         required={required}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        onFocus={() => setEmailFocused(true)}
+        onBlur={() => setEmailFocused(false)}
         placeholder={placeholder}
         autoComplete="off"
+        inputMode="email"
         className="rowgon-input text-sm"
+      />
+      <EmailShortcutChips
+        value={query}
+        onChange={setQuery}
+        visible={emailFocused}
       />
       {available.length > 0 ? (
         <ul className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-[color:var(--panel-border)] bg-[color:var(--menu-bg)] p-2">
