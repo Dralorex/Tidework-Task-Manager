@@ -85,6 +85,66 @@ export function GuidedCreateTaskForm({
       />
     ) : null;
 
+  /** Auto-walk cadence chips + info prompts without requiring each click. */
+  useEffect(() => {
+    if (!active) return;
+
+    if (step === "one-off") {
+      setCadence("");
+      setStep("one-off-info");
+      return;
+    }
+    if (step === "daily") {
+      setCadence("daily");
+      setWeekDays([0, 1, 2, 3, 4, 5, 6]);
+      setStep("daily-info");
+      return;
+    }
+    if (step === "weekly") {
+      setCadence("weekly");
+      setStep("weekly-info");
+      return;
+    }
+    if (step === "monthly") {
+      setCadence("monthly");
+      setStep("monthly-info");
+      return;
+    }
+
+    if (step === "one-off-info") setCadence("");
+    if (step === "daily-info") {
+      setCadence("daily");
+      setWeekDays((prev) => (prev.length ? prev : [0, 1, 2, 3, 4, 5, 6]));
+    }
+    if (step === "weekly-info") setCadence("weekly");
+    if (step === "monthly-info") setCadence("monthly");
+  }, [active, step, setStep]);
+
+  useEffect(() => {
+    if (!active) return;
+    const nextByInfo: Partial<
+      Record<typeof step, "daily-info" | "weekly-info" | "monthly-info" | "submit">
+    > = {
+      "one-off-info": "daily-info",
+      "daily-info": "weekly-info",
+      "weekly-info": "monthly-info",
+      "monthly-info": "submit",
+    };
+    const next = nextByInfo[step];
+    if (!next) return;
+
+    const t = window.setTimeout(() => {
+      if (next === "submit") {
+        setCadence("");
+        setWeekDays([]);
+        setMonthDays([]);
+      }
+      setStep(next);
+    }, 3200);
+
+    return () => window.clearTimeout(t);
+  }, [active, step, setStep]);
+
   function toggleWeek(day: number) {
     setWeekDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort(),
@@ -103,10 +163,29 @@ export function GuidedCreateTaskForm({
     setCadence(value);
     if (value === "daily") setWeekDays([0, 1, 2, 3, 4, 5, 6]);
     if (!active) return;
-    if (value === "" && step === "one-off") setStep("one-off-info");
-    if (value === "daily" && step === "daily") setStep("daily-info");
-    if (value === "weekly" && step === "weekly") setStep("weekly-info");
-    if (value === "monthly" && step === "monthly") setStep("monthly-info");
+    // Manual tap can still skip ahead in the auto tour
+    if (value === "" && (step === "one-off" || step === "one-off-info")) {
+      setStep("daily-info");
+    }
+    if (value === "daily" && (step === "daily" || step === "daily-info")) {
+      setStep("weekly-info");
+    }
+    if (value === "weekly" && (step === "weekly" || step === "weekly-info")) {
+      setStep("monthly-info");
+    }
+    if (value === "monthly" && (step === "monthly" || step === "monthly-info")) {
+      setCadence("");
+      setWeekDays([]);
+      setMonthDays([]);
+      setStep("submit");
+    }
+  }
+
+  function finishCadenceTour() {
+    setCadence("");
+    setWeekDays([]);
+    setMonthDays([]);
+    setStep("submit");
   }
 
   const showNameBlink = blink("task-name") && !nameClicked;
@@ -444,7 +523,8 @@ export function GuidedCreateTaskForm({
         <OnboardingPrompt
           title="One-off"
           body="A one-off task happens once — no automatic follow-up when it’s done."
-          onNext={() => setStep("daily")}
+          onNext={() => setStep("daily-info")}
+          nextLabel="Next"
           layer={promptLayer}
         />
       ) : null}
@@ -452,7 +532,7 @@ export function GuidedCreateTaskForm({
         <OnboardingPrompt
           title="Daily"
           body="Daily tasks spawn again on a schedule so recurring work doesn’t fall through the cracks."
-          onNext={() => setStep("weekly")}
+          onNext={() => setStep("weekly-info")}
           layer={promptLayer}
         />
       ) : null}
@@ -460,7 +540,7 @@ export function GuidedCreateTaskForm({
         <OnboardingPrompt
           title="Weekly"
           body="Weekly lets you pick which weekdays the task should repeat on."
-          onNext={() => setStep("monthly")}
+          onNext={() => setStep("monthly-info")}
           layer={promptLayer}
         />
       ) : null}
@@ -468,7 +548,7 @@ export function GuidedCreateTaskForm({
         <OnboardingPrompt
           title="Monthly"
           body="Monthly repeats on chosen days of the month — great for reports and check-ins."
-          onNext={() => setStep("submit")}
+          onNext={finishCadenceTour}
           layer={promptLayer}
         />
       ) : null}

@@ -282,10 +282,10 @@ export function WorkspaceOnboardingProvider({
         "due-clear": ["due-clear"],
         "claim-pool": ["claim-pool"],
         tags: ["tags"],
-        "one-off": ["one-off"],
-        daily: ["daily"],
-        weekly: ["weekly"],
-        monthly: ["monthly"],
+        "one-off": ["one-off", "one-off-info"],
+        daily: ["daily", "daily-info"],
+        weekly: ["weekly", "weekly-info"],
+        monthly: ["monthly", "monthly-info"],
         submit: ["submit"],
       };
       return (map[target] ?? []).includes(step);
