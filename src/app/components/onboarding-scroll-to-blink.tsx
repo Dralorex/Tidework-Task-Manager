@@ -44,6 +44,15 @@ function selectorForStep(
   step: WorkspaceOnboardingStep,
 ): string | null {
   const map: Partial<Record<WorkspaceOnboardingStep, string>> = {
+    "roles-open": "#workspace-roles",
+    "roles-intro": "#workspace-roles",
+    "roles-name": "#workspace-roles",
+    "roles-create": "#workspace-roles",
+    "roles-list": "#workspace-roles",
+    "roles-hide": "#workspace-roles",
+    "roles-hide-info": "#workspace-roles",
+    "roles-assign-info": "#workspace-roles",
+    "roles-folder-bridge": "#workspace-roles",
     "create-folder": "#workspace-folders",
     "folder-name": '#workspace-folders input[name="name"]',
     "folder-roles": '#workspace-folders input[name="roles"]',

@@ -574,6 +574,8 @@ export default async function WorkspacePage({
         hasFolder={activeFolders.length > 0}
         hasTask={taskCount > 0}
         inFolder={Boolean(currentFolder)}
+        hasRole={workspaceRoles.length > 0}
+        canManageRoles={canManageRoles}
         canEdit={canEditBase && !workspaceArchived}
       >
       <div className="flex flex-wrap items-end justify-between gap-4">

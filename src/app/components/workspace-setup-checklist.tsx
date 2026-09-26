@@ -25,13 +25,27 @@ export function WorkspaceSetupChecklist({
     active,
     track,
     step,
+    setStep,
     skipSection,
     completeOnboarding,
+    canManageRoles,
+    hasRole,
   } = useWorkspaceOnboarding();
 
   if (!active) return null;
 
+  const showRolesTour = track === "full" && canManageRoles;
+
   const steps = [
+    ...(showRolesTour
+      ? [
+          {
+            done: hasRole,
+            label: "Create a role",
+            hint: "Open Roles in the sidebar, name one, create it — then you’ll attach it to a folder next",
+          },
+        ]
+      : []),
     {
       done: hasFolder,
       label: "Create a folder",
@@ -74,7 +88,9 @@ export function WorkspaceSetupChecklist({
           <p className="mt-1 text-sm text-[#0A3D45]/70">
             {track === "short"
               ? "A few blinks — folder, open it, add a task."
-              : "One folder, one task, and you’re in the claim → review loop."}
+              : showRolesTour
+                ? "Roles first (so folders can use them), then a folder, a task, and the claim → review loop."
+                : "One folder, one task, and you’re in the claim → review loop."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -123,6 +139,75 @@ export function WorkspaceSetupChecklist({
         ))}
       </ol>
 
+      {step === "roles-open" ? (
+        <OnboardingPrompt
+          title="Start with Roles"
+          body="Custom roles decide who can open which folders. Click the blinking Roles header in the left sidebar (▸) to open it."
+        />
+      ) : null}
+
+      {step === "roles-intro" ? (
+        <OnboardingPrompt
+          title="What roles are for"
+          body="A role is a label like Design or Finance. You’ll attach roles to folders to lock them, and later to people so they can open those folders. Built-in privileges (Owner / Admin / Editor / Member) stay separate."
+          onNext={() => setStep("roles-name")}
+        />
+      ) : null}
+
+      {step === "roles-name" ? (
+        <OnboardingPrompt
+          title="Name a role"
+          body="The New role name field is blinking — type something short like “Design”, “Ops”, or “Client”. You’ll use this name when restricting a folder."
+        />
+      ) : null}
+
+      {step === "roles-create" ? (
+        <OnboardingPrompt
+          title="Create the role"
+          body="Create role is blinking — click it to save. Nothing is restricted yet; you’re just defining the label."
+        />
+      ) : null}
+
+      {step === "roles-list" ? (
+        <OnboardingPrompt
+          title="Your role is ready"
+          body="It shows in the list with a member count. Next we’ll cover the optional “Hide folders with this role” switch."
+          onNext={() => setStep("roles-hide")}
+        />
+      ) : null}
+
+      {step === "roles-hide" ? (
+        <OnboardingPrompt
+          title="Hide folders with this role"
+          body="Optional. When checked, people without this role won’t even see folders that require it (instead of seeing a locked folder). Toggle it or hit Next."
+          onNext={() => setStep("roles-hide-info")}
+        />
+      ) : null}
+
+      {step === "roles-hide-info" ? (
+        <OnboardingPrompt
+          title="When to hide"
+          body="Use hide for private areas (HR, client-only). Leave it off if you want everyone to see the folder name but only role-holders can open it. You can change this anytime."
+          onNext={() => setStep("roles-assign-info")}
+        />
+      ) : null}
+
+      {step === "roles-assign-info" ? (
+        <OnboardingPrompt
+          title="Giving people a role"
+          body="Open a member’s ··· menu → Custom roles to check this role for them. When you invite someone, you can also assign roles later the same way. Without the role, restricted folders stay locked (or hidden)."
+          onNext={() => setStep("roles-folder-bridge")}
+        />
+      ) : null}
+
+      {step === "roles-folder-bridge" ? (
+        <OnboardingPrompt
+          title="Next: put the role on a folder"
+          body="We’ll create a folder next. On the Roles field, pick the role you just made to restrict that folder — or leave it empty for everyone."
+          onNext={() => setStep("create-folder")}
+        />
+      ) : null}
+
       {step === "create-folder" ? (
         <OnboardingPrompt
           title="Tip: open a dropdown"
@@ -140,7 +225,11 @@ export function WorkspaceSetupChecklist({
       {step === "folder-roles" ? (
         <OnboardingPrompt
           title="Who can see this folder?"
-          body="Roles is optional — leave empty for everyone, or pick roles to restrict access. Click the field (or skip past it) to continue."
+          body={
+            hasRole
+              ? "Pick the role you created (or leave empty for everyone). This is how folder access uses the Roles panel. Click the field or continue past it."
+              : "Roles is optional — leave empty for everyone, or pick roles to restrict access. Click the field (or skip past it) to continue."
+          }
         />
       ) : null}
 

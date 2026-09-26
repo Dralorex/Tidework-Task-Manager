@@ -1,5 +1,14 @@
 /** Guided first-session steps inside a workspace. */
 export type WorkspaceOnboardingStep =
+  | "roles-open"
+  | "roles-intro"
+  | "roles-name"
+  | "roles-create"
+  | "roles-list"
+  | "roles-hide"
+  | "roles-hide-info"
+  | "roles-assign-info"
+  | "roles-folder-bridge"
   | "create-folder"
   | "folder-name"
   | "folder-roles"
@@ -62,6 +71,15 @@ export const ONBOARDING_STEP_KEY = (workspaceId: string) =>
 export const ONBOARDING_PREF_KEY = "rowgon-onboarding-pref:v1";
 
 const ALL_STEPS: WorkspaceOnboardingStep[] = [
+  "roles-open",
+  "roles-intro",
+  "roles-name",
+  "roles-create",
+  "roles-list",
+  "roles-hide",
+  "roles-hide-info",
+  "roles-assign-info",
+  "roles-folder-bridge",
   "create-folder",
   "folder-name",
   "folder-roles",
@@ -94,6 +112,19 @@ const ALL_STEPS: WorkspaceOnboardingStep[] = [
   "done",
 ];
 
+/** Full-track roles tour (before folders) so folder role pickers have options. */
+export const ROLE_CREATE_STEPS: WorkspaceOnboardingStep[] = [
+  "roles-open",
+  "roles-intro",
+  "roles-name",
+  "roles-create",
+  "roles-list",
+  "roles-hide",
+  "roles-hide-info",
+  "roles-assign-info",
+  "roles-folder-bridge",
+];
+
 const FOLDER_CREATE_STEPS: WorkspaceOnboardingStep[] = [
   "create-folder",
   "folder-name",
@@ -104,7 +135,7 @@ const FOLDER_CREATE_STEPS: WorkspaceOnboardingStep[] = [
   "folder-submit",
 ];
 
-/** Short track: fewer micro-steps, still blinks. */
+/** Short track: fewer micro-steps, still blinks. Skips the roles tour. */
 export const SHORT_TRACK_STEPS: WorkspaceOnboardingStep[] = [
   "create-folder",
   "folder-name",
@@ -116,6 +147,14 @@ export const SHORT_TRACK_STEPS: WorkspaceOnboardingStep[] = [
   "submit",
   "done",
 ];
+
+export function isRoleCreateStep(step: WorkspaceOnboardingStep) {
+  return ROLE_CREATE_STEPS.includes(step);
+}
+
+export function isFolderCreateStep(step: WorkspaceOnboardingStep) {
+  return FOLDER_CREATE_STEPS.includes(step);
+}
 
 export function readFoldersOpenPreference(
   workspaceId: string,
@@ -207,12 +246,28 @@ export function deriveOnboardingStep(args: {
   hasFolder: boolean;
   hasTask: boolean;
   inFolder: boolean;
+  hasRole: boolean;
+  canManageRoles: boolean;
   stored: WorkspaceOnboardingStep | null;
   track: OnboardingTrack;
 }): WorkspaceOnboardingStep {
   if (args.hasTask) return "done";
   if (!args.hasFolder) {
-    if (args.stored && FOLDER_CREATE_STEPS.includes(args.stored)) {
+    const rolesFirst =
+      args.track === "full" && args.canManageRoles;
+    if (rolesFirst && args.stored && isRoleCreateStep(args.stored)) {
+      return args.stored;
+    }
+    if (args.stored && isFolderCreateStep(args.stored)) {
+      return args.stored;
+    }
+    if (rolesFirst && !args.hasRole) return "roles-open";
+    if (
+      rolesFirst &&
+      args.hasRole &&
+      args.stored &&
+      isRoleCreateStep(args.stored)
+    ) {
       return args.stored;
     }
     return "create-folder";
@@ -221,7 +276,8 @@ export function deriveOnboardingStep(args: {
   if (
     args.stored &&
     args.stored !== "create-folder" &&
-    !FOLDER_CREATE_STEPS.includes(args.stored) &&
+    !isFolderCreateStep(args.stored) &&
+    !isRoleCreateStep(args.stored) &&
     args.stored !== "open-folder" &&
     args.stored !== "done"
   ) {
@@ -235,6 +291,21 @@ export function parseStoredStep(raw: string | null): WorkspaceOnboardingStep | n
   return ALL_STEPS.includes(raw as WorkspaceOnboardingStep)
     ? (raw as WorkspaceOnboardingStep)
     : null;
+}
+
+export function nextRoleCreateStep(
+  current: WorkspaceOnboardingStep,
+): WorkspaceOnboardingStep {
+  if (current === "roles-open") return "roles-intro";
+  if (current === "roles-intro") return "roles-name";
+  if (current === "roles-name") return "roles-create";
+  if (current === "roles-create") return "roles-list";
+  if (current === "roles-list") return "roles-hide";
+  if (current === "roles-hide") return "roles-hide-info";
+  if (current === "roles-hide-info") return "roles-assign-info";
+  if (current === "roles-assign-info") return "roles-folder-bridge";
+  if (current === "roles-folder-bridge") return "create-folder";
+  return current;
 }
 
 export function nextFolderCreateStep(
@@ -256,6 +327,7 @@ export function nextFolderCreateStep(
 export function skipToNextSection(
   step: WorkspaceOnboardingStep,
 ): WorkspaceOnboardingStep {
+  if (isRoleCreateStep(step)) return "create-folder";
   if (FOLDER_CREATE_STEPS.includes(step)) return "open-folder";
   if (step === "open-folder") return "open-add-task";
   if (step === "open-add-task" || step === "task-name") return "priority";

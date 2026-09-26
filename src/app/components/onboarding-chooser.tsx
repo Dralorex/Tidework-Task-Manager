@@ -14,8 +14,8 @@ export function OnboardingChooser() {
         Hey — this looks like a new account
       </h2>
       <p className="mt-2 max-w-xl text-sm text-[#0A3D45]/75">
-        Want help getting started? We can walk you through Rowgon so you know
-        where folders, tasks, and people live.
+        Want help getting started? We can walk you through Rowgon — roles,
+        folders, tasks, and where people live.
       </p>
 
       <div className="mt-5 flex flex-col gap-2.5">

@@ -11,6 +11,8 @@ import {
 import {
   deriveOnboardingStep,
   dismissSetup,
+  isFolderCreateStep,
+  isRoleCreateStep,
   isSetupDismissed,
   readOnboardingPreference,
   readStoredOnboardingStep,
@@ -35,6 +37,8 @@ type Ctx = {
   completeOnboarding: () => void;
   dismiss: () => void;
   blink: (target: string) => boolean;
+  canManageRoles: boolean;
+  hasRole: boolean;
 };
 
 const OnboardingContext = createContext<Ctx | null>(null);
@@ -45,6 +49,8 @@ export function WorkspaceOnboardingProvider({
   hasFolder,
   hasTask,
   inFolder,
+  hasRole,
+  canManageRoles,
   canEdit,
   children,
 }: {
@@ -53,6 +59,8 @@ export function WorkspaceOnboardingProvider({
   hasFolder: boolean;
   hasTask: boolean;
   inFolder: boolean;
+  hasRole: boolean;
+  canManageRoles: boolean;
   canEdit: boolean;
   children: React.ReactNode;
 }) {
@@ -87,12 +95,14 @@ export function WorkspaceOnboardingProvider({
       hasFolder,
       hasTask,
       inFolder,
+      hasRole,
+      canManageRoles,
       stored: storedStep,
       track,
     });
     setStepState(next);
     setReady(true);
-  }, [workspaceId, hasFolder, hasTask, inFolder]);
+  }, [workspaceId, hasFolder, hasTask, inFolder, hasRole, canManageRoles]);
 
   useEffect(() => {
     if (!ready) return;
@@ -101,29 +111,18 @@ export function WorkspaceOnboardingProvider({
     setStepState((prev) => {
       if (hasTask) return "done";
       if (!hasFolder) {
-        // Stay inside folder-create micro-steps
-        if (
-          prev === "folder-name" ||
-          prev === "folder-roles" ||
-          prev === "folder-hide" ||
-          prev === "folder-always" ||
-          prev === "folder-accessible" ||
-          prev === "folder-submit" ||
-          prev === "create-folder"
-        ) {
+        if (isRoleCreateStep(prev) || isFolderCreateStep(prev)) {
           return prev;
+        }
+        if (pref.status === "full" && canManageRoles && !hasRole) {
+          return "roles-open";
         }
         return "create-folder";
       }
       if (!inFolder) {
         if (
-          prev === "create-folder" ||
-          prev === "folder-name" ||
-          prev === "folder-roles" ||
-          prev === "folder-hide" ||
-          prev === "folder-always" ||
-          prev === "folder-accessible" ||
-          prev === "folder-submit" ||
+          isRoleCreateStep(prev) ||
+          isFolderCreateStep(prev) ||
           prev === "open-folder" ||
           prev === "done"
         ) {
@@ -132,20 +131,33 @@ export function WorkspaceOnboardingProvider({
         return "open-folder";
       }
       if (
-        prev === "create-folder" ||
-        prev === "folder-name" ||
-        prev === "folder-roles" ||
-        prev === "folder-hide" ||
-        prev === "folder-always" ||
-        prev === "folder-accessible" ||
-        prev === "folder-submit" ||
+        isRoleCreateStep(prev) ||
+        isFolderCreateStep(prev) ||
         prev === "open-folder"
       ) {
         return "open-add-task";
       }
       return prev;
     });
-  }, [ready, hasFolder, hasTask, inFolder, pref.status]);
+  }, [
+    ready,
+    hasFolder,
+    hasTask,
+    inFolder,
+    hasRole,
+    canManageRoles,
+    pref.status,
+  ]);
+
+  // After a role is created during the create-button step, move on.
+  useEffect(() => {
+    if (!ready) return;
+    if (pref.status !== "full") return;
+    if (step === "roles-create" && hasRole) {
+      setStepState("roles-list");
+      writeStoredOnboardingStep(workspaceId, "roles-list");
+    }
+  }, [ready, pref.status, step, hasRole, workspaceId]);
 
   const setStep = useCallback(
     (next: WorkspaceOnboardingStep) => {
@@ -160,9 +172,17 @@ export function WorkspaceOnboardingProvider({
       const next: OnboardingPreference = { status: track, track };
       writeOnboardingPreference(next);
       setPref(next);
-      setStep(hasFolder ? (inFolder ? "open-add-task" : "open-folder") : "create-folder");
+      if (hasFolder) {
+        setStep(inFolder ? "open-add-task" : "open-folder");
+        return;
+      }
+      if (track === "full" && canManageRoles) {
+        setStep("roles-open");
+        return;
+      }
+      setStep("create-folder");
     },
-    [hasFolder, inFolder, setStep],
+    [hasFolder, inFolder, canManageRoles, setStep],
   );
 
   const decline = useCallback(
@@ -189,7 +209,6 @@ export function WorkspaceOnboardingProvider({
 
   const skipSection = useCallback(() => {
     if (pref.status === "short") {
-      // Short track: skip jumps toward done faster
       if (!hasFolder) {
         setStep("open-folder");
         return;
@@ -240,7 +259,6 @@ export function WorkspaceOnboardingProvider({
     (target: string) => {
       if (!active || !track) return false;
 
-      // Short track: only a subset blinks
       if (track === "short") {
         const shortMap: Record<string, WorkspaceOnboardingStep[]> = {
           "folders-header": ["create-folder"],
@@ -256,6 +274,10 @@ export function WorkspaceOnboardingProvider({
       }
 
       const map: Record<string, WorkspaceOnboardingStep[]> = {
+        "roles-header": ["roles-open"],
+        "roles-name": ["roles-name"],
+        "roles-create": ["roles-create"],
+        "roles-hide": ["roles-hide"],
         "folders-header": ["create-folder"],
         "folder-name": ["folder-name"],
         "folder-roles": ["folder-roles"],
@@ -297,6 +319,8 @@ export function WorkspaceOnboardingProvider({
       completeOnboarding,
       dismiss,
       blink,
+      canManageRoles,
+      hasRole,
     }),
     [
       active,
@@ -310,6 +334,8 @@ export function WorkspaceOnboardingProvider({
       completeOnboarding,
       dismiss,
       blink,
+      canManageRoles,
+      hasRole,
     ],
   );
 
@@ -335,6 +361,8 @@ export function useWorkspaceOnboarding() {
       completeOnboarding: () => {},
       dismiss: () => {},
       blink: (_: string) => false,
+      canManageRoles: false,
+      hasRole: false,
     };
   }
   return ctx;
