@@ -481,13 +481,6 @@ export function GuidedCreateTaskForm({
           onNext={() => setStep("claim-pool")}
         />
       ) : null}
-      {active && step === "claim-pool-info" ? (
-        <OnboardingPrompt
-          title="Claim pool"
-          body="This is used to auto-assign any member to a task. Leave Claim pool (optional) unless you want a specific person."
-          onNext={() => setStep("tags")}
-        />
-      ) : null}
       {active && step === "tags-info" ? (
         <OnboardingPrompt
           title="Tags"

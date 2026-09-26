@@ -287,6 +287,22 @@ export function WorkspaceSetupChecklist({
           body="Click the ▸ arrow or the blinking empty space on the Add Task bar to expand it."
         />
       ) : null}
+
+      {step === "claim-pool" ? (
+        <OnboardingPrompt
+          title="Claim pool"
+          body="Claim Pool (optional) is blinking in Add Task. Open it if you want to assign someone now, or Next to learn what it does."
+          onNext={() => setStep("claim-pool-info")}
+        />
+      ) : null}
+
+      {step === "claim-pool-info" ? (
+        <OnboardingPrompt
+          title="What Claim pool does"
+          body="Leave it on Claim Pool (optional) so anyone can claim the task. Pick a person only when you want it auto-assigned. Then Next to continue to tags."
+          onNext={() => setStep("tags")}
+        />
+      ) : null}
     </div>
   );
 }
