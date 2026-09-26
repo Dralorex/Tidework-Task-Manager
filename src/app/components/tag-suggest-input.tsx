@@ -295,7 +295,8 @@ export function TagSuggestInput({
     if (!piece) return;
 
     if (useChips) {
-      addChip(piece, true);
+      // Commit + clear draft; close menu so the empty list doesn’t cover the hint.
+      addChip(piece, false);
       return;
     }
 
