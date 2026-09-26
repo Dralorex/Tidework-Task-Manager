@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { InlineActionForm } from "@/app/components/forms";
+import { StartHereWorkspaceGlow } from "@/app/components/start-here-workspace-glow";
 import { WorkspaceCardMenu } from "@/app/components/workspace-card-menu";
 import { createWorkspaceAction } from "@/app/actions/workspaces";
 import { canViewArchived, isArchived } from "@/lib/archive";
@@ -63,6 +64,8 @@ export default async function AppHomePage() {
     take: 5,
   });
 
+  const showStartHere = active.length === 0 && archived.length === 0;
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
       <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
@@ -74,27 +77,29 @@ export default async function AppHomePage() {
             Each workspace is its own tide pool — folders, tasks, and people with roles.
           </p>
         </div>
-        <div className="rowgon-panel w-full max-w-sm p-5 animate-rowgon-rise-delay">
-          <h2 className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
-            New workspace
-          </h2>
-          <InlineActionForm
-            className="mt-3 flex flex-col gap-3"
-            action={createWorkspaceAction}
-            submitLabel="Create workspace"
-          >
-            <input
-              name="name"
-              required
-              placeholder="Studio sprint"
-              className="rowgon-input"
-            />
-          </InlineActionForm>
-        </div>
+        <StartHereWorkspaceGlow active={showStartHere}>
+          <div className="rowgon-panel w-full p-5 animate-rowgon-rise-delay">
+            <h2 className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
+              New workspace
+            </h2>
+            <InlineActionForm
+              className="mt-3 flex flex-col gap-3"
+              action={createWorkspaceAction}
+              submitLabel="Create workspace"
+            >
+              <input
+                name="name"
+                required
+                placeholder="Studio sprint"
+                className="rowgon-input"
+              />
+            </InlineActionForm>
+          </div>
+        </StartHereWorkspaceGlow>
       </div>
 
       <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {active.length === 0 && archived.length === 0 ? (
+        {showStartHere ? (
           <div className="rowgon-panel sm:col-span-2 lg:col-span-3 max-w-xl p-6 animate-rowgon-rise">
             <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
               Start here
