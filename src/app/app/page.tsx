@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
-import { InlineActionForm } from "@/app/components/forms";
-import { StartHereWorkspaceGlow } from "@/app/components/start-here-workspace-glow";
+import { StartHereNewWorkspace } from "@/app/components/start-here-new-workspace";
 import { WorkspaceCardMenu } from "@/app/components/workspace-card-menu";
-import { createWorkspaceAction } from "@/app/actions/workspaces";
 import { canViewArchived, isArchived } from "@/lib/archive";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -66,106 +64,58 @@ export default async function AppHomePage() {
 
   const showStartHere = active.length === 0 && archived.length === 0;
 
+  const workspaceList =
+    active.length === 0 ? (
+      <div className="rowgon-panel sm:col-span-2 lg:col-span-3 max-w-xl p-5 text-sm text-[#0A3D45]/70">
+        No active workspaces. Archived ones are listed below if you still have
+        access.
+      </div>
+    ) : (
+      active.map((m, i) => {
+        const isOwner = m.role === "OWNER";
+        return (
+          <div
+            key={m.id}
+            className="rowgon-panel relative p-5 transition hover:-translate-y-0.5 hover:shadow-lg"
+            style={{ animationDelay: `${i * 60}ms` }}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <Link
+                href={`/app/w/${m.workspaceId}`}
+                className="min-w-0 flex-1"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
+                    {m.workspace.name}
+                  </p>
+                  {isOwner ? (
+                    <span className="rounded-md bg-[#0A3D45]/10 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#0A3D45]">
+                      Owner
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-2 text-sm capitalize text-[#0A3D45]/60">
+                  {m.role.toLowerCase()}
+                </p>
+              </Link>
+              <WorkspaceCardMenu
+                workspaceId={m.workspaceId}
+                workspaceName={m.workspace.name}
+                role={m.role}
+                members={membersByWorkspace.get(m.workspaceId) ?? []}
+              />
+            </div>
+          </div>
+        );
+      })
+    );
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
-      <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-        <div className="animate-rowgon-rise">
-          <h1 className="font-[family-name:var(--font-display)] text-4xl text-[#0A3D45] sm:text-5xl">
-            Your workspaces
-          </h1>
-          <p className="mt-2 max-w-lg text-[#0A3D45]/70">
-            Each workspace is its own tide pool — folders, tasks, and people with roles.
-          </p>
-        </div>
-        <div className="rowgon-panel w-full max-w-sm p-5 animate-rowgon-rise-delay">
-          <h2 className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
-            New workspace
-          </h2>
-          <InlineActionForm
-            className="mt-3 flex flex-col gap-3"
-            action={createWorkspaceAction}
-            submitLabel="Create workspace"
-          >
-            <input
-              name="name"
-              required
-              placeholder="Studio sprint"
-              className="rowgon-input"
-            />
-          </InlineActionForm>
-        </div>
-      </div>
-
-      <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {showStartHere ? (
-          <StartHereWorkspaceGlow
-            active
-            className="sm:col-span-2 lg:col-span-3 max-w-xl"
-          >
-            <div className="rowgon-panel w-full p-6 animate-rowgon-rise">
-              <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
-                Start here
-              </h2>
-              <p className="mt-2 text-[#0A3D45]/75">
-                Create a workspace to hold folders and claimable tasks.
-              </p>
-              <p className="mt-4 text-sm text-[#0A3D45]/60">
-                Waiting on an invite? You’ll see it under{" "}
-                <Link
-                  href="/app/notifications"
-                  className="font-semibold underline-offset-2 hover:underline"
-                >
-                  Alerts
-                </Link>
-                .
-              </p>
-              <p className="mt-5 text-sm font-medium text-[#0A3D45]">
-                Use <span className="text-[#1a7a82]">New workspace</span> above
-                to create one.
-              </p>
-            </div>
-          </StartHereWorkspaceGlow>
-        ) : active.length === 0 ? (
-          <div className="rowgon-panel sm:col-span-2 lg:col-span-3 max-w-xl p-5 text-sm text-[#0A3D45]/70">
-            No active workspaces. Archived ones are listed below if you still have access.
-          </div>
-        ) : (
-          active.map((m, i) => {
-            const isOwner = m.role === "OWNER";
-            return (
-              <div
-                key={m.id}
-                className="rowgon-panel relative p-5 transition hover:-translate-y-0.5 hover:shadow-lg"
-                style={{ animationDelay: `${i * 60}ms` }}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <Link href={`/app/w/${m.workspaceId}`} className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
-                        {m.workspace.name}
-                      </p>
-                      {isOwner ? (
-                        <span className="rounded-md bg-[#0A3D45]/10 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#0A3D45]">
-                          Owner
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-2 text-sm capitalize text-[#0A3D45]/60">
-                      {m.role.toLowerCase()}
-                    </p>
-                  </Link>
-                  <WorkspaceCardMenu
-                    workspaceId={m.workspaceId}
-                    workspaceName={m.workspace.name}
-                    role={m.role}
-                    members={membersByWorkspace.get(m.workspaceId) ?? []}
-                  />
-                </div>
-              </div>
-            );
-          })
-        )}
-      </section>
+      <StartHereNewWorkspace
+        showStartHere={showStartHere}
+        workspaceList={workspaceList}
+      />
 
       {archived.length > 0 ? (
         <section className="mt-12">
