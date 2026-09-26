@@ -313,7 +313,7 @@ export function FloatingChatWidget({
     <div className="pointer-events-none fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
       {open ? (
         <div
-          className="pointer-events-auto flex h-[min(34rem,calc(100vh-6.5rem))] w-[min(22.5rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--menu-bg)] shadow-[0_18px_50px_color-mix(in_srgb,var(--rowgon-deep)_18%,transparent)] backdrop-blur-md animate-[rowgon-rise_220ms_ease]"
+          className="rowgon-menu-popover pointer-events-auto flex h-[min(34rem,calc(100vh-6.5rem))] w-[min(22.5rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl animate-[rowgon-rise_220ms_ease]"
           role="dialog"
           aria-label="Chat"
         >

@@ -383,7 +383,7 @@ function TaskTagChip({
         {!isPublic ? " (private)" : ""}
       </button>
       {open ? (
-        <span className="absolute left-0 top-full z-20 mt-1 w-40 rounded-md border border-[color:var(--panel-border)] bg-[color:var(--menu-bg)] p-2 shadow-md">
+        <span className="rowgon-menu-popover absolute left-0 top-full z-20 mt-1 w-40 rounded-md p-2">
           <p className="text-[11px] text-[color:var(--rowgon-deep)]/70">Remove this tag?</p>
           <div className="mt-2 flex gap-2">
             <button

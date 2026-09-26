@@ -361,7 +361,7 @@ export function TagSuggestInput({
             ref={panelRef}
             id={listId}
             role="listbox"
-            className="fixed z-[200] overflow-hidden rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--menu-bg)] py-1 shadow-lg"
+            className="rowgon-menu-popover fixed z-[200] overflow-hidden rounded-lg py-1"
             style={{
               top: coords?.top ?? 0,
               left: coords?.left ?? 0,

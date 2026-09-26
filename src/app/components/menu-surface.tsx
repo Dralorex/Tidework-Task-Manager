@@ -104,7 +104,7 @@ export function MenuSurface({
             <div
               ref={panelRef}
               role="menu"
-              className={`fixed z-[200] rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--menu-bg)] py-1 shadow-lg ${widthClass}`}
+              className={`rowgon-menu-popover fixed z-[200] rounded-lg py-1 ${widthClass}`}
               style={{
                 top: coords?.top ?? 0,
                 left: coords?.left ?? 0,
