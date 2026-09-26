@@ -140,17 +140,28 @@ export function FriendInvitePicker({
         name={targetName}
         required={required}
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => setQuery(e.target.value.toLowerCase())}
+        onInput={(e) => {
+          const el = e.currentTarget;
+          const lower = el.value.toLowerCase();
+          if (el.value !== lower) {
+            el.value = lower;
+            setQuery(lower);
+          }
+        }}
         onFocus={() => setEmailFocused(true)}
         onBlur={() => setEmailFocused(false)}
         placeholder={placeholder}
         autoComplete="off"
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
         inputMode="email"
         className="rowgon-input text-sm"
       />
       <EmailShortcutChips
         value={query}
-        onChange={setQuery}
+        onChange={(next) => setQuery(next.toLowerCase())}
         visible={emailFocused}
       />
       {available.length > 0 ? (

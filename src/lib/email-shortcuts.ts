@@ -23,7 +23,7 @@ const TLD_RE = /\.(com|org|net|edu|co|io|mail)$/i;
 
 /** Insert/replace the domain provider, keeping any existing TLD when swapping. */
 export function applyEmailProvider(value: string, domain: string): string {
-  const trimmed = value.trim();
+  const trimmed = value.trim().toLowerCase();
   const at = trimmed.indexOf("@");
   const local = at >= 0 ? trimmed.slice(0, at) : trimmed;
   let tld = "";
@@ -32,18 +32,18 @@ export function applyEmailProvider(value: string, domain: string): string {
     const m = rest.match(TLD_RE);
     if (m) tld = m[0].toLowerCase();
   }
-  return `${local}@${domain}${tld}`;
+  return `${local}@${domain.toLowerCase()}${tld}`;
 }
 
 /** Attach or replace a TLD after @provider (no-op until a domain exists). */
 export function applyEmailTld(value: string, tld: string): string {
-  const trimmed = value.trim();
+  const trimmed = value.trim().toLowerCase();
   const at = trimmed.indexOf("@");
   if (at < 0) return trimmed;
   const local = trimmed.slice(0, at);
   let domain = trimmed.slice(at + 1).replace(TLD_RE, "");
   if (!domain) return trimmed;
-  const suffix = tld.startsWith(".") ? tld : `.${tld}`;
+  const suffix = (tld.startsWith(".") ? tld : `.${tld}`).toLowerCase();
   return `${local}@${domain}${suffix}`;
 }
 

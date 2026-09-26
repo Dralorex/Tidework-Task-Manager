@@ -127,7 +127,15 @@ export function PasswordResetForm() {
           required
           className="rowgon-input"
           value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
+          onChange={(e) => setIdentifier(e.target.value.toLowerCase())}
+          onInput={(e) => {
+            const el = e.currentTarget;
+            const lower = el.value.toLowerCase();
+            if (el.value !== lower) {
+              el.value = lower;
+              setIdentifier(lower);
+            }
+          }}
           onFocus={() => setIdentifierFocused(true)}
           onBlur={() => setIdentifierFocused(false)}
           autoCapitalize="none"
@@ -137,7 +145,7 @@ export function PasswordResetForm() {
       </label>
       <EmailShortcutChips
         value={identifier}
-        onChange={setIdentifier}
+        onChange={(next) => setIdentifier(next.toLowerCase())}
         visible={identifierFocused}
       />
       {requestState && !requestState.ok ? (

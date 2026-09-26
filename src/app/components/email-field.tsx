@@ -54,14 +54,15 @@ export function EmailField({
   const autoId = useId();
   const id = idProp ?? autoId;
   const inputRef = useRef<HTMLInputElement>(null);
-  const [uncontrolled, setUncontrolled] = useState(defaultValue);
+  const [uncontrolled, setUncontrolled] = useState(defaultValue.toLowerCase());
   const [focused, setFocused] = useState(false);
   const controlled = valueControlled !== undefined;
-  const value = controlled ? valueControlled : uncontrolled;
+  const value = (controlled ? valueControlled : uncontrolled).toLowerCase();
 
   function setValue(next: string) {
-    if (!controlled) setUncontrolled(next);
-    onChange?.(next);
+    const lower = next.toLowerCase();
+    if (!controlled) setUncontrolled(lower);
+    onChange?.(lower);
   }
 
   function insertProvider(domain: string) {
@@ -98,7 +99,7 @@ export function EmailField({
 
   // Keep uncontrolled default in sync if parent remounts with a new default.
   useEffect(() => {
-    if (!controlled) setUncontrolled(defaultValue);
+    if (!controlled) setUncontrolled(defaultValue.toLowerCase());
   }, [controlled, defaultValue]);
 
   const showShortcuts = focused && !disabled && !readOnly;
@@ -128,6 +129,15 @@ export function EmailField({
           className={inputClassName}
           value={value}
           onChange={(e) => setValue(e.target.value)}
+          onInput={(e) => {
+            // Phones can still insert capitals despite autoCapitalize=none.
+            const el = e.currentTarget;
+            const lower = el.value.toLowerCase();
+            if (el.value !== lower) {
+              el.value = lower;
+              setValue(lower);
+            }
+          }}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
         />
@@ -202,7 +212,9 @@ export function EmailShortcutChips({
             key={p.domain}
             type="button"
             className="rounded-full border border-[#0A3D45]/12 bg-white/80 px-2.5 py-1 text-xs font-semibold text-[#0A3D45]/75 transition hover:border-[#1a7a82]/35 hover:bg-[#E8F7F6] hover:text-[#0A3D45]"
-            onClick={() => onChange(applyEmailProvider(value, p.domain))}
+            onClick={() =>
+              onChange(applyEmailProvider(value, p.domain).toLowerCase())
+            }
           >
             {p.label}
           </button>
@@ -215,7 +227,9 @@ export function EmailShortcutChips({
               key={tld}
               type="button"
               className="rounded-full border border-[#1a7a82]/20 bg-[#E8F7F6]/80 px-2.5 py-1 text-xs font-semibold text-[#1a7a82] transition hover:border-[#1a7a82]/45 hover:bg-[#E8F7F6]"
-              onClick={() => onChange(applyEmailTld(value, tld))}
+              onClick={() =>
+                onChange(applyEmailTld(value, tld).toLowerCase())
+              }
             >
               {tld}
             </button>
