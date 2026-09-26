@@ -2,14 +2,24 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import {
+  computeOverlayBottomPx,
+  getPhoneLaunchMode,
+  subscribeOverlayBottom,
+  type PhoneLaunchMode,
+} from "@/lib/phone-overlay";
 
 /**
  * Coach prompt for guided onboarding.
  *
- * Default `layer="foreground"`: fixed to the bottom of the viewport (with a
- * small gap / safe-area), portaled to `document.body` so it stays visible
- * while the page scrolls and never nests inside a panel bubble.
- * Use this for ALL info prompts — including new ones.
+ * Default `layer="foreground"`: fixed to the bottom of the viewport, portaled
+ * to `document.body` so it stays visible while the page scrolls and never
+ * nests inside a panel bubble. Use this for ALL info prompts — including new ones.
+ *
+ * Bottom placement adapts to launch mode + keyboard:
+ * - Homescreen / PWA: hugs the physical bottom (home-indicator gap only).
+ * - In-browser: sits above the browser chrome.
+ * - Both: lift with the soft keyboard via visualViewport.
  *
  * Prefer an action button (`onAction` / `actionLabel`) when the user should
  * enter a field (e.g. “Add Title”, “Add Tag”) — that focuses the control.
@@ -18,6 +28,22 @@ import { createPortal } from "react-dom";
  * `embedded` — rare: compact content inside another sheet (no outer chrome).
  * `inline` — opt-in only when a tip must live in document flow.
  */
+function useOverlayBottom() {
+  const [bottom, setBottom] = useState(0);
+  const [mode, setMode] = useState<PhoneLaunchMode>("browser");
+
+  useEffect(() => {
+    setMode(getPhoneLaunchMode());
+    setBottom(computeOverlayBottomPx());
+    return subscribeOverlayBottom(({ bottom: next, mode: nextMode }) => {
+      setBottom(next);
+      setMode(nextMode);
+    });
+  }, []);
+
+  return { bottom, mode };
+}
+
 export function OnboardingPrompt({
   title,
   body,
@@ -37,6 +63,7 @@ export function OnboardingPrompt({
   layer?: "inline" | "foreground" | "embedded";
 }) {
   const [mounted, setMounted] = useState(false);
+  const { bottom, mode } = useOverlayBottom();
   useEffect(() => setMounted(true), []);
 
   const showAction = Boolean(onAction && actionLabel);
@@ -98,16 +125,15 @@ export function OnboardingPrompt({
     return card;
   }
 
-  // foreground (default): locked to the bottom of the screen
+  // foreground (default): locked near the bottom, above keyboard / browser chrome
   if (!mounted || typeof document === "undefined") return null;
 
   return createPortal(
     <div
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-[90] flex justify-center px-3"
-      style={{
-        paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))",
-      }}
+      className="pointer-events-none fixed inset-x-0 z-[90] flex justify-center px-3 transition-[bottom] duration-150 ease-out"
+      style={{ bottom }}
       data-onboarding-prompt="foreground"
+      data-launch={mode}
     >
       <div className="pointer-events-auto w-full max-w-lg shadow-lg">{card}</div>
     </div>,
