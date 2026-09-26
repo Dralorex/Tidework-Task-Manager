@@ -108,7 +108,11 @@ export function WorkspaceOnboardingProvider({
     if (pref.status !== "full" && pref.status !== "short") return;
 
     setStepState((prev) => {
-      if (hasTask) return "done";
+      if (hasTask) {
+        if (prev === "task-menu-info") return prev;
+        if (prev === "submit" || prev !== "done") return "task-menu-info";
+        return "done";
+      }
       if (!hasFolder) {
         if (isRoleCreateStep(prev) || isFolderCreateStep(prev)) {
           return prev;
@@ -220,6 +224,11 @@ export function WorkspaceOnboardingProvider({
         setStep("submit");
         return;
       }
+      if (step === "submit") {
+        // Still need them to add a task — skip only ends the tip tour.
+        completeOnboarding();
+        return;
+      }
       completeOnboarding();
       return;
     }
@@ -245,16 +254,28 @@ export function WorkspaceOnboardingProvider({
     !hasTask &&
     (forceShow || !hasFolder || !hasTask);
 
+  /** Tips that still show after the first task exists (blink off). */
+  const postTaskStep = step === "task-menu-info";
+
   const active =
     ready &&
     canEdit &&
     (pref.status === "full" || pref.status === "short") &&
-    !hasTask &&
-    step !== "done";
+    step !== "done" &&
+    (!hasTask || postTaskStep);
+
+  // Persist submit → task-menu-info once the first task lands.
+  useEffect(() => {
+    if (!ready) return;
+    if (pref.status !== "full" && pref.status !== "short") return;
+    if (hasTask && step === "submit") {
+      setStep("task-menu-info");
+    }
+  }, [ready, pref.status, hasTask, step, setStep]);
 
   const blink = useCallback(
     (target: string) => {
-      if (!active || !track) return false;
+      if (!active || !track || hasTask) return false;
 
       if (track === "short") {
         const shortMap: Record<string, WorkspaceOnboardingStep[]> = {
@@ -264,7 +285,7 @@ export function WorkspaceOnboardingProvider({
           "folder-bubble": ["open-folder"],
           "add-task-header": ["open-add-task"],
           "task-name": ["task-name"],
-          submit: ["submit", "task-menu-info"],
+          submit: ["submit"],
         };
         return (shortMap[target] ?? []).includes(step);
       }
@@ -296,11 +317,11 @@ export function WorkspaceOnboardingProvider({
         daily: ["daily", "daily-info"],
         weekly: ["weekly", "weekly-info"],
         monthly: ["monthly", "monthly-info"],
-        submit: ["submit", "task-menu-info"],
+        submit: ["submit"],
       };
       return (map[target] ?? []).includes(step);
     },
-    [active, track, step],
+    [active, track, step, hasTask],
   );
 
   const value = useMemo(

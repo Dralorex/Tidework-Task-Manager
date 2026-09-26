@@ -240,7 +240,13 @@ export function deriveOnboardingStep(args: {
   stored: WorkspaceOnboardingStep | null;
   track: OnboardingTrack;
 }): WorkspaceOnboardingStep {
-  if (args.hasTask) return "done";
+  if (args.hasTask) {
+    // Keep the post-create tip available after the first task lands.
+    if (args.stored === "task-menu-info" || args.stored === "submit") {
+      return "task-menu-info";
+    }
+    return "done";
+  }
   if (!args.hasFolder) {
     const rolesFirst =
       args.track === "full" && args.canManageRoles;
@@ -348,9 +354,9 @@ export function skipToNextSection(
     step === "monthly" ||
     step === "monthly-info"
   ) {
-    return "task-menu-info";
+    return "submit";
   }
-  if (step === "task-menu-info" || step === "submit") {
+  if (step === "submit" || step === "task-menu-info") {
     return "done";
   }
   return "done";

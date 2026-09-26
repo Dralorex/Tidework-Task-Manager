@@ -45,11 +45,14 @@ export function GuidedCreateTaskForm({
   publicTagOptions: string[];
   assignableMembers: Assignable[];
 }) {
-  const { active, step, setStep, blink, track } = useWorkspaceOnboarding();
+  const { active, step, setStep, blink, track, completeOnboarding } =
+    useWorkspaceOnboarding();
   const [taskName, setTaskName] = useState("");
   const [nameClicked, setNameClicked] = useState(false);
   const [description, setDescription] = useState("");
   const [descClicked, setDescClicked] = useState(false);
+  /** After Continue on “Add your task”, hide tip until they submit. */
+  const [submitTipPaused, setSubmitTipPaused] = useState(false);
   const [priority, setPriority] = useState("");
   const [assignTo, setAssignTo] = useState("");
   const [spawnMode, setSpawnMode] = useState("complete");
@@ -148,8 +151,12 @@ export function GuidedCreateTaskForm({
     setCadence("");
     setWeekDays([]);
     setMonthDays([]);
-    setStep("task-menu-info");
+    setStep("submit");
   }
+
+  useEffect(() => {
+    if (step !== "submit") setSubmitTipPaused(false);
+  }, [step]);
 
   const showNameBlink = blink("task-name") && !nameClicked;
   const showDescBlink = blink("description") && !descClicked;
@@ -182,7 +189,7 @@ export function GuidedCreateTaskForm({
             const v = e.target.value;
             setTaskName(v);
             if (active && step === "task-name" && v.trim().length > 0) {
-              setStep(track === "short" ? "task-menu-info" : "priority");
+              setStep(track === "short" ? "submit" : "priority");
             }
           }}
         />
@@ -568,19 +575,19 @@ export function GuidedCreateTaskForm({
           onNext={finishCadenceTour}
         />
       ) : null}
+      {active && step === "submit" && !submitTipPaused ? (
+        <OnboardingPrompt
+          title="Add your task"
+          body="After Continue, use the blinking Add Task button when you’re ready. The tip stays away until your task is created."
+          onNext={() => setSubmitTipPaused(true)}
+          nextLabel="Continue"
+        />
+      ) : null}
       {active && step === "task-menu-info" ? (
         <OnboardingPrompt
           title="Edit or delete a task"
-          body="After a task exists, open its ⋮ menu beside Claim Task. Use Rename / Replace to change the name, description, priority, or due date — or Delete to remove it."
-          onNext={() => setStep("submit")}
-        />
-      ) : null}
-      {active && step === "submit" ? (
-        <OnboardingPrompt
-          title="Add your task"
-          body="When you’re ready, submit with Add Task — the blinking button creates it."
-          actionLabel="Add Task"
-          onAction={() => clickOnboardingStep("submit")}
+          body="Your task is in. Open its ⋮ menu beside Claim Task to Rename / Replace the name, description, priority, or due date — or Delete to remove it."
+          onNext={() => completeOnboarding()}
         />
       ) : null}
     </div>
