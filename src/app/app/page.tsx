@@ -77,50 +77,54 @@ export default async function AppHomePage() {
             Each workspace is its own tide pool — folders, tasks, and people with roles.
           </p>
         </div>
-        <StartHereWorkspaceGlow active={showStartHere}>
-          <div className="rowgon-panel w-full p-5 animate-rowgon-rise-delay">
-            <h2 className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
-              New workspace
-            </h2>
-            <InlineActionForm
-              className="mt-3 flex flex-col gap-3"
-              action={createWorkspaceAction}
-              submitLabel="Create workspace"
-            >
-              <input
-                name="name"
-                required
-                placeholder="Studio sprint"
-                className="rowgon-input"
-              />
-            </InlineActionForm>
-          </div>
-        </StartHereWorkspaceGlow>
+        <div className="rowgon-panel w-full max-w-sm p-5 animate-rowgon-rise-delay">
+          <h2 className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
+            New workspace
+          </h2>
+          <InlineActionForm
+            className="mt-3 flex flex-col gap-3"
+            action={createWorkspaceAction}
+            submitLabel="Create workspace"
+          >
+            <input
+              name="name"
+              required
+              placeholder="Studio sprint"
+              className="rowgon-input"
+            />
+          </InlineActionForm>
+        </div>
       </div>
 
       <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {showStartHere ? (
-          <div className="rowgon-panel sm:col-span-2 lg:col-span-3 max-w-xl p-6 animate-rowgon-rise">
-            <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
-              Start here
-            </h2>
-            <p className="mt-2 text-[#0A3D45]/75">
-              Create a workspace to hold folders and claimable tasks.
-            </p>
-            <p className="mt-4 text-sm text-[#0A3D45]/60">
-              Waiting on an invite? You’ll see it under{" "}
-              <Link
-                href="/app/notifications"
-                className="font-semibold underline-offset-2 hover:underline"
-              >
-                Alerts
-              </Link>
-              .
-            </p>
-            <p className="mt-5 text-sm font-medium text-[#0A3D45]">
-              Use <span className="text-[#1a7a82]">New workspace</span> above to create one.
-            </p>
-          </div>
+          <StartHereWorkspaceGlow
+            active
+            className="sm:col-span-2 lg:col-span-3 max-w-xl"
+          >
+            <div className="rowgon-panel w-full p-6 animate-rowgon-rise">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
+                Start here
+              </h2>
+              <p className="mt-2 text-[#0A3D45]/75">
+                Create a workspace to hold folders and claimable tasks.
+              </p>
+              <p className="mt-4 text-sm text-[#0A3D45]/60">
+                Waiting on an invite? You’ll see it under{" "}
+                <Link
+                  href="/app/notifications"
+                  className="font-semibold underline-offset-2 hover:underline"
+                >
+                  Alerts
+                </Link>
+                .
+              </p>
+              <p className="mt-5 text-sm font-medium text-[#0A3D45]">
+                Use <span className="text-[#1a7a82]">New workspace</span> above
+                to create one.
+              </p>
+            </div>
+          </StartHereWorkspaceGlow>
         ) : active.length === 0 ? (
           <div className="rowgon-panel sm:col-span-2 lg:col-span-3 max-w-xl p-5 text-sm text-[#0A3D45]/70">
             No active workspaces. Archived ones are listed below if you still have access.

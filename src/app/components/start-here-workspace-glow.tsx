@@ -28,17 +28,18 @@ function readPref(): OnboardingPreference {
 }
 
 /**
- * Wraps the New workspace create bubble with a circling blue glow while
- * Start here is directing first-time setup. Turns off once onboarding is
- * completed or declined.
+ * Wraps the Start here bubble with a circling blue glow while first-time
+ * setup is active. Turns off once onboarding is completed or declined.
  */
 export function StartHereWorkspaceGlow({
   active,
   children,
+  className,
 }: {
   /** True when the Start here empty state is showing (no workspaces yet). */
   active: boolean;
   children: ReactNode;
+  className?: string;
 }) {
   const [glow, setGlow] = useState(false);
 
@@ -62,7 +63,7 @@ export function StartHereWorkspaceGlow({
 
   return (
     <div
-      className={`w-full max-w-sm ${glow ? "rowgon-glow-orbit" : ""}`.trim()}
+      className={`w-full ${className ?? ""} ${glow ? "rowgon-glow-orbit" : ""}`.trim()}
     >
       {children}
     </div>

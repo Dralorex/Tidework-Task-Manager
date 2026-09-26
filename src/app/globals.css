@@ -232,8 +232,8 @@ input[type="date"].rowgon-input-date::-webkit-calendar-picker-indicator {
 }
 
 /**
- * Circling blue glow for the New workspace bubble while Start here
- * is directing first-time setup (pre-onboarding / empty home).
+ * Circling blue glow for the Start here bubble while first-time setup
+ * is active (pre-onboarding / empty home).
  */
 @property --rowgon-glow-angle {
   syntax: "<angle>";
