@@ -26,6 +26,7 @@ export type WorkspaceOnboardingStep =
   | "weekly-info"
   | "monthly"
   | "monthly-info"
+  | "task-menu-info"
   | "submit"
   | "done";
 
@@ -86,6 +87,7 @@ const ALL_STEPS: WorkspaceOnboardingStep[] = [
   "weekly-info",
   "monthly",
   "monthly-info",
+  "task-menu-info",
   "submit",
   "done",
 ];
@@ -107,6 +109,7 @@ export const SHORT_TRACK_STEPS: WorkspaceOnboardingStep[] = [
   "open-folder",
   "open-add-task",
   "task-name",
+  "task-menu-info",
   "submit",
   "done",
 ];
@@ -248,7 +251,10 @@ export function skipToNextSection(
     step === "monthly" ||
     step === "monthly-info"
   ) {
-    return "submit";
+    return "task-menu-info";
+  }
+  if (step === "task-menu-info" || step === "submit") {
+    return "done";
   }
   return "done";
 }

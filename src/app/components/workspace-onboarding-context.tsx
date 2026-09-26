@@ -260,7 +260,8 @@ export function WorkspaceOnboardingProvider({
           "folder-bubble": ["open-folder"],
           "add-task-header": ["open-add-task"],
           "task-name": ["task-name"],
-          submit: ["submit"],
+          "task-menu-info": ["task-menu-info"],
+          submit: ["submit", "task-menu-info"],
         };
         return (shortMap[target] ?? []).includes(step);
       }
@@ -286,7 +287,7 @@ export function WorkspaceOnboardingProvider({
         daily: ["daily", "daily-info"],
         weekly: ["weekly", "weekly-info"],
         monthly: ["monthly", "monthly-info"],
-        submit: ["submit"],
+        submit: ["submit", "task-menu-info"],
       };
       return (map[target] ?? []).includes(step);
     },

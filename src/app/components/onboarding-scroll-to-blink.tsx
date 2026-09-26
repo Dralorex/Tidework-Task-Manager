@@ -70,6 +70,7 @@ function selectorForStep(
     "weekly-info": "#workspace-add-task",
     monthly: "#workspace-add-task",
     "monthly-info": "#workspace-add-task",
+    "task-menu-info": '#workspace-add-task button[type="submit"]',
     submit: '#workspace-add-task button[type="submit"]',
   };
   return map[step] ?? null;

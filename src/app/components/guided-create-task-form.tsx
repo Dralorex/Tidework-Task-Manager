@@ -56,7 +56,7 @@ export function GuidedCreateTaskForm({
   publicTagOptions: string[];
   assignableMembers: Assignable[];
 }) {
-  const { active, step, setStep, blink } = useWorkspaceOnboarding();
+  const { active, step, setStep, blink, track } = useWorkspaceOnboarding();
   const isPhone = useIsPhoneLayout();
   const [taskName, setTaskName] = useState("");
   const [nameClicked, setNameClicked] = useState(false);
@@ -123,18 +123,21 @@ export function GuidedCreateTaskForm({
   useEffect(() => {
     if (!active) return;
     const nextByInfo: Partial<
-      Record<typeof step, "daily-info" | "weekly-info" | "monthly-info" | "submit">
+      Record<
+        typeof step,
+        "daily-info" | "weekly-info" | "monthly-info" | "task-menu-info"
+      >
     > = {
       "one-off-info": "daily-info",
       "daily-info": "weekly-info",
       "weekly-info": "monthly-info",
-      "monthly-info": "submit",
+      "monthly-info": "task-menu-info",
     };
     const next = nextByInfo[step];
     if (!next) return;
 
     const t = window.setTimeout(() => {
-      if (next === "submit") {
+      if (next === "task-menu-info") {
         setCadence("");
         setWeekDays([]);
         setMonthDays([]);
@@ -142,6 +145,13 @@ export function GuidedCreateTaskForm({
       setStep(next);
     }, 3200);
 
+    return () => window.clearTimeout(t);
+  }, [active, step, setStep]);
+
+  // After edit/delete tip, move on to Add task
+  useEffect(() => {
+    if (!active || step !== "task-menu-info") return;
+    const t = window.setTimeout(() => setStep("submit"), 4500);
     return () => window.clearTimeout(t);
   }, [active, step, setStep]);
 
@@ -177,7 +187,7 @@ export function GuidedCreateTaskForm({
       setCadence("");
       setWeekDays([]);
       setMonthDays([]);
-      setStep("submit");
+      setStep("task-menu-info");
     }
   }
 
@@ -185,7 +195,7 @@ export function GuidedCreateTaskForm({
     setCadence("");
     setWeekDays([]);
     setMonthDays([]);
-    setStep("submit");
+    setStep("task-menu-info");
   }
 
   const showNameBlink = blink("task-name") && !nameClicked;
@@ -213,7 +223,7 @@ export function GuidedCreateTaskForm({
             const v = e.target.value;
             setTaskName(v);
             if (active && step === "task-name" && v.trim().length > 0) {
-              setStep("priority");
+              setStep(track === "short" ? "task-menu-info" : "priority");
             }
           }}
         />
@@ -549,6 +559,14 @@ export function GuidedCreateTaskForm({
           title="Monthly"
           body="Monthly repeats on chosen days of the month — great for reports and check-ins."
           onNext={finishCadenceTour}
+          layer={promptLayer}
+        />
+      ) : null}
+      {active && step === "task-menu-info" ? (
+        <OnboardingPrompt
+          title="Edit or delete a task"
+          body="After a task exists, open its ··· menu on the right. Use Rename / Replace to change the name, description, priority, or due date — or Delete to remove it."
+          onNext={() => setStep("submit")}
           layer={promptLayer}
         />
       ) : null}
