@@ -100,6 +100,7 @@ export function DueDateField({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
+          data-onboarding="due-reset"
           className={`rounded-full border border-[#0A3D45]/15 bg-white/70 px-2.5 py-1 text-xs font-semibold text-[#0A3D45]/75 hover:bg-white ${
             blinkReset
               ? "animate-rowgon-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
@@ -114,6 +115,7 @@ export function DueDateField({
         </button>
         <button
           type="button"
+          data-onboarding="due-clear"
           className={`rounded-full border border-[#0A3D45]/15 bg-white/70 px-2.5 py-1 text-xs font-semibold text-[#0A3D45]/75 hover:bg-white ${
             blinkClear
               ? "animate-rowgon-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"

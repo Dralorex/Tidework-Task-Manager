@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { GuidedCreateFolderForm } from "@/app/components/guided-create-folder-form";
 import { FolderBubble } from "@/app/components/folder-bubble";
 import { FolderTemplatesPanel } from "@/app/components/folder-templates-panel";
-import { OnboardingPrompt } from "@/app/components/onboarding-prompt";
 import { WorkspaceCollapsible } from "@/app/components/workspace-collapsible";
 import { useWorkspaceOnboarding } from "@/app/components/workspace-onboarding-context";
 import {
@@ -118,17 +117,6 @@ export function WorkspaceFoldersPanel({
     return <div className="rowgon-panel min-h-[3.5rem]" id="workspace-folders" />;
   }
 
-  let openFolderHintIndex = -1;
-  if (active && step === "open-folder") {
-    for (let i = childFolders.length - 1; i >= 0; i--) {
-      if (!childFolders[i].locked) {
-        openFolderHintIndex = i;
-        break;
-      }
-    }
-  }
-  const openableCount = childFolders.filter((c) => !c.locked).length;
-
   return (
     <WorkspaceCollapsible
       id="workspace-folders"
@@ -144,7 +132,7 @@ export function WorkspaceFoldersPanel({
     >
       {childFolders.length > 0 ? (
         <ul className="space-y-2">
-          {childFolders.map((f, i) => (
+          {childFolders.map((f) => (
             <li key={f.id}>
               <FolderBubble
                 workspaceId={workspaceId}
@@ -159,14 +147,6 @@ export function WorkspaceFoldersPanel({
                 folderActions={f.folderActions}
                 blink={blink("folder-bubble") && !f.locked}
               />
-              {i === openFolderHintIndex ? (
-                <OnboardingPrompt
-                  title="How to open a folder"
-                  body={`Tap the card above${
-                    openableCount > 1 ? " (any blinking one works)" : ""
-                  } — empty space opens it.`}
-                />
-              ) : null}
             </li>
           ))}
         </ul>

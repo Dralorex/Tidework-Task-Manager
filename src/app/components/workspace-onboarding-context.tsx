@@ -295,7 +295,7 @@ export function WorkspaceOnboardingProvider({
         "due-clear": ["due-clear"],
         // due-reset-info: no blink — explanation prompt only
         "claim-pool": ["claim-pool"],
-        tags: ["tags"],
+        tags: ["tags", "tags-info"],
         "one-off": ["one-off", "one-off-info"],
         daily: ["daily", "daily-info"],
         weekly: ["weekly", "weekly-info"],

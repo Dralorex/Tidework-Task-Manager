@@ -100,7 +100,11 @@ export function GuidedCreateFolderForm({
                   ? "No roles yet — create one in Roles first"
                   : "No matching roles"
               }
-              hint="Leave empty for all members. Pick roles to restrict access."
+              hint={
+                active
+                  ? undefined
+                  : "Leave empty for all members. Pick roles to restrict access."
+              }
             />
           </div>
           <label

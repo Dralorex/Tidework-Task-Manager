@@ -1,8 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { OnboardingPrompt } from "@/app/components/onboarding-prompt";
 import { useWorkspaceOnboarding } from "@/app/components/workspace-onboarding-context";
+import {
+  clickOnboardingStep,
+  focusOnboardingStep,
+} from "@/lib/onboarding-targets";
 
 export function WorkspaceSetupChecklist({
   workspaceId,
@@ -142,7 +145,9 @@ export function WorkspaceSetupChecklist({
       {step === "roles-open" ? (
         <OnboardingPrompt
           title="Start with Roles"
-          body="Custom roles decide who can open which folders. Click the blinking Roles header in the left sidebar (▸) to open it."
+          body="Custom roles decide who can open which folders. Open the blinking Roles header in the left sidebar to begin."
+          actionLabel="Open Roles"
+          onAction={() => clickOnboardingStep("roles-open")}
         />
       ) : null}
 
@@ -157,14 +162,18 @@ export function WorkspaceSetupChecklist({
       {step === "roles-name" ? (
         <OnboardingPrompt
           title="Name a role"
-          body="The New role name field is blinking — type something short like “Design”, “Ops”, or “Client”. You’ll use this name when restricting a folder."
+          body="Type something short like “Design”, “Ops”, or “Client”. You’ll use this name when restricting a folder."
+          actionLabel="Add Role Name"
+          onAction={() => focusOnboardingStep("roles-name")}
         />
       ) : null}
 
       {step === "roles-create" ? (
         <OnboardingPrompt
           title="Create the role"
-          body="Create role is blinking — click it to save. Nothing is restricted yet; you’re just defining the label."
+          body="Save the role you named. Nothing is restricted yet — you’re just defining the label."
+          actionLabel="Create Role"
+          onAction={() => clickOnboardingStep("roles-create")}
         />
       ) : null}
 
@@ -179,7 +188,9 @@ export function WorkspaceSetupChecklist({
       {step === "roles-hide" ? (
         <OnboardingPrompt
           title="Hide folders with this role"
-          body="Optional. When checked, people without this role won’t even see folders that require it (instead of seeing a locked folder). Toggle it or hit Next."
+          body="Optional. When checked, people without this role won’t even see folders that require it (instead of seeing a locked folder)."
+          actionLabel="Toggle Hide"
+          onAction={() => clickOnboardingStep("roles-hide")}
           onNext={() => setStep("roles-hide-info")}
         />
       ) : null}
@@ -210,15 +221,19 @@ export function WorkspaceSetupChecklist({
 
       {step === "create-folder" ? (
         <OnboardingPrompt
-          title="Tip: open a dropdown"
-          body="Click the ▸ arrow or any empty space on the Folders header (the blue-blinking bar) to open it."
+          title="Open Folders"
+          body="Open the Folders panel to create your first folder. Tap the ▸ arrow or the blinking empty space on the header."
+          actionLabel="Open Folders"
+          onAction={() => clickOnboardingStep("create-folder")}
         />
       ) : null}
 
       {step === "folder-name" ? (
         <OnboardingPrompt
           title="Name your folder"
-          body="The Folder Name field is blinking — click it and type something like “General”, then follow the next highlights."
+          body="Type something like “General”, then follow the next highlights."
+          actionLabel="Add Folder Name"
+          onAction={() => focusOnboardingStep("folder-name")}
         />
       ) : null}
 
@@ -227,71 +242,93 @@ export function WorkspaceSetupChecklist({
           title="Who can see this folder?"
           body={
             hasRole
-              ? "Pick the role you created (or leave empty for everyone). This is how folder access uses the Roles panel. Click the field or continue past it."
-              : "Roles is optional — leave empty for everyone, or pick roles to restrict access. Click the field (or skip past it) to continue."
+              ? "Pick the role you created (or leave empty for everyone). This is how folder access uses the Roles panel."
+              : "Roles is optional — leave empty for everyone, or pick roles to restrict access."
           }
+          actionLabel="Pick Roles"
+          onAction={() => focusOnboardingStep("folder-roles")}
+          onNext={() => setStep("folder-hide")}
         />
       ) : null}
 
       {step === "folder-hide" ? (
         <OnboardingPrompt
           title="Hide from unauthorized"
-          body="Optional: hide locked folders from people without access. Toggle it or click past to keep going."
+          body="Optional: hide locked folders from people without access."
+          actionLabel="Toggle Hide"
+          onAction={() => clickOnboardingStep("folder-hide")}
+          onNext={() => setStep("folder-always")}
         />
       ) : null}
 
       {step === "folder-always" ? (
         <OnboardingPrompt
           title="Always show"
-          body="Optional: keep the folder visible even when restricted. Toggle it or click past to continue."
+          body="Optional: keep the folder visible even when restricted."
+          actionLabel="Toggle Always Show"
+          onAction={() => clickOnboardingStep("folder-always")}
+          onNext={() => setStep("folder-accessible")}
         />
       ) : null}
 
       {step === "folder-accessible" ? (
         <OnboardingPrompt
           title="Always accessible"
-          body="Optional: let anyone open this folder even when roles are set. Then hit Add folder."
+          body="Optional: let anyone open this folder even when roles are set. Then add the folder."
+          actionLabel="Toggle Always Accessible"
+          onAction={() => clickOnboardingStep("folder-accessible")}
+          onNext={() => setStep("folder-submit")}
         />
       ) : null}
 
       {step === "folder-submit" ? (
         <OnboardingPrompt
           title="Add the folder"
-          body="The Add folder button is blinking — click it to create your first folder."
+          body="Create your first folder with the blinking Add folder button."
+          actionLabel="Add Folder"
+          onAction={() => clickOnboardingStep("folder-submit")}
         />
       ) : null}
 
       {step === "open-folder" ? (
-        <p className="mt-4 text-xs text-[#0A3D45]/55">
-          Click a blinking folder card
-          {firstFolderId ? (
-            <>
-              {" "}
-              (or jump to{" "}
-              <Link
-                href={`/app/w/${workspaceId}?folder=${firstFolderId}`}
-                className="font-medium underline underline-offset-2"
-              >
-                your first folder
-              </Link>
-              )
-            </>
-          ) : null}
-          .
-        </p>
+        <OnboardingPrompt
+          title="Open a folder"
+          body={
+            firstFolderId
+              ? "Tap a blinking folder card — empty space opens it. Or use Open Folder below."
+              : "Tap a blinking folder card — empty space opens it."
+          }
+          actionLabel="Open Folder"
+          onAction={() => {
+            const sel =
+              '#workspace-folders [data-onboarding="folder-bubble"]';
+            const el = document.querySelector(sel);
+            if (el instanceof HTMLElement) {
+              el.click();
+              return;
+            }
+            if (firstFolderId) {
+              window.location.href = `/app/w/${workspaceId}?folder=${firstFolderId}`;
+            }
+          }}
+        />
       ) : null}
 
       {step === "open-add-task" ? (
         <OnboardingPrompt
           title="Open Add Task"
-          body="Click the ▸ arrow or the blinking empty space on the Add Task bar to expand it."
+          body="Expand Add Task to name your first task. Tap the ▸ arrow or the blinking empty space on the bar."
+          actionLabel="Open Add Task"
+          onAction={() => clickOnboardingStep("open-add-task")}
         />
       ) : null}
 
       {step === "claim-pool" ? (
         <OnboardingPrompt
           title="Manual Assign"
-          body="Manual Assign (optional) is blinking in Add Task. Open it if you want to assign someone now, or Next to learn what it does."
+          body="Optional: assign someone now, or leave Manual Assign so anyone can claim the task."
+          actionLabel="Open Manual Assign"
+          onAction={() => focusOnboardingStep("claim-pool")}
           onNext={() => setStep("claim-pool-info")}
         />
       ) : null}
@@ -299,7 +336,7 @@ export function WorkspaceSetupChecklist({
       {step === "claim-pool-info" ? (
         <OnboardingPrompt
           title="What Manual Assign does"
-          body="Leave it on Manual Assign (optional) so anyone can claim the task. Pick a person only when you want it assigned up front. Then Next to continue to tags."
+          body="Leave it on Manual Assign (optional) so anyone can claim the task. Pick a person only when you want it assigned up front."
           onNext={() => setStep("tags")}
         />
       ) : null}

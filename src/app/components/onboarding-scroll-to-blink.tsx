@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useWorkspaceOnboarding } from "@/app/components/workspace-onboarding-context";
+import { selectorForStep } from "@/lib/onboarding-targets";
 import type { WorkspaceOnboardingStep } from "@/lib/workspace-onboarding";
 
 function isPhone() {
@@ -38,53 +39,6 @@ function isOnboardingTextField(el: EventTarget | null): el is HTMLElement {
     return false;
   }
   return Boolean(el.closest("#workspace-folders, #workspace-add-task"));
-}
-
-function selectorForStep(
-  step: WorkspaceOnboardingStep,
-): string | null {
-  const map: Partial<Record<WorkspaceOnboardingStep, string>> = {
-    "roles-open": "#workspace-roles",
-    "roles-intro": "#workspace-roles",
-    "roles-name": "#workspace-roles",
-    "roles-create": "#workspace-roles",
-    "roles-list": "#workspace-roles",
-    "roles-hide": "#workspace-roles",
-    "roles-hide-info": "#workspace-roles",
-    "roles-assign-info": "#workspace-roles",
-    "roles-folder-bridge": "#workspace-roles",
-    "create-folder": "#workspace-folders",
-    "folder-name": '#workspace-folders input[name="name"]',
-    "folder-roles": '#workspace-folders input[name="roles"]',
-    "folder-hide": "#workspace-folders",
-    "folder-always": "#workspace-folders",
-    "folder-accessible": "#workspace-folders",
-    "folder-submit": '#workspace-folders button[type="submit"]',
-    "open-folder": "#workspace-folders",
-    "open-add-task": "#workspace-add-task",
-    "task-name": '#workspace-add-task input[name="name"]',
-    priority: '#workspace-add-task select[name="priority"]',
-    description: '#workspace-add-task input[name="description"]',
-    "due-date": '#workspace-add-task input[name="dueDate"]',
-    "due-reset": "#workspace-add-task",
-    "due-reset-info": "#workspace-add-task",
-    "due-clear": "#workspace-add-task",
-    "claim-pool": '#workspace-add-task select[name="assignTo"]',
-    "claim-pool-info": '#workspace-add-task select[name="assignTo"]',
-    tags: '#workspace-add-task input[name="tags"]',
-    "tags-info": '#workspace-add-task input[name="tags"]',
-    "one-off": "#workspace-add-task",
-    "one-off-info": "#workspace-add-task",
-    daily: "#workspace-add-task",
-    "daily-info": "#workspace-add-task",
-    weekly: "#workspace-add-task",
-    "weekly-info": "#workspace-add-task",
-    monthly: "#workspace-add-task",
-    "monthly-info": "#workspace-add-task",
-    "task-menu-info": '#workspace-add-task button[type="submit"]',
-    submit: '#workspace-add-task button[type="submit"]',
-  };
-  return map[step] ?? null;
 }
 
 function resolveTarget(step: WorkspaceOnboardingStep) {

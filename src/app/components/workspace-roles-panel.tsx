@@ -159,6 +159,9 @@ export function WorkspaceRolesPanel({
                   <input
                     type="checkbox"
                     className="mt-0.5"
+                    data-onboarding={
+                      index === 0 ? "roles-hide" : undefined
+                    }
                     checked={role.hideFolders}
                     disabled={pending}
                     onChange={(e) =>
@@ -190,6 +193,7 @@ export function WorkspaceRolesPanel({
           <form onSubmit={create} className="mt-3 flex flex-col gap-2">
             <input
               value={name}
+              data-onboarding="roles-name"
               onChange={(e) => {
                 const v = e.target.value;
                 setName(v);
@@ -201,18 +205,13 @@ export function WorkspaceRolesPanel({
                   advanceFrom("roles-name");
                 }
               }}
-              onFocus={() => {
-                if (active && step === "roles-name") advanceFrom("roles-name");
-              }}
-              onClick={() => {
-                if (active && step === "roles-name") advanceFrom("roles-name");
-              }}
               placeholder="New role name"
               className={`rowgon-input text-sm ${blinkRing(blink("roles-name"))}`}
               required
             />
             <button
               type="submit"
+              data-onboarding="roles-create"
               disabled={pending || !name.trim()}
               className={`rowgon-btn-secondary text-sm disabled:opacity-50 ${blinkRing(blink("roles-create"))}`}
             >

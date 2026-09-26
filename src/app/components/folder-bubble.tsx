@@ -58,6 +58,7 @@ export function FolderBubble({
       {!locked ? (
         <Link
           href={href}
+          data-onboarding={blink ? "folder-bubble" : undefined}
           className="absolute inset-0 z-0 rounded-lg"
           aria-label={`Open folder ${name}`}
         />

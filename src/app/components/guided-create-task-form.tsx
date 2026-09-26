@@ -7,6 +7,10 @@ import { OnboardingPrompt } from "@/app/components/onboarding-prompt";
 import { TagSuggestInput } from "@/app/components/tag-suggest-input";
 import { useWorkspaceOnboarding } from "@/app/components/workspace-onboarding-context";
 import { createTaskAction } from "@/app/actions/tasks";
+import {
+  clickOnboardingStep,
+  focusOnboardingStep,
+} from "@/lib/onboarding-targets";
 import { PRIORITY_LABELS, TASK_PRIORITIES } from "@/lib/urgency";
 
 const WEEKDAYS = [
@@ -297,7 +301,11 @@ export function GuidedCreateTaskForm({
             name="tags"
             tags={publicTagOptions}
             placeholder="add tags: example, test, help"
-            hint="Optional. Type a tag and press Enter to add it — or separate with commas."
+            hint={
+              active
+                ? undefined
+                : "Optional. Type a tag and press Enter to add it — or separate with commas."
+            }
             emptyMessage="No public tags in this folder yet — type a new one"
             allowMultiple
             keepOpenOnPick
@@ -310,15 +318,16 @@ export function GuidedCreateTaskForm({
           <div className="flex flex-wrap gap-2">
             {(
               [
-                ["", "One-off", "one-off"],
-                ["daily", "Daily", "daily"],
-                ["weekly", "Weekly", "weekly"],
-                ["monthly", "Monthly", "monthly"],
+                ["", "One-off", "one-off", "cadence-one-off"],
+                ["daily", "Daily", "daily", "cadence-daily"],
+                ["weekly", "Weekly", "weekly", "cadence-weekly"],
+                ["monthly", "Monthly", "monthly", "cadence-monthly"],
               ] as const
-            ).map(([value, label, key]) => (
+            ).map(([value, label, key, dataKey]) => (
               <button
                 key={label}
                 type="button"
+                data-onboarding={dataKey}
                 onClick={() => pickCadence(value)}
                 className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
                   cadence === value
@@ -455,36 +464,73 @@ export function GuidedCreateTaskForm({
         </div>
       </InlineActionForm>
 
+      {active && step === "task-name" ? (
+        <OnboardingPrompt
+          title="Task title"
+          body="Give this task a clear name — you’ll claim and review it from the list."
+          actionLabel="Add Title"
+          onAction={() => focusOnboardingStep("task-name")}
+        />
+      ) : null}
+      {active && step === "priority" ? (
+        <OnboardingPrompt
+          title="Priority"
+          body="Pick how urgent this task is. Priority drives the urgency chips and sort order."
+          actionLabel="Pick Priority"
+          onAction={() => focusOnboardingStep("priority")}
+        />
+      ) : null}
+      {active && step === "description" ? (
+        <OnboardingPrompt
+          title="Description"
+          body="Optional. Add a short note so claimants know what “done” looks like."
+          actionLabel="Add Description"
+          onAction={() => focusOnboardingStep("description")}
+          onNext={() => setStep("due-date")}
+        />
+      ) : null}
       {active && step === "due-date" ? (
         <OnboardingPrompt
           title="Due date"
-          body="Optional. Tap Due Date to open the calendar picker, then we’ll cover Reset and Clear below."
+          body="Optional. Open the calendar picker, then we’ll cover Reset and Clear."
+          actionLabel="Open Due Date"
+          onAction={() => focusOnboardingStep("due-date")}
+          onNext={() => setStep("due-reset")}
         />
       ) : null}
       {active && step === "due-reset" ? (
         <OnboardingPrompt
           title="Try Reset"
-          body="The Reset button is blinking — click it. We’ll explain what it does before moving on."
+          body="Reset sets the due date to today. Tap it to see how it works."
+          actionLabel="Try Reset"
+          onAction={() => clickOnboardingStep("due-reset")}
         />
       ) : null}
       {active && step === "due-reset-info" ? (
         <OnboardingPrompt
           title="What Reset does"
-          body="Reset sets the due date to today’s date. Handy when you want a due date quickly without picking from the calendar. Click Next to see Clear."
+          body="Reset sets the due date to today’s date — handy when you want a due date quickly without picking from the calendar."
           onNext={() => setStep("due-clear")}
         />
       ) : null}
       {active && step === "due-clear" ? (
         <OnboardingPrompt
           title="What Clear does"
-          body="Clear removes the due date entirely — the task won’t have one. Click Clear to try it, or Next to continue."
+          body="Clear removes the due date entirely — the task won’t have one."
+          actionLabel="Try Clear"
+          onAction={() => clickOnboardingStep("due-clear")}
           onNext={() => setStep("claim-pool")}
         />
       ) : null}
-      {active && step === "tags-info" ? (
+      {active && (step === "tags" || step === "tags-info") ? (
         <OnboardingPrompt
           title="Tags"
           body="Type a tag and press Enter to add it (the field clears for the next one). Or pick from suggestions. Later, use the Tag filter in search to find matching tasks."
+          actionLabel="Add Tag"
+          onAction={() => {
+            focusOnboardingStep("tags");
+            if (step === "tags") setStep("tags-info");
+          }}
           onNext={() => setStep("one-off")}
         />
       ) : null}
@@ -493,7 +539,6 @@ export function GuidedCreateTaskForm({
           title="One-off"
           body="A one-off task happens once — no automatic follow-up when it’s done."
           onNext={() => setStep("daily-info")}
-          nextLabel="Next"
         />
       ) : null}
       {active && step === "daily-info" ? (
@@ -522,6 +567,14 @@ export function GuidedCreateTaskForm({
           title="Edit or delete a task"
           body="After a task exists, open its ⋮ menu beside Claim Task. Use Rename / Replace to change the name, description, priority, or due date — or Delete to remove it."
           onNext={() => setStep("submit")}
+        />
+      ) : null}
+      {active && step === "submit" ? (
+        <OnboardingPrompt
+          title="Add your task"
+          body="When you’re ready, submit with Add Task — the blinking button creates it."
+          actionLabel="Add Task"
+          onAction={() => clickOnboardingStep("submit")}
         />
       ) : null}
     </div>

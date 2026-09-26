@@ -11,6 +11,10 @@ import { createPortal } from "react-dom";
  * while the page scrolls and never nests inside a panel bubble.
  * Use this for ALL info prompts — including new ones.
  *
+ * Prefer an action button (`onAction` / `actionLabel`) when the user should
+ * enter a field (e.g. “Add Title”, “Add Tag”) — that focuses the control.
+ * Use `onNext` / `nextLabel` (“Next”) for informational steps.
+ *
  * `embedded` — rare: compact content inside another sheet (no outer chrome).
  * `inline` — opt-in only when a tip must live in document flow.
  */
@@ -19,29 +23,54 @@ export function OnboardingPrompt({
   body,
   onNext,
   nextLabel = "Next",
+  onAction,
+  actionLabel,
   layer = "foreground",
 }: {
   title: string;
   body: string;
   onNext?: () => void;
   nextLabel?: string;
+  /** Primary field/action CTA (e.g. focus a text box). */
+  onAction?: () => void;
+  actionLabel?: string;
   layer?: "inline" | "foreground" | "embedded";
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  const showAction = Boolean(onAction && actionLabel);
+  const showNext = Boolean(onNext);
+
   const inner = (
     <>
       <p className="font-semibold text-[#0A3D45]">{title}</p>
       <p className="mt-1 text-[#0A3D45]/75">{body}</p>
-      {onNext ? (
-        <button
-          type="button"
-          onClick={onNext}
-          className="rowgon-btn-primary mt-3 !min-h-9 !px-4 !py-1.5 text-sm"
-        >
-          {nextLabel}
-        </button>
+      {showAction || showNext ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {showAction ? (
+            <button
+              type="button"
+              onClick={onAction}
+              className="rowgon-btn-primary !min-h-9 !px-4 !py-1.5 text-sm"
+            >
+              {actionLabel}
+            </button>
+          ) : null}
+          {showNext ? (
+            <button
+              type="button"
+              onClick={onNext}
+              className={
+                showAction
+                  ? "rounded-full px-3 py-1.5 text-sm font-semibold text-[#1a7a82] underline-offset-2 hover:underline"
+                  : "rowgon-btn-primary !min-h-9 !px-4 !py-1.5 text-sm"
+              }
+            >
+              {nextLabel}
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </>
   );
