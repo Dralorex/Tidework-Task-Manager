@@ -115,6 +115,17 @@ export function WorkspaceFoldersPanel({
     return <div className="tide-panel min-h-[3.5rem]" id="workspace-folders" />;
   }
 
+  let openFolderHintIndex = -1;
+  if (active && step === "open-folder") {
+    for (let i = childFolders.length - 1; i >= 0; i--) {
+      if (!childFolders[i].locked) {
+        openFolderHintIndex = i;
+        break;
+      }
+    }
+  }
+  const openableCount = childFolders.filter((c) => !c.locked).length;
+
   return (
     <WorkspaceCollapsible
       id="workspace-folders"
@@ -130,7 +141,7 @@ export function WorkspaceFoldersPanel({
     >
       {childFolders.length > 0 ? (
         <ul className="space-y-2">
-          {childFolders.map((f) => (
+          {childFolders.map((f, i) => (
             <li key={f.id}>
               <FolderBubble
                 workspaceId={workspaceId}
@@ -145,6 +156,17 @@ export function WorkspaceFoldersPanel({
                 folderActions={f.folderActions}
                 blink={blink("folder-bubble") && !f.locked}
               />
+              {i === openFolderHintIndex ? (
+                <p
+                  role="status"
+                  className="mt-2 rounded-lg border border-[#93c5fd] bg-[#E8F1FF] px-3 py-2 text-xs leading-snug text-[#0A3D45]"
+                >
+                  <span className="font-semibold">How to open a folder:</span>{" "}
+                  tap the card above
+                  {openableCount > 1 ? " (any blinking one works)" : ""} — empty
+                  space opens it.
+                </p>
+              ) : null}
             </li>
           ))}
         </ul>
