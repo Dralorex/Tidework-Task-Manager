@@ -176,7 +176,7 @@ export function weeklyDigestEmail(payload: WeeklyDigestPayload) {
         <strong>${escapeHtml(payload.weekLabel)}</strong>. Nice tide.
       </p>`
     : `<p style="margin:0 0 8px;font-size:16px;line-height:1.5;color:rgba(10,61,69,0.85);">
-        Hi @${escapeHtml(payload.username)} — your Tidework week
+        Hi @${escapeHtml(payload.username)} — your Rowgon week
         (<strong>${escapeHtml(payload.weekLabel)}</strong>):
       </p>
       ${listHtml("Overdue", payload.overdue, base)}
@@ -185,13 +185,13 @@ export function weeklyDigestEmail(payload: WeeklyDigestPayload) {
       ${listHtml("Still on your plate", payload.claimedOpen, base)}
       <p style="margin:20px 0 0;">
         <a href="${base}/app" style="display:inline-block;background:#0A3D45;color:#E8F7F6;text-decoration:none;padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;">
-          Open Tidework
+          Open Rowgon
         </a>
       </p>`;
 
   const bodyText = empty
     ? `Hi @${payload.username} — nothing urgent for ${payload.weekLabel}.\n${base}/app\n`
-    : `Hi @${payload.username} — Tidework week (${payload.weekLabel})\n` +
+    : `Hi @${payload.username} — Rowgon week (${payload.weekLabel})\n` +
       listText("Overdue", payload.overdue, base) +
       listText("Due in the next 7 days", payload.dueSoon, base) +
       listText("Needs review", payload.inReview, base) +
@@ -200,24 +200,24 @@ export function weeklyDigestEmail(payload: WeeklyDigestPayload) {
 
   return {
     subject: empty
-      ? `Tidework weekly · clear seas`
-      : `Tidework weekly · ${payload.overdue.length ? `${payload.overdue.length} overdue` : "your week"}`,
+      ? `Rowgon weekly · clear seas`
+      : `Rowgon weekly · ${payload.overdue.length ? `${payload.overdue.length} overdue` : "your week"}`,
     html: `<!DOCTYPE html>
 <html><body style="margin:0;padding:0;background:#E8F7F6;font-family:Georgia,'Times New Roman',serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#E8F7F6;padding:32px 16px;">
 <tr><td align="center">
 <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;padding:32px;border:1px solid rgba(10,61,69,0.12);">
 <tr><td style="color:#0A3D45;">
-<p style="margin:0 0 8px;font-size:22px;font-weight:700;">Tidework</p>
+<p style="margin:0 0 8px;font-size:22px;font-weight:700;">Rowgon</p>
 <h1 style="margin:0 0 16px;font-size:24px;line-height:1.3;">Weekly digest</h1>
 ${bodyHtml}
 <p style="margin:24px 0 0;font-size:12px;color:rgba(10,61,69,0.55);">
-  Manage this email from Alerts in Tidework.
+  Manage this email from Alerts in Rowgon.
 </p>
 </td></tr></table>
 </td></tr></table>
 </body></html>`,
-    text: `Tidework\n\nWeekly digest\n\n${bodyText}\nManage from Alerts in Tidework.\n`,
+    text: `Rowgon\n\nWeekly digest\n\n${bodyText}\nManage from Alerts in Rowgon.\n`,
   };
 }
 

@@ -8,7 +8,7 @@ export function getAppBaseUrl() {
 }
 
 export function getEmailFrom() {
-  return process.env.EMAIL_FROM?.trim() || "Tidework <onboarding@resend.dev>";
+  return process.env.EMAIL_FROM?.trim() || "Rowgon <onboarding@resend.dev>";
 }
 
 export type SendEmailInput = {

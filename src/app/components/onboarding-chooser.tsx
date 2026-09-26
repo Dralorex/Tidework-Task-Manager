@@ -14,7 +14,7 @@ export function OnboardingChooser() {
         Hey — this looks like a new account
       </h2>
       <p className="mt-2 max-w-xl text-sm text-[#0A3D45]/75">
-        Want help getting started? We can walk you through Tidework so you know
+        Want help getting started? We can walk you through Rowgon so you know
         where folders, tasks, and people live.
       </p>
 

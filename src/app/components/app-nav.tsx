@@ -98,7 +98,7 @@ export function AppNav({
             href="/app"
             className="font-[family-name:var(--font-display)] text-lg text-[#0A3D45]"
           >
-            Tidework
+            Rowgon
           </Link>
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="max-w-[9rem] truncate text-xs text-[#0A3D45]/70">
@@ -150,7 +150,7 @@ export function AppNav({
           href="/app"
           className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]"
         >
-          Tidework
+          Rowgon
         </Link>
         <nav className="flex flex-wrap items-center gap-1">
           {TABS.map((tab) => {

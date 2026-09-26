@@ -10,7 +10,7 @@ export default function ForgotPasswordPage() {
           href="/"
           className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]"
         >
-          Tidework
+          Rowgon
         </Link>
         <h1 className="mt-4 font-[family-name:var(--font-display)] text-3xl text-[#0A3D45]">
           Reset password

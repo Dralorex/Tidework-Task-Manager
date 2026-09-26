@@ -15,9 +15,10 @@ const body = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "Tidework Task Manager",
+  metadataBase: new URL("https://rowgon.com"),
+  title: "Rowgon Task Manager",
   description:
-    "Claim work as the tide rises. Nested folders, urgency that pulls due tasks up, friends, and private chats.",
+    "Nested folders, urgency that pulls due tasks up, friends, and private chats.",
 };
 
 /** Keep the page at 1× on load; pinch-zoom still allowed. */
