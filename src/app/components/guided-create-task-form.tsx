@@ -234,7 +234,7 @@ export function GuidedCreateTaskForm({
         </select>
 
         <div
-          className={`sm:col-span-2 rounded-xl ${blinkClass(blink("tags"))}`}
+          className="sm:col-span-2"
           onFocusCapture={() => {
             if (active && step === "tags") setStep("tags-info");
           }}
@@ -250,6 +250,7 @@ export function GuidedCreateTaskForm({
             emptyMessage="No public tags in this folder yet — type a new one"
             allowMultiple
             keepOpenOnPick
+            inputClassName={`tide-input text-sm ${blinkClass(blink("tags"))}`}
           />
         </div>
 
