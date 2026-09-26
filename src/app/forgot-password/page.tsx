@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { AuthForm } from "@/app/components/forms";
-import { requestPasswordResetAction } from "@/app/actions/auth";
+import { PasswordResetForm } from "@/app/components/password-reset-form";
 
 export default function ForgotPasswordPage() {
   return (
@@ -16,21 +15,19 @@ export default function ForgotPasswordPage() {
           Reset password
         </h1>
         <p className="mt-2 text-sm text-[#0A3D45]/70">
-          Works only if your account has an email. Otherwise add one after signing in, or
-          ask a workspace admin for help.
+          Enter your username or email. We’ll send a 6-digit code so you can
+          choose a new password on this site.
         </p>
 
         <div className="mt-6">
-          <AuthForm action={requestPasswordResetAction} submitLabel="Send reset link">
-            <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">
-              Username or email
-              <input name="identifier" required className="rowgon-input" />
-            </label>
-          </AuthForm>
+          <PasswordResetForm />
         </div>
 
         <p className="mt-6 text-center text-sm text-[#0A3D45]/70">
-          <Link href="/login" className="font-semibold underline-offset-2 hover:underline">
+          <Link
+            href="/login"
+            className="font-semibold underline-offset-2 hover:underline"
+          >
             Back to sign in
           </Link>
         </p>
