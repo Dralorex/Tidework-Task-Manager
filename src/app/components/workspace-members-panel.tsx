@@ -86,7 +86,7 @@ export function WorkspaceMembersPanel({
   }
 
   return (
-    <div className="tide-panel p-4">
+    <div className="rowgon-panel p-4">
       <button
         type="button"
         className="flex w-full items-center justify-between text-left"

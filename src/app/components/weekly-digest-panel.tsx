@@ -27,7 +27,7 @@ export function WeeklyDigestPanel({
   ] as const;
 
   return (
-    <section className="tide-panel mt-8 p-5">
+    <section className="rowgon-panel mt-8 p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">

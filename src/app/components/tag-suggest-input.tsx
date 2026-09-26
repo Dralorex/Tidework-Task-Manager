@@ -22,7 +22,7 @@ export function TagSuggestInput({
   defaultValue = "",
   required = false,
   className,
-  inputClassName = "tide-input text-sm",
+  inputClassName = "rowgon-input text-sm",
   emptyMessage = "No tags yet",
   hint,
   submitOnPick = false,

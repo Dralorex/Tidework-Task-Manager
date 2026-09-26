@@ -92,12 +92,12 @@ export function WorkspaceRolesPanel({
           name="name"
           required
           placeholder="e.g. Design"
-          className="tide-input min-h-9 flex-1 text-sm"
+          className="rowgon-input min-h-9 flex-1 text-sm"
         />
         <button
           type="submit"
           disabled={pending}
-          className="tide-btn-secondary min-h-9 text-xs"
+          className="rowgon-btn-secondary min-h-9 text-xs"
         >
           Add role
         </button>
@@ -314,7 +314,7 @@ export function FolderAccessPanel({
       <button
         type="button"
         disabled={pending}
-        className="tide-btn-secondary mt-3 min-h-9 text-xs"
+        className="rowgon-btn-secondary mt-3 min-h-9 text-xs"
         onClick={() => {
           setError(null);
           startTransition(async () => {

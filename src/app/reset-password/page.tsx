@@ -11,8 +11,8 @@ export default async function ResetPasswordPage({
 
   if (!token) {
     return (
-      <main className="tide-wave-bg flex min-h-screen items-center justify-center px-4">
-        <div className="tide-panel max-w-md p-8 text-center">
+      <main className="rowgon-wave-bg flex min-h-screen items-center justify-center px-4">
+        <div className="rowgon-panel max-w-md p-8 text-center">
           <p>Missing reset token.</p>
           <Link href="/forgot-password" className="mt-4 inline-block font-semibold">
             Request a new link
@@ -32,8 +32,8 @@ export default async function ResetPasswordPage({
   }
 
   return (
-    <main className="tide-wave-bg flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="tide-panel w-full max-w-md p-8 animate-tide-rise">
+    <main className="rowgon-wave-bg flex min-h-screen items-center justify-center px-4 py-12">
+      <div className="rowgon-panel w-full max-w-md p-8 animate-rowgon-rise">
         <Link
           href="/"
           className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]"
@@ -53,7 +53,7 @@ export default async function ResetPasswordPage({
                 type="password"
                 required
                 minLength={8}
-                className="tide-input"
+                className="rowgon-input"
               />
             </label>
           </AuthForm>

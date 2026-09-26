@@ -62,7 +62,7 @@ export function UnclaimTaskControl({
           required
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          className="tide-input mt-1 w-full text-sm"
+          className="rowgon-input mt-1 w-full text-sm"
           placeholder="Need to step away / blocked / etc."
         />
       </label>
@@ -71,7 +71,7 @@ export function UnclaimTaskControl({
         <textarea
           value={workNote}
           onChange={(e) => setWorkNote(e.target.value)}
-          className="tide-input mt-1 min-h-[4rem] w-full text-sm"
+          className="rowgon-input mt-1 min-h-[4rem] w-full text-sm"
           placeholder="Progress notes for the next person…"
         />
       </label>
@@ -87,7 +87,7 @@ export function UnclaimTaskControl({
         <button
           type="submit"
           disabled={pending}
-          className="tide-btn-secondary text-xs disabled:opacity-60"
+          className="rowgon-btn-secondary text-xs disabled:opacity-60"
         >
           {pending ? "Working…" : "Confirm unclaim"}
         </button>

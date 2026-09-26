@@ -44,7 +44,7 @@ export function StartDmForm({
       >
         <select
           name="workspaceId"
-          className="tide-input text-sm"
+          className="rowgon-input text-sm"
           required
           value={scope}
           onChange={(e) => setScope(e.target.value)}
@@ -79,7 +79,7 @@ export function StartDmForm({
           name="message"
           required
           placeholder="First message"
-          className="tide-input text-sm"
+          className="rowgon-input text-sm"
         />
       </InlineActionForm>
     </ChatSidebarSection>

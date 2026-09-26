@@ -9,7 +9,7 @@ import { nextFolderCreateStep } from "@/lib/workspace-onboarding";
 
 function blinkClass(on: boolean) {
   return on
-    ? "animate-tide-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
+    ? "animate-rowgon-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
     : "";
 }
 
@@ -60,7 +60,7 @@ export function GuidedCreateFolderForm({
         name="name"
         required
         placeholder="Folder Name"
-        className={`tide-input text-sm ${blinkClass(showNameBlink)}`}
+        className={`rowgon-input text-sm ${blinkClass(showNameBlink)}`}
         value={name}
         onFocus={() => setNameClicked(true)}
         onClick={() => setNameClicked(true)}
@@ -73,7 +73,7 @@ export function GuidedCreateFolderForm({
         }}
       />
       {parentName ? (
-        <p className="text-[11px] text-[color:var(--tide-deep)]/55">
+        <p className="text-[11px] text-[color:var(--rowgon-deep)]/55">
           Nesting under “{parentName}”
         </p>
       ) : null}
@@ -94,7 +94,7 @@ export function GuidedCreateFolderForm({
               placeholder="Roles (optional)"
               allowMultiple
               keepOpenOnPick
-              inputClassName={`tide-input text-sm ${blinkClass(blink("folder-roles"))}`}
+              inputClassName={`rowgon-input text-sm ${blinkClass(blink("folder-roles"))}`}
               emptyMessage={
                 roleNames.length === 0
                   ? "No roles yet — create one in Roles first"
@@ -104,7 +104,7 @@ export function GuidedCreateFolderForm({
             />
           </div>
           <label
-            className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1 text-xs text-[color:var(--tide-deep)]"
+            className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1 text-xs text-[color:var(--rowgon-deep)]"
             onClick={() => {
               if (active && step === "folder-hide") advanceFrom("folder-hide");
             }}
@@ -112,7 +112,7 @@ export function GuidedCreateFolderForm({
             <span
               key={blinkKey(blink("folder-hide"), "folder-hide")}
               className={`mt-0.5 inline-flex shrink-0 rounded-md p-0.5 ${
-                blink("folder-hide") ? "animate-tide-blink-ring" : ""
+                blink("folder-hide") ? "animate-rowgon-blink-ring" : ""
               }`}
             >
               <input
@@ -128,13 +128,13 @@ export function GuidedCreateFolderForm({
             </span>
             <span>
               Hide from unauthorized
-              <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--tide-deep)]/50">
+              <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--rowgon-deep)]/50">
                 Don’t show a locked folder to people without access.
               </span>
             </span>
           </label>
           <label
-            className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1 text-xs text-[color:var(--tide-deep)]"
+            className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1 text-xs text-[color:var(--rowgon-deep)]"
             onClick={() => {
               if (active && step === "folder-always")
                 advanceFrom("folder-always");
@@ -142,7 +142,9 @@ export function GuidedCreateFolderForm({
           >
             <span
               key={blinkKey(blink("folder-always"), "folder-always")}
-              className={`mt-0.5 inline-flex shrink-0 rounded-md p-0.5 ${blinkClass(blink("folder-always"))}`}
+              className={`mt-0.5 inline-flex shrink-0 rounded-md p-0.5 ${
+                blink("folder-always") ? "animate-rowgon-blink-ring" : ""
+              }`}
             >
               <input
                 type="checkbox"
@@ -157,7 +159,7 @@ export function GuidedCreateFolderForm({
             </span>
             <span>
               Always show
-              <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--tide-deep)]/50">
+              <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--rowgon-deep)]/50">
                 Overrides hide rules — always visible (still locked without
                 access).
               </span>

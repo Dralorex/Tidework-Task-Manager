@@ -112,7 +112,7 @@ export function WorkspaceFoldersPanel({
   }
 
   if (!hydrated) {
-    return <div className="tide-panel min-h-[3.5rem]" id="workspace-folders" />;
+    return <div className="rowgon-panel min-h-[3.5rem]" id="workspace-folders" />;
   }
 
   let openFolderHintIndex = -1;

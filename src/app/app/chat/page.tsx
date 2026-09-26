@@ -368,7 +368,7 @@ export default async function ChatPage({
     <main className="mx-auto grid max-w-6xl items-start gap-6 px-4 py-8 lg:grid-cols-[280px_1fr]">
       <aside className="space-y-4 self-start">
         {dmRequests.length > 0 ? (
-          <div className="tide-panel p-4">
+          <div className="rowgon-panel p-4">
             <h3 className="font-semibold text-[#0A3D45]">DM requests</h3>
             <ul className="mt-2 space-y-3 text-sm">
               {dmRequests.map((r) => (
@@ -399,7 +399,7 @@ export default async function ChatPage({
           </div>
         ) : null}
 
-        <div className="tide-panel p-4">
+        <div className="rowgon-panel p-4">
           <StartDmForm
             friends={friendOptions}
             peopleWithDmIds={peopleWithDmIds}
@@ -422,7 +422,7 @@ export default async function ChatPage({
         </div>
       </aside>
 
-      <section className="tide-panel flex h-[min(36rem,calc(100dvh-6rem))] min-h-[28rem] flex-col self-start overflow-hidden p-5">
+      <section className="rowgon-panel flex h-[min(36rem,calc(100dvh-6rem))] min-h-[28rem] flex-col self-start overflow-hidden p-5">
         {tab === "hub" && !active ? (
           <div className="min-h-0 flex-1 overflow-y-auto">
             <h1 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
@@ -650,7 +650,7 @@ export default async function ChatPage({
                 <p className="text-sm text-[#0A3D45]/55">No messages yet.</p>
               ) : null}
             </div>
-            <div className="mt-3 shrink-0 border-t border-[#0A3D45]/10 bg-[var(--tide-panel-bg,inherit)] pt-3">
+            <div className="mt-3 shrink-0 border-t border-[#0A3D45]/10 bg-[var(--rowgon-panel-bg,inherit)] pt-3">
               {active.closedAt ? (
                 <p className="rounded-md bg-[#0A3D45]/[0.05] px-3 py-2 text-sm text-[#0A3D45]/70">
                   This chat was closed. You can still read it, but messaging is

@@ -30,7 +30,7 @@ export default async function AppSectionLayout({
   ]);
 
   return (
-    <div className="tide-wave-bg min-h-screen">
+    <div className="rowgon-wave-bg min-h-screen">
       <AppNav
         username={user.username}
         unreadCount={unreadCount}

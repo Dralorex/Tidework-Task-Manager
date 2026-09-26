@@ -27,7 +27,7 @@ export async function sendEmail(
 ): Promise<{ ok: true; mocked: boolean } | { ok: false; error: string }> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) {
-    console.info("[tidework:mail:dev]", {
+    console.info("[rowgon:mail:dev]", {
       to: input.to,
       subject: input.subject,
       text: input.text.slice(0, 500),

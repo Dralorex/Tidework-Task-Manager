@@ -172,7 +172,7 @@ export default async function NotificationsPage() {
 
       <ul className="mt-8 space-y-3">
         {notifications.length === 0 ? (
-          <li className="tide-panel p-4 text-[#0A3D45]/60">You’re all caught up.</li>
+          <li className="rowgon-panel p-4 text-[#0A3D45]/60">You’re all caught up.</li>
         ) : (
           notifications.map((n) => {
             const meta = parseMeta(n.meta);
@@ -193,7 +193,7 @@ export default async function NotificationsPage() {
             return (
               <li
                 key={n.id}
-                className={`tide-panel p-4 ${n.read ? "opacity-80" : ""}`}
+                className={`rowgon-panel p-4 ${n.read ? "opacity-80" : ""}`}
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">

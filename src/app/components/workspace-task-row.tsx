@@ -230,7 +230,7 @@ function TaskEditorMenu({
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="tide-input w-full text-sm"
+            className="rowgon-input w-full text-sm"
             placeholder="Task Name"
             required
             autoFocus
@@ -238,13 +238,13 @@ function TaskEditorMenu({
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="tide-input min-h-[4rem] w-full text-sm"
+            className="rowgon-input min-h-[4rem] w-full text-sm"
             placeholder="Description"
           />
           <select
             value={priority}
             onChange={(e) => setPriority(e.target.value as TaskPriority)}
-            className="tide-input w-full text-sm"
+            className="rowgon-input w-full text-sm"
           >
             {TASK_PRIORITIES.map((p) => (
               <option key={p} value={p}>
@@ -256,7 +256,7 @@ function TaskEditorMenu({
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
-            className="tide-input w-full text-sm"
+            className="rowgon-input w-full text-sm"
           />
           {error ? <p className="text-xs text-[#9b2f22]">{error}</p> : null}
           <div className="flex gap-2">
@@ -290,14 +290,14 @@ function TaskEditorMenu({
             required
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="tide-input w-full text-sm"
+            className="rowgon-input w-full text-sm"
             placeholder="Reason"
             autoFocus
           />
           <textarea
             value={workNote}
             onChange={(e) => setWorkNote(e.target.value)}
-            className="tide-input min-h-[3.5rem] w-full text-sm"
+            className="rowgon-input min-h-[3.5rem] w-full text-sm"
             placeholder="Optional notes for the next person"
           />
           {error ? <p className="text-xs text-[#9b2f22]">{error}</p> : null}
@@ -365,7 +365,7 @@ function TaskTagChip({
       </button>
       {open ? (
         <span className="absolute left-0 top-full z-20 mt-1 w-40 rounded-md border border-[color:var(--panel-border)] bg-[color:var(--menu-bg)] p-2 shadow-md">
-          <p className="text-[11px] text-[color:var(--tide-deep)]/70">Remove this tag?</p>
+          <p className="text-[11px] text-[color:var(--rowgon-deep)]/70">Remove this tag?</p>
           <div className="mt-2 flex gap-2">
             <button
               type="button"
@@ -481,7 +481,7 @@ export function WorkspaceTaskRow({
 
   return (
     <li
-      className={`tide-panel relative overflow-hidden p-4 pl-5 transition ${
+      className={`rowgon-panel relative overflow-hidden p-4 pl-5 transition ${
         expanded ? "" : "cursor-pointer"
       }`}
       onClick={expandFromEmptySpace}
@@ -686,7 +686,7 @@ export function WorkspaceTaskRow({
                         name="label"
                         required
                         placeholder="Checklist step"
-                        className="tide-input text-sm"
+                        className="rowgon-input text-sm"
                       />
                     </InlineActionForm>
                   ) : null}
@@ -799,7 +799,7 @@ export function WorkspaceTaskRow({
                     name="comment"
                     required
                     placeholder="What did you complete?"
-                    className="tide-input text-sm"
+                    className="rowgon-input text-sm"
                   />
                 </InlineActionForm>
               ) : null}
@@ -834,7 +834,7 @@ export function WorkspaceTaskRow({
                   <input type="hidden" name="taskId" value={task.id} />
                   <select
                     name="assignTo"
-                    className="tide-input text-sm"
+                    className="rowgon-input text-sm"
                     defaultValue={task.assigneeId ?? ""}
                   >
                     <option value="">Claim pool (anyone)</option>

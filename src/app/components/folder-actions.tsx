@@ -134,20 +134,20 @@ export function FolderActions({
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="tide-input max-w-[8rem] py-1 text-xs"
+            className="rowgon-input max-w-[8rem] py-1 text-xs"
             autoFocus
             onClick={(e) => e.stopPropagation()}
           />
           <button
             type="submit"
-            className="text-xs font-semibold text-[color:var(--tide-deep)]"
+            className="text-xs font-semibold text-[color:var(--rowgon-deep)]"
             onClick={(e) => e.stopPropagation()}
           >
             Save
           </button>
           <button
             type="button"
-            className="text-xs text-[color:var(--tide-deep)]/55"
+            className="text-xs text-[color:var(--rowgon-deep)]/55"
             onClick={(e) => {
               e.stopPropagation();
               setRenaming(false);
@@ -168,7 +168,7 @@ export function FolderActions({
               type="button"
               aria-label="Folder options"
               aria-expanded={open}
-              className="rounded-md px-1.5 py-0.5 text-[color:var(--tide-deep)]/70 transition hover:bg-[color:var(--tide-deep)]/8 hover:text-[color:var(--tide-deep)]"
+              className="rounded-md px-1.5 py-0.5 text-[color:var(--rowgon-deep)]/70 transition hover:bg-[color:var(--rowgon-deep)]/8 hover:text-[color:var(--rowgon-deep)]"
               onClick={(e) => {
                 e.stopPropagation();
                 setOpen((v) => !v);
@@ -213,10 +213,10 @@ export function FolderActions({
             </>
           ) : (
             <div className="max-h-80 space-y-2 overflow-y-auto px-3 py-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--tide-deep)]/45">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--rowgon-deep)]/45">
                 Who can open “{folderName}”
               </p>
-              <label className="flex items-center gap-2 text-sm text-[color:var(--tide-deep)]">
+              <label className="flex items-center gap-2 text-sm text-[color:var(--rowgon-deep)]">
                 <input
                   type="radio"
                   name={`access-${folderId}`}
@@ -225,7 +225,7 @@ export function FolderActions({
                 />
                 All members
               </label>
-              <label className="flex items-center gap-2 text-sm text-[color:var(--tide-deep)]">
+              <label className="flex items-center gap-2 text-sm text-[color:var(--rowgon-deep)]">
                 <input
                   type="radio"
                   name={`access-${folderId}`}
@@ -235,12 +235,12 @@ export function FolderActions({
                 Specific roles
               </label>
               {accessMode === "roles" ? (
-                <ul className="space-y-1 border-t border-[color:var(--tide-deep)]/8 pt-2">
+                <ul className="space-y-1 border-t border-[color:var(--rowgon-deep)]/8 pt-2">
                   {workspaceRoles.map((role) => {
                     const checked = selected.has(role.id);
                     return (
                       <li key={role.id}>
-                        <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-sm text-[color:var(--tide-deep)] hover:bg-[color:var(--tide-deep)]/8">
+                        <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-sm text-[color:var(--rowgon-deep)] hover:bg-[color:var(--rowgon-deep)]/8">
                           <input
                             type="checkbox"
                             checked={checked}
@@ -259,15 +259,15 @@ export function FolderActions({
                     );
                   })}
                   {workspaceRoles.length === 0 ? (
-                    <li className="text-xs text-[color:var(--tide-deep)]/55">
+                    <li className="text-xs text-[color:var(--rowgon-deep)]/55">
                       Create a role first.
                     </li>
                   ) : null}
                 </ul>
               ) : null}
 
-              <div className="space-y-2 border-t border-[color:var(--tide-deep)]/8 pt-2">
-                <label className="flex cursor-pointer items-start gap-2 rounded-md px-1 py-1 text-sm text-[color:var(--tide-deep)] hover:bg-[color:var(--tide-deep)]/8">
+              <div className="space-y-2 border-t border-[color:var(--rowgon-deep)]/8 pt-2">
+                <label className="flex cursor-pointer items-start gap-2 rounded-md px-1 py-1 text-sm text-[color:var(--rowgon-deep)] hover:bg-[color:var(--rowgon-deep)]/8">
                   <input
                     type="checkbox"
                     className="mt-0.5"
@@ -276,12 +276,12 @@ export function FolderActions({
                   />
                   <span>
                     Hide from unauthorized
-                    <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--tide-deep)]/55">
+                    <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--rowgon-deep)]/55">
                       Don’t show a locked folder to people without access.
                     </span>
                   </span>
                 </label>
-                <label className="flex cursor-pointer items-start gap-2 rounded-md px-1 py-1 text-sm text-[color:var(--tide-deep)] hover:bg-[color:var(--tide-deep)]/8">
+                <label className="flex cursor-pointer items-start gap-2 rounded-md px-1 py-1 text-sm text-[color:var(--rowgon-deep)] hover:bg-[color:var(--rowgon-deep)]/8">
                   <input
                     type="checkbox"
                     className="mt-0.5"
@@ -290,7 +290,7 @@ export function FolderActions({
                   />
                   <span>
                     Always show
-                    <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--tide-deep)]/55">
+                    <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--rowgon-deep)]/55">
                       Overrides hide rules — always visible in the tree (still locked without access).
                     </span>
                   </span>
@@ -298,20 +298,20 @@ export function FolderActions({
               </div>
 
               {error ? (
-                <p className="text-xs text-[color:var(--tide-coral)]">{error}</p>
+                <p className="text-xs text-[color:var(--rowgon-coral)]">{error}</p>
               ) : null}
               <div className="flex gap-2 pt-1">
                 <button
                   type="button"
                   disabled={pending}
-                  className="tide-btn-secondary !px-2.5 !py-1 text-xs disabled:opacity-50"
+                  className="rowgon-btn-secondary !px-2.5 !py-1 text-xs disabled:opacity-50"
                   onClick={saveAccess}
                 >
                   {pending ? "Saving…" : "Save"}
                 </button>
                 <button
                   type="button"
-                  className="text-xs text-[color:var(--tide-deep)]/55"
+                  className="text-xs text-[color:var(--rowgon-deep)]/55"
                   onClick={() => setPanel("menu")}
                 >
                   Back

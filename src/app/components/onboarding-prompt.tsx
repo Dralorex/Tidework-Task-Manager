@@ -33,7 +33,7 @@ export function OnboardingPrompt({
         <button
           type="button"
           onClick={onNext}
-          className="tide-btn-primary mt-3 !min-h-9 !px-4 !py-1.5 text-sm"
+          className="rowgon-btn-primary mt-3 !min-h-9 !px-4 !py-1.5 text-sm"
         >
           {nextLabel}
         </button>
@@ -76,7 +76,7 @@ export function OnboardingPrompt({
 
 export function blinkRing(active: boolean) {
   return active
-    ? "animate-tide-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
+    ? "animate-rowgon-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
     : "";
 }
 

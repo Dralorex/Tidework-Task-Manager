@@ -9,14 +9,14 @@ import {
   useState,
 } from "react";
 import {
-  ONBOARDING_STEP_KEY,
-  SETUP_DISMISS_KEY,
   deriveOnboardingStep,
+  dismissSetup,
   isSetupDismissed,
-  parseStoredStep,
   readOnboardingPreference,
+  readStoredOnboardingStep,
   skipToNextSection,
   writeOnboardingPreference,
+  writeStoredOnboardingStep,
   type OnboardingPreference,
   type OnboardingTrack,
   type WorkspaceOnboardingStep,
@@ -76,9 +76,7 @@ export function WorkspaceOnboardingProvider({
 
     let storedStep: WorkspaceOnboardingStep | null = null;
     try {
-      storedStep = parseStoredStep(
-        localStorage.getItem(ONBOARDING_STEP_KEY(workspaceId)),
-      );
+      storedStep = readStoredOnboardingStep(workspaceId);
     } catch {
       /* ignore */
     }
@@ -149,11 +147,7 @@ export function WorkspaceOnboardingProvider({
   const setStep = useCallback(
     (next: WorkspaceOnboardingStep) => {
       setStepState(next);
-      try {
-        localStorage.setItem(ONBOARDING_STEP_KEY(workspaceId), next);
-      } catch {
-        /* ignore */
-      }
+      writeStoredOnboardingStep(workspaceId, next);
     },
     [workspaceId],
   );
@@ -176,11 +170,7 @@ export function WorkspaceOnboardingProvider({
       };
       writeOnboardingPreference(next);
       setPref(next);
-      try {
-        localStorage.setItem(SETUP_DISMISS_KEY(workspaceId), "1");
-      } catch {
-        /* ignore */
-      }
+      dismissSetup(workspaceId);
       setStep("done");
     },
     [workspaceId, setStep],
@@ -190,11 +180,7 @@ export function WorkspaceOnboardingProvider({
     const next: OnboardingPreference = { status: "completed" };
     writeOnboardingPreference(next);
     setPref(next);
-    try {
-      localStorage.setItem(SETUP_DISMISS_KEY(workspaceId), "1");
-    } catch {
-      /* ignore */
-    }
+    dismissSetup(workspaceId);
     setStep("done");
   }, [workspaceId, setStep]);
 

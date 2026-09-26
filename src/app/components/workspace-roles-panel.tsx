@@ -79,7 +79,7 @@ export function WorkspaceRolesPanel({
   }
 
   return (
-    <div className="tide-panel p-4">
+    <div className="rowgon-panel p-4">
       <ChatSidebarSection
         title="Roles"
         description="Custom roles control folder access and role-based task alerts. Members can hold several at once."
@@ -88,12 +88,12 @@ export function WorkspaceRolesPanel({
           {roles.map((role) => (
             <li
               key={role.id}
-              className="space-y-1.5 text-[color:var(--tide-deep)]"
+              className="space-y-1.5 text-[color:var(--rowgon-deep)]"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="min-w-0 truncate font-medium">
                   {role.name}
-                  <span className="ml-1.5 text-[11px] font-normal text-[color:var(--tide-deep)]/50">
+                  <span className="ml-1.5 text-[11px] font-normal text-[color:var(--rowgon-deep)]/50">
                     {role.memberCount} member{role.memberCount === 1 ? "" : "s"}
                   </span>
                 </span>
@@ -101,7 +101,7 @@ export function WorkspaceRolesPanel({
                   <button
                     type="button"
                     disabled={pending}
-                    className="shrink-0 text-xs text-[color:var(--tide-coral)] hover:underline disabled:opacity-50"
+                    className="shrink-0 text-xs text-[color:var(--rowgon-coral)] hover:underline disabled:opacity-50"
                     onClick={() => remove(role.id, role.name)}
                   >
                     Delete
@@ -109,7 +109,7 @@ export function WorkspaceRolesPanel({
                 ) : null}
               </div>
               {canManage ? (
-                <label className="flex cursor-pointer items-start gap-2 text-xs text-[color:var(--tide-deep)]/80">
+                <label className="flex cursor-pointer items-start gap-2 text-xs text-[color:var(--rowgon-deep)]/80">
                   <input
                     type="checkbox"
                     className="mt-0.5"
@@ -121,20 +121,20 @@ export function WorkspaceRolesPanel({
                   />
                   <span>
                     Hide folders with this role
-                    <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--tide-deep)]/50">
+                    <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--rowgon-deep)]/50">
                       Unauthorized members won’t see those folders at all.
                     </span>
                   </span>
                 </label>
               ) : role.hideFolders ? (
-                <p className="text-[11px] text-[color:var(--tide-deep)]/50">
+                <p className="text-[11px] text-[color:var(--rowgon-deep)]/50">
                   Hides folders from unauthorized members
                 </p>
               ) : null}
             </li>
           ))}
           {roles.length === 0 ? (
-            <li className="text-xs text-[color:var(--tide-deep)]/55">
+            <li className="text-xs text-[color:var(--rowgon-deep)]/55">
               No custom roles yet.
             </li>
           ) : null}
@@ -146,20 +146,20 @@ export function WorkspaceRolesPanel({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="New role name"
-              className="tide-input text-sm"
+              className="rowgon-input text-sm"
               required
             />
             <button
               type="submit"
               disabled={pending || !name.trim()}
-              className="tide-btn-secondary text-sm disabled:opacity-50"
+              className="rowgon-btn-secondary text-sm disabled:opacity-50"
             >
               {pending ? "Saving…" : "Create role"}
             </button>
           </form>
         ) : null}
         {error ? (
-          <p className="mt-2 text-xs text-[color:var(--tide-coral)]">{error}</p>
+          <p className="mt-2 text-xs text-[color:var(--rowgon-coral)]">{error}</p>
         ) : null}
       </ChatSidebarSection>
     </div>

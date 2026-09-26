@@ -150,7 +150,7 @@ export function RecurrenceFields() {
             <select
               name="recurrenceSpawnMode"
               defaultValue="complete"
-              className="tide-input mt-1 min-h-11 text-sm"
+              className="rowgon-input mt-1 min-h-11 text-sm"
             >
               <option value="complete">On complete (approve)</option>
               <option value="due">On due rollover</option>
@@ -162,7 +162,7 @@ export function RecurrenceFields() {
             <select
               name="recurrenceNextAssignee"
               defaultValue="pool"
-              className="tide-input mt-1 min-h-11 text-sm"
+              className="rowgon-input mt-1 min-h-11 text-sm"
             >
               <option value="pool">Claim pool</option>
               <option value="same">Same person</option>

@@ -13,19 +13,19 @@ export function FolderCompletionStats({
   return (
     <div className="mt-1.5 space-y-1.5">
       <div className="flex flex-wrap gap-1">
-        <span className="rounded-md bg-[color:var(--tide-deep)]/8 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[color:var(--tide-deep)]/75">
+        <span className="rounded-md bg-[color:var(--rowgon-deep)]/8 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[color:var(--rowgon-deep)]/75">
           {label}
         </span>
-        <span className="rounded-md bg-[color:var(--tide-deep)]/8 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[color:var(--tide-deep)]/75">
+        <span className="rounded-md bg-[color:var(--rowgon-deep)]/8 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[color:var(--rowgon-deep)]/75">
           {done}/{total}
         </span>
-        <span className="rounded-md bg-[color:var(--tide-deep)]/8 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[color:var(--tide-deep)]/75">
+        <span className="rounded-md bg-[color:var(--rowgon-deep)]/8 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[color:var(--rowgon-deep)]/75">
           {unclaimed} Unclaimed
         </span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-[color:var(--tide-deep)]/10">
+      <div className="h-1.5 overflow-hidden rounded-full bg-[color:var(--rowgon-deep)]/10">
         <div
-          className="h-full rounded-full bg-[color:var(--tide-sea)] transition-[width] duration-300"
+          className="h-full rounded-full bg-[color:var(--rowgon-sea)] transition-[width] duration-300"
           style={{ width: `${total === 0 ? 0 : pct}%` }}
         />
       </div>

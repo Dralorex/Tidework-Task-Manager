@@ -617,10 +617,10 @@ export default async function WorkspacePage({
             name="q"
             defaultValue={q}
             placeholder="Search names…"
-            className="tide-input min-w-[12rem]"
+            className="rowgon-input min-w-[12rem]"
           />
           <TagFilterField tags={searchTagOptions} defaultValue={tagFilterRaw} />
-          <button type="submit" className="tide-btn-secondary text-sm">
+          <button type="submit" className="rowgon-btn-secondary text-sm">
             Search
           </button>
         </form>
@@ -681,7 +681,7 @@ export default async function WorkspacePage({
       <div className="mt-8 grid gap-6 lg:grid-cols-[240px_1fr]">
         <aside className={`space-y-4 ${inbox ? "hidden lg:block" : ""}`}>
           {canInvite ? (
-            <div className="tide-panel p-4">
+            <div className="rowgon-panel p-4">
               <ChatSidebarSection
                 title="Invite"
                 description="Invite a friend by username, or type an email. They’ll get a link to join this workspace."
@@ -699,7 +699,7 @@ export default async function WorkspacePage({
                   />
                   <select
                     name="role"
-                    className="tide-input text-sm"
+                    className="rowgon-input text-sm"
                     defaultValue="MEMBER"
                   >
                     <option value="ADMIN">Admin</option>
@@ -747,7 +747,7 @@ export default async function WorkspacePage({
         </aside>
 
         <section className="space-y-6">
-          <div className="tide-panel p-5">
+          <div className="rowgon-panel p-5">
             {backHref && backLabel ? (
               <Link
                 href={backHref}
@@ -769,7 +769,7 @@ export default async function WorkspacePage({
                 {!inbox && currentFolder ? (
                   <Link
                     href={`/app/w/${workspaceId}`}
-                    className="tide-btn-secondary !px-3 !py-1.5 text-xs"
+                    className="rowgon-btn-secondary !px-3 !py-1.5 text-xs"
                   >
                     See All Tasks
                   </Link>

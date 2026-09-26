@@ -249,7 +249,7 @@ export function ChatRowMenu({
                 <button
                   type="submit"
                   disabled={pending}
-                  className="tide-btn-secondary w-full text-xs disabled:opacity-60"
+                  className="rowgon-btn-secondary w-full text-xs disabled:opacity-60"
                 >
                   {pending ? "Adding…" : "Add selected"}
                 </button>

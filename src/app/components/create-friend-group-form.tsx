@@ -28,7 +28,7 @@ export function CreateFriendGroupForm({
           name="name"
           required
           placeholder="Group name"
-          className="tide-input text-sm"
+          className="rowgon-input text-sm"
         />
         <FriendInvitePicker
           friends={friends}

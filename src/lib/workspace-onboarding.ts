@@ -49,16 +49,16 @@ export type OnboardingPreference = {
 };
 
 export const SETUP_DISMISS_KEY = (workspaceId: string) =>
-  `tidework-setup-dismissed:${workspaceId}`;
+  `rowgon-setup-dismissed:${workspaceId}`;
 
 export const FOLDERS_OPEN_KEY = (workspaceId: string) =>
-  `tidework-folders-open:${workspaceId}`;
+  `rowgon-folders-open:${workspaceId}`;
 
 export const ONBOARDING_STEP_KEY = (workspaceId: string) =>
-  `tidework-onboarding-step:${workspaceId}`;
+  `rowgon-onboarding-step:${workspaceId}`;
 
 /** User-scoped preference (survives workspace switches). */
-export const ONBOARDING_PREF_KEY = "tidework-onboarding-pref:v1";
+export const ONBOARDING_PREF_KEY = "rowgon-onboarding-pref:v1";
 
 const ALL_STEPS: WorkspaceOnboardingStep[] = [
   "create-folder",
@@ -164,6 +164,37 @@ export function writeOnboardingPreference(pref: OnboardingPreference) {
       ONBOARDING_PREF_KEY,
       JSON.stringify({ ...pref, updatedAt: new Date().toISOString() }),
     );
+  } catch {
+    /* ignore */
+  }
+}
+
+export function readStoredOnboardingStep(
+  workspaceId: string,
+): WorkspaceOnboardingStep | null {
+  try {
+    return parseStoredStep(
+      localStorage.getItem(ONBOARDING_STEP_KEY(workspaceId)),
+    );
+  } catch {
+    return null;
+  }
+}
+
+export function writeStoredOnboardingStep(
+  workspaceId: string,
+  step: WorkspaceOnboardingStep,
+) {
+  try {
+    localStorage.setItem(ONBOARDING_STEP_KEY(workspaceId), step);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function dismissSetup(workspaceId: string) {
+  try {
+    localStorage.setItem(SETUP_DISMISS_KEY(workspaceId), "1");
   } catch {
     /* ignore */
   }

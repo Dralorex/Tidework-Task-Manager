@@ -38,7 +38,7 @@ export default async function SocialPage() {
           accept on the first message.
         </p>
 
-        <div className="tide-panel mt-8 p-5">
+        <div className="rowgon-panel mt-8 p-5">
           <h2 className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
             Add a friend
           </h2>
@@ -51,7 +51,7 @@ export default async function SocialPage() {
               name="username"
               required
               placeholder="username"
-              className="tide-input"
+              className="rowgon-input"
             />
           </InlineActionForm>
         </div>
@@ -65,7 +65,7 @@ export default async function SocialPage() {
               {incoming.map((r) => (
                 <li
                   key={r.id}
-                  className="tide-panel flex items-center justify-between gap-3 p-4"
+                  className="rowgon-panel flex items-center justify-between gap-3 p-4"
                 >
                   <span>@{r.requester.username}</span>
                   <div className="flex gap-2">
@@ -99,7 +99,7 @@ export default async function SocialPage() {
               <li className="text-[#0A3D45]/60">No friends yet.</li>
             ) : (
               friends.map((f) => (
-                <li key={f.id} className="tide-panel px-4 py-3">
+                <li key={f.id} className="rowgon-panel px-4 py-3">
                   @{f.username}
                 </li>
               ))

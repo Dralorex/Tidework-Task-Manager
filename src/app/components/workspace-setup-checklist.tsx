@@ -65,7 +65,7 @@ export function WorkspaceSetupChecklist({
   ];
 
   return (
-    <div className="tide-panel mt-6 border border-[#1a7a82]/25 p-5 animate-tide-rise">
+    <div className="rowgon-panel mt-6 border border-[#1a7a82]/25 p-5 animate-rowgon-rise">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">

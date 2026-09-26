@@ -117,7 +117,7 @@ export function WorkspaceMemberMenu({
             type="button"
             aria-label={`Manage ${memberLabel}`}
             aria-expanded={open}
-            className="rounded-md px-2 py-0.5 text-[color:var(--tide-deep)]/70 transition hover:bg-[color:var(--tide-deep)]/8 hover:text-[color:var(--tide-deep)]"
+            className="rounded-md px-2 py-0.5 text-[color:var(--rowgon-deep)]/70 transition hover:bg-[color:var(--rowgon-deep)]/8 hover:text-[color:var(--rowgon-deep)]"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -183,16 +183,16 @@ export function WorkspaceMemberMenu({
           <div className="space-y-2 px-3 py-2">
             <button
               type="button"
-              className="text-xs text-[color:var(--tide-deep)]/60"
+              className="text-xs text-[color:var(--rowgon-deep)]/60"
               onClick={() => setPanel("menu")}
             >
               ← Back
             </button>
-            <p className="text-xs font-semibold text-[color:var(--tide-deep)]">
+            <p className="text-xs font-semibold text-[color:var(--rowgon-deep)]">
               Privilege
             </p>
             <select
-              className="tide-input py-1 text-xs"
+              className="rowgon-input py-1 text-xs"
               defaultValue={memberRole}
               disabled={pending}
               onChange={(e) =>
@@ -214,12 +214,12 @@ export function WorkspaceMemberMenu({
           <div className="max-h-80 space-y-2 overflow-y-auto px-3 py-2">
             <button
               type="button"
-              className="text-xs text-[color:var(--tide-deep)]/60"
+              className="text-xs text-[color:var(--rowgon-deep)]/60"
               onClick={() => setPanel("menu")}
             >
               ← Back
             </button>
-            <p className="text-xs font-semibold text-[color:var(--tide-deep)]">
+            <p className="text-xs font-semibold text-[color:var(--rowgon-deep)]">
               Custom roles
             </p>
             <ul className="space-y-1">
@@ -227,7 +227,7 @@ export function WorkspaceMemberMenu({
                 const checked = selected.has(role.id);
                 return (
                   <li key={role.id}>
-                    <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-sm text-[color:var(--tide-deep)] hover:bg-[color:var(--tide-deep)]/8">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-sm text-[color:var(--rowgon-deep)] hover:bg-[color:var(--rowgon-deep)]/8">
                       <input
                         type="checkbox"
                         checked={checked}
@@ -246,7 +246,7 @@ export function WorkspaceMemberMenu({
                 );
               })}
               {workspaceRoles.length === 0 ? (
-                <li className="text-xs text-[color:var(--tide-deep)]/55">
+                <li className="text-xs text-[color:var(--rowgon-deep)]/55">
                   Create a role in the Roles panel first.
                 </li>
               ) : null}
@@ -254,7 +254,7 @@ export function WorkspaceMemberMenu({
             <button
               type="button"
               disabled={pending}
-              className="tide-btn-secondary !px-2.5 !py-1 text-xs disabled:opacity-50"
+              className="rowgon-btn-secondary !px-2.5 !py-1 text-xs disabled:opacity-50"
               onClick={saveCustomRoles}
             >
               {pending ? "Saving…" : "Save"}
@@ -263,7 +263,7 @@ export function WorkspaceMemberMenu({
         ) : null}
 
         {error ? (
-          <p className="border-t border-[color:var(--tide-deep)]/10 px-3 py-2 text-xs text-[color:var(--tide-coral)]">
+          <p className="border-t border-[color:var(--rowgon-deep)]/10 px-3 py-2 text-xs text-[color:var(--rowgon-coral)]">
             {error}
           </p>
         ) : null}

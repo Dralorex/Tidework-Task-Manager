@@ -25,7 +25,7 @@ export function PriorityField({
       value={value}
       onChange={(e) => setValue(e.target.value)}
       aria-label="Priority Level"
-      className={`tide-input ${isHint ? "tide-input-hint" : ""} ${className ?? ""}`}
+      className={`rowgon-input ${isHint ? "rowgon-input-hint" : ""} ${className ?? ""}`}
     >
       <option value="" disabled>
         Priority Level

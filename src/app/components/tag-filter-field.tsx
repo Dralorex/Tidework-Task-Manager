@@ -21,7 +21,7 @@ export function TagFilterField({
       defaultValue={defaultValue}
       className={className}
       placeholder="Tag filter"
-      inputClassName="tide-input min-w-[12rem] w-48"
+      inputClassName="rowgon-input min-w-[12rem] w-48"
       emptyMessage="No tags in this folder yet"
       allowMultiple
       keepOpenOnPick

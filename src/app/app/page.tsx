@@ -66,7 +66,7 @@ export default async function AppHomePage() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
       <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-        <div className="animate-tide-rise">
+        <div className="animate-rowgon-rise">
           <h1 className="font-[family-name:var(--font-display)] text-4xl text-[#0A3D45] sm:text-5xl">
             Your workspaces
           </h1>
@@ -74,7 +74,7 @@ export default async function AppHomePage() {
             Each workspace is its own tide pool — folders, tasks, and people with roles.
           </p>
         </div>
-        <div className="tide-panel w-full max-w-sm p-5 animate-tide-rise-delay">
+        <div className="rowgon-panel w-full max-w-sm p-5 animate-rowgon-rise-delay">
           <h2 className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
             New workspace
           </h2>
@@ -87,7 +87,7 @@ export default async function AppHomePage() {
               name="name"
               required
               placeholder="Studio sprint"
-              className="tide-input"
+              className="rowgon-input"
             />
           </InlineActionForm>
         </div>
@@ -95,7 +95,7 @@ export default async function AppHomePage() {
 
       <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {active.length === 0 && archived.length === 0 ? (
-          <div className="tide-panel sm:col-span-2 lg:col-span-3 max-w-xl p-6 animate-tide-rise">
+          <div className="rowgon-panel sm:col-span-2 lg:col-span-3 max-w-xl p-6 animate-rowgon-rise">
             <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
               Start here
             </h2>
@@ -117,7 +117,7 @@ export default async function AppHomePage() {
             </p>
           </div>
         ) : active.length === 0 ? (
-          <div className="tide-panel sm:col-span-2 lg:col-span-3 max-w-xl p-5 text-sm text-[#0A3D45]/70">
+          <div className="rowgon-panel sm:col-span-2 lg:col-span-3 max-w-xl p-5 text-sm text-[#0A3D45]/70">
             No active workspaces. Archived ones are listed below if you still have access.
           </div>
         ) : (
@@ -126,7 +126,7 @@ export default async function AppHomePage() {
             return (
               <div
                 key={m.id}
-                className="tide-panel relative p-5 transition hover:-translate-y-0.5 hover:shadow-lg"
+                className="rowgon-panel relative p-5 transition hover:-translate-y-0.5 hover:shadow-lg"
                 style={{ animationDelay: `${i * 60}ms` }}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -171,7 +171,7 @@ export default async function AppHomePage() {
               <Link
                 key={m.id}
                 href={`/app/w/${m.workspaceId}`}
-                className="tide-panel block border border-[#0A3D45]/10 bg-white/50 p-5 opacity-90 transition hover:opacity-100"
+                className="rowgon-panel block border border-[#0A3D45]/10 bg-white/50 p-5 opacity-90 transition hover:opacity-100"
               >
                 <p className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
                   {m.workspace.name}
@@ -200,7 +200,7 @@ export default async function AppHomePage() {
           </div>
           <ul className="mt-4 space-y-2">
             {notifications.map((n) => (
-              <li key={n.id} className="tide-panel px-4 py-3 text-sm">
+              <li key={n.id} className="rowgon-panel px-4 py-3 text-sm">
                 <Link href="/app/notifications" className="block">
                   <span className="font-semibold text-[#0A3D45]">{n.title}</span>
                   <span className="text-[#0A3D45]/70"> — {n.body}</span>

@@ -40,7 +40,7 @@ export function CreateWorkspaceGroupForm({
       >
         <select
           name="workspaceId"
-          className="tide-input text-sm"
+          className="rowgon-input text-sm"
           required
           value={workspaceId}
           onChange={(e) => setWorkspaceId(e.target.value)}
@@ -55,7 +55,7 @@ export function CreateWorkspaceGroupForm({
           name="name"
           required
           placeholder="Group name"
-          className="tide-input text-sm"
+          className="rowgon-input text-sm"
         />
         <FriendInvitePicker
           key={workspaceId}

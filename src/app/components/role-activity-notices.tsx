@@ -31,9 +31,9 @@ export function RoleActivityNotices({
       {items.map((item) => (
         <li
           key={item.roleId}
-          className="tide-panel flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+          className="rowgon-panel flex flex-wrap items-center justify-between gap-3 px-4 py-3"
         >
-          <p className="text-sm text-[color:var(--tide-deep)]">
+          <p className="text-sm text-[color:var(--rowgon-deep)]">
             <span className="font-semibold">
               {item.count} task{item.count === 1 ? "" : "s"}
             </span>{" "}
@@ -43,7 +43,7 @@ export function RoleActivityNotices({
           <button
             type="button"
             disabled={pending}
-            className="tide-btn-secondary !px-3 !py-1.5 text-xs disabled:opacity-50"
+            className="rowgon-btn-secondary !px-3 !py-1.5 text-xs disabled:opacity-50"
             onClick={() => markOne(item.roleId)}
           >
             Mark seen

@@ -9,7 +9,7 @@ export function OnboardingChooser() {
   if (!needsChooser) return null;
 
   return (
-    <div className="tide-panel mt-6 border border-[#1a7a82]/30 p-5 animate-tide-rise sm:p-6">
+    <div className="rowgon-panel mt-6 border border-[#1a7a82]/30 p-5 animate-rowgon-rise sm:p-6">
       <h2 className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]">
         Hey — this looks like a new account
       </h2>
@@ -22,14 +22,14 @@ export function OnboardingChooser() {
         <button
           type="button"
           onClick={() => chooseTrack("full")}
-          className="tide-btn-primary w-full justify-center text-left sm:text-center"
+          className="rowgon-btn-primary w-full justify-center text-left sm:text-center"
         >
           Yes — teach me the full course
         </button>
         <button
           type="button"
           onClick={() => chooseTrack("short")}
-          className="tide-btn-secondary w-full justify-center"
+          className="rowgon-btn-secondary w-full justify-center"
         >
           I’m too busy to learn right now — give me the short version
         </button>

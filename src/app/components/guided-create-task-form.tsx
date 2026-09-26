@@ -38,7 +38,7 @@ type Assignable = { id: string; username: string };
 
 function blinkClass(on: boolean) {
   return on
-    ? "animate-tide-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
+    ? "animate-rowgon-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
     : "";
 }
 
@@ -177,7 +177,7 @@ export function GuidedCreateTaskForm({
           name="name"
           required
           placeholder="Task Name"
-          className={`tide-input ${blinkClass(showNameBlink)}`}
+          className={`rowgon-input ${blinkClass(showNameBlink)}`}
           value={taskName}
           onFocus={() => setNameClicked(true)}
           onClick={() => setNameClicked(true)}
@@ -195,7 +195,7 @@ export function GuidedCreateTaskForm({
           required
           value={priority}
           aria-label="Priority Level"
-          className={`tide-input ${!priority ? "tide-input-hint" : ""} ${blinkClass(blink("priority"))}`}
+          className={`rowgon-input ${!priority ? "rowgon-input-hint" : ""} ${blinkClass(blink("priority"))}`}
           onFocus={() => {
             if (active && step === "priority") setStep("description");
           }}
@@ -220,7 +220,7 @@ export function GuidedCreateTaskForm({
         <input
           name="description"
           placeholder="Description"
-          className={`tide-input sm:col-span-2 ${blinkClass(showDescBlink)}`}
+          className={`rowgon-input sm:col-span-2 ${blinkClass(showDescBlink)}`}
           value={description}
           onFocus={() => setDescClicked(true)}
           onClick={() => setDescClicked(true)}
@@ -267,7 +267,7 @@ export function GuidedCreateTaskForm({
 
         <select
           name="assignTo"
-          className={`tide-input ${blinkClass(blink("claim-pool"))}`}
+          className={`rowgon-input ${blinkClass(blink("claim-pool"))}`}
           defaultValue=""
           onFocus={() => {
             if (active && step === "claim-pool") setStep("claim-pool-info");
@@ -301,7 +301,7 @@ export function GuidedCreateTaskForm({
             emptyMessage="No public tags in this folder yet — type a new one"
             allowMultiple
             keepOpenOnPick
-            inputClassName={`tide-input text-sm ${blinkClass(blink("tags"))}`}
+            inputClassName={`rowgon-input text-sm ${blinkClass(blink("tags"))}`}
           />
         </div>
 
@@ -428,7 +428,7 @@ export function GuidedCreateTaskForm({
                 <select
                   name="recurrenceSpawnMode"
                   defaultValue="complete"
-                  className="tide-input mt-1 min-h-11 text-sm"
+                  className="rowgon-input mt-1 min-h-11 text-sm"
                 >
                   <option value="complete">On complete (approve)</option>
                   <option value="due">On due rollover</option>
@@ -440,7 +440,7 @@ export function GuidedCreateTaskForm({
                 <select
                   name="recurrenceNextAssignee"
                   defaultValue="pool"
-                  className="tide-input mt-1 min-h-11 text-sm"
+                  className="rowgon-input mt-1 min-h-11 text-sm"
                 >
                   <option value="pool">Claim pool</option>
                   <option value="same">Same person</option>

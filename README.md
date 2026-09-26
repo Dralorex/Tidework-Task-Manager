@@ -1,4 +1,4 @@
-# Tidework Task Manager
+# Rowgon Task Manager
 
 Collaborative task management where urgency rises with due dates — nested folders, claimable tasks, roles, friends, and private chats.
 

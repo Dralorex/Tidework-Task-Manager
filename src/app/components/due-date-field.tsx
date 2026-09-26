@@ -149,7 +149,7 @@ export function DueDateField({
       <div
         className={`relative min-w-0 overflow-hidden rounded-[0.85rem] ${
           blink
-            ? "animate-tide-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
+            ? "animate-rowgon-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
             : ""
         }`}
         onClick={(e) => {
@@ -159,7 +159,7 @@ export function DueDateField({
       >
         {showPlaceholder ? (
           <span
-            className="pointer-events-none absolute inset-0 z-[1] flex items-center px-[0.9rem] text-[color-mix(in_srgb,var(--tide-ink)_45%,transparent)]"
+            className="pointer-events-none absolute inset-0 z-[1] flex items-center px-[0.9rem] text-[color-mix(in_srgb,var(--rowgon-ink)_45%,transparent)]"
             aria-hidden
           >
             Due Date
@@ -189,7 +189,7 @@ export function DueDateField({
           }}
           aria-label="Due Date"
           readOnly={preferInApp}
-          className={`tide-input max-w-full min-w-0 ${
+          className={`rowgon-input max-w-full min-w-0 ${
             showPlaceholder
               ? "text-transparent [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-datetime-edit]:text-transparent [&::-webkit-datetime-edit]:max-w-full"
               : "[&::-webkit-calendar-picker-indicator]:cursor-pointer"
@@ -201,7 +201,7 @@ export function DueDateField({
           type="button"
           className={`rounded-full border border-[#0A3D45]/15 bg-white/70 px-2.5 py-1 text-xs font-semibold text-[#0A3D45]/75 hover:bg-white ${
             blinkReset
-              ? "animate-tide-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
+              ? "animate-rowgon-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
               : ""
           }`}
           onClick={() => {
@@ -215,7 +215,7 @@ export function DueDateField({
           type="button"
           className={`rounded-full border border-[#0A3D45]/15 bg-white/70 px-2.5 py-1 text-xs font-semibold text-[#0A3D45]/75 hover:bg-white ${
             blinkClear
-              ? "animate-tide-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
+              ? "animate-rowgon-blink-empty ring-2 ring-inset ring-[#3b82f6]/55"
               : ""
           }`}
           onClick={() => {

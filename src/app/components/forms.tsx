@@ -57,7 +57,7 @@ export function AuthForm({
           If that account has an email, a reset link was prepared.
         </p>
       ) : null}
-      <SubmitButton label={submitLabel} className="tide-btn-primary" />
+      <SubmitButton label={submitLabel} className="rowgon-btn-primary" />
       {extras}
     </form>
   );
@@ -80,7 +80,7 @@ export function InlineActionForm({
 }) {
   const [state, formAction] = useActionState(action, null);
   const base =
-    submitVariant === "primary" ? "tide-btn-primary text-sm" : "tide-btn-secondary text-sm";
+    submitVariant === "primary" ? "rowgon-btn-primary text-sm" : "rowgon-btn-secondary text-sm";
 
   return (
     <form className={className ?? "flex flex-col gap-3"} action={formAction}>

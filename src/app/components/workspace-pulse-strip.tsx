@@ -46,7 +46,7 @@ export function WorkspacePulseStrip({
   return (
     <div className="mt-6 space-y-3">
       {counts ? (
-        <div className="tide-panel flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 sm:px-4">
+        <div className="rowgon-panel flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 sm:px-4">
           <h2 className="shrink-0 font-[family-name:var(--font-display)] text-base text-[#0A3D45] sm:text-lg">
             Pulse
           </h2>

@@ -9,8 +9,8 @@ export default async function SignUpPage() {
   if (user) redirect("/app");
 
   return (
-    <main className="tide-wave-bg flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="tide-panel w-full max-w-md p-8 animate-tide-rise">
+    <main className="rowgon-wave-bg flex min-h-screen items-center justify-center px-4 py-12">
+      <div className="rowgon-panel w-full max-w-md p-8 animate-rowgon-rise">
         <Link
           href="/"
           className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]"
@@ -32,7 +32,7 @@ export default async function SignUpPage() {
                 name="username"
                 required
                 autoComplete="username"
-                className="tide-input"
+                className="rowgon-input"
                 placeholder="tide_rider"
               />
             </label>
@@ -44,7 +44,7 @@ export default async function SignUpPage() {
                 required
                 minLength={8}
                 autoComplete="new-password"
-                className="tide-input"
+                className="rowgon-input"
                 placeholder="At least 8 characters"
               />
             </label>
@@ -55,7 +55,7 @@ export default async function SignUpPage() {
                 name="email"
                 type="email"
                 autoComplete="email"
-                className="tide-input"
+                className="rowgon-input"
                 placeholder="you@example.com"
               />
             </label>

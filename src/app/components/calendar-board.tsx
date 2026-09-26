@@ -237,7 +237,7 @@ export function CalendarBoard({
         </button>
       </div>
 
-      <div className="tide-panel space-y-4 p-4 sm:p-5">
+      <div className="rowgon-panel space-y-4 p-4 sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="font-[family-name:var(--font-display)] text-xl text-[#0A3D45]">
@@ -251,7 +251,7 @@ export function CalendarBoard({
             <button
               type="button"
               onClick={() => setComposer(composer === "personal" ? null : "personal")}
-              className="tide-btn-secondary min-h-10 text-sm"
+              className="rowgon-btn-secondary min-h-10 text-sm"
             >
               Personal event
             </button>
@@ -261,7 +261,7 @@ export function CalendarBoard({
                 onClick={() =>
                   setComposer(composer === "workspace" ? null : "workspace")
                 }
-                className="tide-btn-secondary min-h-10 text-sm"
+                className="rowgon-btn-secondary min-h-10 text-sm"
               >
                 Workspace event
               </button>
@@ -277,12 +277,12 @@ export function CalendarBoard({
             className="grid gap-2 sm:grid-cols-2"
             submitClassName="min-h-11 sm:col-span-2 sm:justify-self-start"
           >
-            <input name="title" required placeholder="Title" className="tide-input min-h-11" />
-            <input name="date" type="date" required className="tide-input min-h-11" />
+            <input name="title" required placeholder="Title" className="rowgon-input min-h-11" />
+            <input name="date" type="date" required className="rowgon-input min-h-11" />
             <input
               name="description"
               placeholder="Notes (optional)"
-              className="tide-input min-h-11 sm:col-span-2"
+              className="rowgon-input min-h-11 sm:col-span-2"
             />
           </InlineActionForm>
         ) : null}
@@ -295,7 +295,7 @@ export function CalendarBoard({
             className="grid gap-2 sm:grid-cols-2"
             submitClassName="min-h-11 sm:col-span-2 sm:justify-self-start"
           >
-            <select name="workspaceId" required className="tide-input min-h-11" defaultValue="">
+            <select name="workspaceId" required className="rowgon-input min-h-11" defaultValue="">
               <option value="" disabled>
                 Workspace…
               </option>
@@ -305,24 +305,24 @@ export function CalendarBoard({
                 </option>
               ))}
             </select>
-            <input name="date" type="date" required className="tide-input min-h-11" />
+            <input name="date" type="date" required className="rowgon-input min-h-11" />
             <input
               name="title"
               required
               placeholder="Title"
-              className="tide-input min-h-11 sm:col-span-2"
+              className="rowgon-input min-h-11 sm:col-span-2"
             />
             <input
               name="description"
               placeholder="Notes (optional)"
-              className="tide-input min-h-11 sm:col-span-2"
+              className="rowgon-input min-h-11 sm:col-span-2"
             />
           </InlineActionForm>
         ) : null}
       </div>
 
       {workspaces.length > 0 ? (
-        <div className="tide-panel p-4 sm:p-5">
+        <div className="rowgon-panel p-4 sm:p-5">
           <h2 className="font-[family-name:var(--font-display)] text-lg text-[#0A3D45]">
             Task sources
           </h2>
@@ -352,7 +352,7 @@ export function CalendarBoard({
         </div>
       ) : null}
 
-      <div className="tide-panel p-4 sm:p-5">
+      <div className="rowgon-panel p-4 sm:p-5">
         <h2 className="font-[family-name:var(--font-display)] text-lg text-[#0A3D45]">
           Birthdays
         </h2>
@@ -369,7 +369,7 @@ export function CalendarBoard({
                 name="birthday"
                 type="date"
                 defaultValue={birthdayValue}
-                className="tide-input mt-1 min-h-11"
+                className="rowgon-input mt-1 min-h-11"
               />
             </label>
           </InlineActionForm>
@@ -389,7 +389,7 @@ export function CalendarBoard({
       {view === "list" ? (
         <section className="space-y-4">
           {byDay.length === 0 ? (
-            <p className="tide-panel p-4 text-sm text-[#0A3D45]/60">
+            <p className="rowgon-panel p-4 text-sm text-[#0A3D45]/60">
               Nothing in the selected kinds yet.
             </p>
           ) : (
@@ -408,11 +408,11 @@ export function CalendarBoard({
           )}
         </section>
       ) : (
-        <section className="tide-panel p-3 sm:p-4">
+        <section className="rowgon-panel p-3 sm:p-4">
           <div className="mb-3 flex items-center justify-between gap-2">
             <button
               type="button"
-              className="tide-btn-secondary !min-h-9 text-sm"
+              className="rowgon-btn-secondary !min-h-9 text-sm"
               onClick={() => setMonthCursor((m) => subMonths(m, 1))}
             >
               Prev
@@ -422,7 +422,7 @@ export function CalendarBoard({
             </h3>
             <button
               type="button"
-              className="tide-btn-secondary !min-h-9 text-sm"
+              className="rowgon-btn-secondary !min-h-9 text-sm"
               onClick={() => setMonthCursor((m) => addMonths(m, 1))}
             >
               Next
@@ -518,7 +518,7 @@ export function CalendarBoard({
 function EventRow({ event }: { event: CalendarBoardEvent }) {
   const meta = KIND_META[event.kind];
   return (
-    <li className="tide-panel relative overflow-hidden p-4 pl-5">
+    <li className="rowgon-panel relative overflow-hidden p-4 pl-5">
       <span
         className={`absolute inset-y-0 left-0 w-1 ${meta.bar}`}
         aria-hidden
@@ -540,7 +540,7 @@ function EventRow({ event }: { event: CalendarBoardEvent }) {
         </div>
         <div className="flex flex-wrap gap-2">
           {event.href ? (
-            <Link href={event.href} className="tide-btn-secondary min-h-10 text-sm">
+            <Link href={event.href} className="rowgon-btn-secondary min-h-10 text-sm">
               Open
             </Link>
           ) : null}

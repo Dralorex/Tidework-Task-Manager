@@ -69,7 +69,7 @@ export function AddTaskTagsForm({
       <button
         type="submit"
         disabled={pending}
-        className="tide-btn-secondary text-sm disabled:opacity-60"
+        className="rowgon-btn-secondary text-sm disabled:opacity-60"
       >
         {pending ? "Working…" : submitLabel}
       </button>

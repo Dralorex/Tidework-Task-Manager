@@ -174,7 +174,7 @@ export function WorkspaceCardMenu({
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="tide-input w-full text-sm"
+              className="rowgon-input w-full text-sm"
               autoFocus
             />
             <div className="flex gap-2">
@@ -223,7 +223,7 @@ export function WorkspaceCardMenu({
                   {isOwner && m.role !== "OWNER" ? (
                     <div className="mt-1.5 flex flex-wrap items-center gap-1">
                       <select
-                        className="tide-input py-1 text-xs"
+                        className="rowgon-input py-1 text-xs"
                         defaultValue={m.role}
                         disabled={pending}
                         onChange={(e) =>

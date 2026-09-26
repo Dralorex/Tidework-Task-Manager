@@ -10,7 +10,7 @@ import { nanoid } from "nanoid";
 import { PrismaClient } from "../../src/generated/prisma/client";
 import { getDatabaseUrl } from "../../src/lib/db-url";
 
-const SESSION_COOKIE = "tidework_session";
+const SESSION_COOKIE = "rowgon_session";
 
 async function main() {
   const prisma = new PrismaClient({
@@ -23,7 +23,7 @@ async function main() {
     data: {
       username,
       passwordHash,
-      email: `${username}@tidework.test`,
+      email: `${username}@rowgon.test`,
     },
   });
 

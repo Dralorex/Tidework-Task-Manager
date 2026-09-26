@@ -51,12 +51,12 @@ export function UrgencyChipSettings({
   }
 
   return (
-    <div className="tide-panel p-4">
+    <div className="rowgon-panel p-4">
       <ChatSidebarSection
         title="Urgency chips"
         description="Choose which priority chips appear on task rows. Faces show level names; hover shows /100 scores. Total = Base + Date (capped at 100)."
       >
-        <ul className="space-y-2 text-sm text-[color:var(--tide-deep)]">
+        <ul className="space-y-2 text-sm text-[color:var(--rowgon-deep)]">
           <li>
             <label className="flex cursor-pointer items-start gap-2">
               <input
@@ -70,7 +70,7 @@ export function UrgencyChipSettings({
               />
               <span>
                 Base
-                <span className="mt-0.5 block text-[11px] text-[color:var(--tide-deep)]/50">
+                <span className="mt-0.5 block text-[11px] text-[color:var(--rowgon-deep)]/50">
                   Manual priority (10–80)
                 </span>
               </span>
@@ -89,7 +89,7 @@ export function UrgencyChipSettings({
               />
               <span>
                 Date
-                <span className="mt-0.5 block text-[11px] text-[color:var(--tide-deep)]/50">
+                <span className="mt-0.5 block text-[11px] text-[color:var(--rowgon-deep)]/50">
                   Due pressure (0–90, steeper near deadline)
                 </span>
               </span>
@@ -108,7 +108,7 @@ export function UrgencyChipSettings({
               />
               <span>
                 Total
-                <span className="mt-0.5 block text-[11px] text-[color:var(--tide-deep)]/50">
+                <span className="mt-0.5 block text-[11px] text-[color:var(--rowgon-deep)]/50">
                   Combined urgency band (Base + Date)
                 </span>
               </span>
@@ -116,7 +116,7 @@ export function UrgencyChipSettings({
           </li>
         </ul>
         {error ? (
-          <p className="mt-2 text-xs text-[color:var(--tide-coral)]">{error}</p>
+          <p className="mt-2 text-xs text-[color:var(--rowgon-coral)]">{error}</p>
         ) : null}
       </ChatSidebarSection>
     </div>

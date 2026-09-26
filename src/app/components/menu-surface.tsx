@@ -122,6 +122,6 @@ export function MenuSurface({
 
 export function menuItemClass(danger = false) {
   return danger
-    ? "block w-full px-3 py-2 text-left text-sm text-[color:var(--tide-coral)] hover:bg-[color:var(--tide-coral)]/10"
-    : "block w-full px-3 py-2 text-left text-sm text-[color:var(--tide-deep)] hover:bg-[color:var(--tide-deep)]/8";
+    ? "block w-full px-3 py-2 text-left text-sm text-[color:var(--rowgon-coral)] hover:bg-[color:var(--rowgon-coral)]/10"
+    : "block w-full px-3 py-2 text-left text-sm text-[color:var(--rowgon-deep)] hover:bg-[color:var(--rowgon-deep)]/8";
 }

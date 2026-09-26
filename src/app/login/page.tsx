@@ -9,8 +9,8 @@ export default async function LoginPage() {
   if (user) redirect("/app");
 
   return (
-    <main className="tide-wave-bg flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="tide-panel w-full max-w-md p-8 animate-tide-rise">
+    <main className="rowgon-wave-bg flex min-h-screen items-center justify-center px-4 py-12">
+      <div className="rowgon-panel w-full max-w-md p-8 animate-rowgon-rise">
         <Link
           href="/"
           className="font-[family-name:var(--font-display)] text-2xl text-[#0A3D45]"
@@ -41,7 +41,7 @@ export default async function LoginPage() {
                 name="username"
                 required
                 autoComplete="username"
-                className="tide-input"
+                className="rowgon-input"
               />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">
@@ -51,7 +51,7 @@ export default async function LoginPage() {
                 type="password"
                 required
                 autoComplete="current-password"
-                className="tide-input"
+                className="rowgon-input"
               />
             </label>
           </AuthForm>

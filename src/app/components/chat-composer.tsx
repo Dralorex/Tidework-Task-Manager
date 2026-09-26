@@ -31,7 +31,7 @@ type TaskOption = {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className="tide-btn-primary min-h-11 text-sm disabled:opacity-60">
+    <button type="submit" disabled={pending} className="rowgon-btn-primary min-h-11 text-sm disabled:opacity-60">
       {pending ? "…" : "Send"}
     </button>
   );
@@ -235,7 +235,7 @@ export function ChatComposer({
                 ? "Write a message… @ mention · # link a task"
                 : "Write a message… use @ to mention"
             }
-            className="tide-input min-h-[3.25rem] w-full"
+            className="rowgon-input min-h-[3.25rem] w-full"
           />
           {picker === "mention" && filteredMentions.length > 0 ? (
             <ul className="absolute bottom-full left-0 z-10 mb-1 max-h-40 w-full overflow-y-auto rounded-xl border border-[#0A3D45]/15 bg-white p-1 shadow-lg">

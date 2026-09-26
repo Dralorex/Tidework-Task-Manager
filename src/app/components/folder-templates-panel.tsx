@@ -166,7 +166,7 @@ export function FolderTemplatesPanel({
                         ? `Template from ${currentFolderName}`
                         : "e.g. Sprint layout"
                     }
-                    className="tide-input min-h-9 text-sm"
+                    className="rowgon-input min-h-9 text-sm"
                   />
                   <p className="text-[11px] text-[#0A3D45]/50">
                     {currentFolderId

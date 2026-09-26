@@ -41,7 +41,7 @@ export function SendBackTaskControl({
     return (
       <button
         type="button"
-        className="tide-btn-secondary text-xs"
+        className="rowgon-btn-secondary text-xs"
         onClick={() => setOpen(true)}
       >
         Send back
@@ -60,7 +60,7 @@ export function SendBackTaskControl({
           required
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          className="tide-input mt-1 w-full text-sm"
+          className="rowgon-input mt-1 w-full text-sm"
           placeholder="Missing details / needs revision / etc."
         />
       </label>
@@ -76,7 +76,7 @@ export function SendBackTaskControl({
         <button
           type="submit"
           disabled={pending}
-          className="tide-btn-secondary text-xs disabled:opacity-60"
+          className="rowgon-btn-secondary text-xs disabled:opacity-60"
         >
           {pending ? "Working…" : "Confirm send back"}
         </button>

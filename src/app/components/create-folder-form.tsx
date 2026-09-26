@@ -29,10 +29,10 @@ export function CreateFolderForm({
         name="name"
         required
         placeholder="Folder Name"
-        className="tide-input text-sm"
+        className="rowgon-input text-sm"
       />
       {parentName ? (
-        <p className="text-[11px] text-[color:var(--tide-deep)]/55">
+        <p className="text-[11px] text-[color:var(--rowgon-deep)]/55">
           Nesting under “{parentName}”
         </p>
       ) : null}
@@ -52,7 +52,7 @@ export function CreateFolderForm({
             }
             hint="Leave empty for all members. Pick roles to restrict access."
           />
-          <label className="flex cursor-pointer items-start gap-2 text-xs text-[color:var(--tide-deep)]">
+          <label className="flex cursor-pointer items-start gap-2 text-xs text-[color:var(--rowgon-deep)]">
             <input
               type="checkbox"
               name="hideFromUnauthorized"
@@ -61,16 +61,16 @@ export function CreateFolderForm({
             />
             <span>
               Hide from unauthorized
-              <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--tide-deep)]/50">
+              <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--rowgon-deep)]/50">
                 Don’t show a locked folder to people without access.
               </span>
             </span>
           </label>
-          <label className="flex cursor-pointer items-start gap-2 text-xs text-[color:var(--tide-deep)]">
+          <label className="flex cursor-pointer items-start gap-2 text-xs text-[color:var(--rowgon-deep)]">
             <input type="checkbox" name="alwaysVisible" value="1" className="mt-0.5" />
             <span>
               Always show
-              <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--tide-deep)]/50">
+              <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--rowgon-deep)]/50">
                 Overrides hide rules — always visible (still locked without access).
               </span>
             </span>

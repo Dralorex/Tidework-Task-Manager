@@ -10,7 +10,7 @@ function SendButton() {
     <button
       type="submit"
       disabled={pending}
-      className="tide-btn-secondary text-sm disabled:opacity-60"
+      className="rowgon-btn-secondary text-sm disabled:opacity-60"
     >
       {pending ? "…" : "Send"}
     </button>
@@ -43,7 +43,7 @@ export function ChatMessageComposer({ groupId }: { groupId: string }) {
           name="body"
           required
           placeholder="Write a message…"
-          className="tide-input flex-1"
+          className="rowgon-input flex-1"
           autoComplete="off"
         />
         <SendButton />

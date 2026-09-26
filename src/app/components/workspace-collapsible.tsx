@@ -62,7 +62,7 @@ export function WorkspaceCollapsible({
   }
 
   return (
-    <div id={id} className={`tide-panel overflow-hidden ${className}`.trim()}>
+    <div id={id} className={`rowgon-panel overflow-hidden ${className}`.trim()}>
       <button
         type="button"
         className="flex w-full items-stretch gap-2 px-5 py-4 text-left"
@@ -74,8 +74,8 @@ export function WorkspaceCollapsible({
         </span>
         {/* Clickable empty stretch — onboarding can blink this */}
         <span
-          className={`tide-blink-surface min-h-8 min-w-[2.5rem] flex-1 self-stretch rounded-lg ${
-            blinkEmpty ? "animate-tide-blink-empty" : ""
+          className={`rowgon-blink-surface min-h-8 min-w-[2.5rem] flex-1 self-stretch rounded-lg ${
+            blinkEmpty ? "animate-rowgon-blink-empty" : ""
           }`}
           aria-hidden
         />
