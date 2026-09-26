@@ -90,6 +90,8 @@ export async function createFolderAction(
     canSetAccess && String(formData.get("hideFromUnauthorized") ?? "") === "1";
   const alwaysVisible =
     canSetAccess && String(formData.get("alwaysVisible") ?? "") === "1";
+  const alwaysAccessible =
+    canSetAccess && String(formData.get("alwaysAccessible") ?? "") === "1";
 
   let roleIds: string[] = [];
   if (canSetAccess) {
@@ -127,6 +129,7 @@ export async function createFolderAction(
       name,
       hideFromUnauthorized,
       alwaysVisible,
+      alwaysAccessible,
       ...(roleIds.length > 0
         ? {
             requiredRoles: {

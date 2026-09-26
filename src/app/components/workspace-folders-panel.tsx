@@ -29,6 +29,7 @@ type BubbleFolder = {
     requiredRoleIds: string[];
     hideFromUnauthorized?: boolean;
     alwaysVisible?: boolean;
+    alwaysAccessible?: boolean;
   };
 };
 
@@ -43,6 +44,7 @@ const FOLDER_FORM_STEPS = new Set([
   "folder-roles",
   "folder-hide",
   "folder-always",
+  "folder-accessible",
   "folder-submit",
 ]);
 

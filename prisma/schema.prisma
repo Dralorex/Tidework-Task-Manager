@@ -317,6 +317,8 @@ model Folder {
   hideFromUnauthorized Boolean @default(false)
   /** Always show in the tree regardless of role hide rules. Does not grant access. */
   alwaysVisible        Boolean @default(false)
+  /** Anyone may open this folder even when roles are set. Does not change ancestors. */
+  alwaysAccessible     Boolean @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   archivedAt  DateTime?

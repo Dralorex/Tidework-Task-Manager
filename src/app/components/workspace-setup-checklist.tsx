@@ -154,7 +154,14 @@ export function WorkspaceSetupChecklist({
       {step === "folder-always" ? (
         <OnboardingPrompt
           title="Always show"
-          body="Optional: keep the folder visible even when restricted. Then hit Add folder."
+          body="Optional: keep the folder visible even when restricted. Toggle it or click past to continue."
+        />
+      ) : null}
+
+      {step === "folder-accessible" ? (
+        <OnboardingPrompt
+          title="Always accessible"
+          body="Optional: let anyone open this folder even when roles are set. Then hit Add folder."
         />
       ) : null}
 

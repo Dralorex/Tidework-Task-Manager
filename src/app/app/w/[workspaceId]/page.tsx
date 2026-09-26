@@ -125,6 +125,7 @@ export default async function WorkspacePage({
     requiredRoleIds: f.requiredRoles.map((r) => r.roleId),
     hideFromUnauthorized: f.hideFromUnauthorized,
     alwaysVisible: f.alwaysVisible,
+    alwaysAccessible: f.alwaysAccessible,
     roleHidesFolder: f.requiredRoles.some((r) => r.role.hideFolders),
   }));
   const foldersById = new Map(folderAccessRows.map((f) => [f.id, f]));
@@ -526,6 +527,7 @@ export default async function WorkspacePage({
       requiredRoleIds: row?.requiredRoleIds ?? [],
       hideFromUnauthorized: row?.hideFromUnauthorized ?? false,
       alwaysVisible: row?.alwaysVisible ?? false,
+      alwaysAccessible: row?.alwaysAccessible ?? false,
     };
   }
 

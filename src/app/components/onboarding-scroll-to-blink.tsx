@@ -49,6 +49,7 @@ function selectorForStep(
     "folder-roles": '#workspace-folders input[name="roles"]',
     "folder-hide": "#workspace-folders",
     "folder-always": "#workspace-folders",
+    "folder-accessible": "#workspace-folders",
     "folder-submit": '#workspace-folders button[type="submit"]',
     "open-folder": "#workspace-folders",
     "open-add-task": "#workspace-add-task",

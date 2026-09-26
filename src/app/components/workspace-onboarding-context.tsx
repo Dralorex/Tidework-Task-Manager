@@ -107,6 +107,7 @@ export function WorkspaceOnboardingProvider({
           prev === "folder-roles" ||
           prev === "folder-hide" ||
           prev === "folder-always" ||
+          prev === "folder-accessible" ||
           prev === "folder-submit" ||
           prev === "create-folder"
         ) {
@@ -121,6 +122,7 @@ export function WorkspaceOnboardingProvider({
           prev === "folder-roles" ||
           prev === "folder-hide" ||
           prev === "folder-always" ||
+          prev === "folder-accessible" ||
           prev === "folder-submit" ||
           prev === "open-folder" ||
           prev === "done"
@@ -135,6 +137,7 @@ export function WorkspaceOnboardingProvider({
         prev === "folder-roles" ||
         prev === "folder-hide" ||
         prev === "folder-always" ||
+        prev === "folder-accessible" ||
         prev === "folder-submit" ||
         prev === "open-folder"
       ) {
@@ -258,6 +261,7 @@ export function WorkspaceOnboardingProvider({
         "folder-roles": ["folder-roles"],
         "folder-hide": ["folder-hide"],
         "folder-always": ["folder-always"],
+        "folder-accessible": ["folder-accessible"],
         "folder-submit": ["folder-submit"],
         "folder-bubble": ["open-folder"],
         "add-task-header": ["open-add-task"],

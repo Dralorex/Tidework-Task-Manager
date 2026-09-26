@@ -206,6 +206,7 @@ export function FolderAccessPanel({
   requiredRoleIds,
   hideFromUnauthorized,
   alwaysVisible,
+  alwaysAccessible,
 }: {
   workspaceId: string;
   folderId: string;
@@ -213,6 +214,7 @@ export function FolderAccessPanel({
   requiredRoleIds: string[];
   hideFromUnauthorized: boolean;
   alwaysVisible: boolean;
+  alwaysAccessible: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -226,6 +228,7 @@ export function FolderAccessPanel({
   );
   const [hideUnauthorized, setHideUnauthorized] = useState(hideFromUnauthorized);
   const [alwaysShow, setAlwaysShow] = useState(alwaysVisible);
+  const [alwaysAccess, setAlwaysAccess] = useState(alwaysAccessible);
 
   if (!open) {
     return (
@@ -310,6 +313,14 @@ export function FolderAccessPanel({
         />
         Always show in tree (still locked)
       </label>
+      <label className="mt-1 flex items-center gap-1 text-xs text-[#0A3D45]/70">
+        <input
+          type="checkbox"
+          checked={alwaysAccess}
+          onChange={(e) => setAlwaysAccess(e.target.checked)}
+        />
+        Always accessible (ignore roles)
+      </label>
 
       <button
         type="button"
@@ -327,6 +338,7 @@ export function FolderAccessPanel({
             }
             fd.set("hideFromUnauthorized", hideUnauthorized ? "1" : "0");
             fd.set("alwaysVisible", alwaysShow ? "1" : "0");
+            fd.set("alwaysAccessible", alwaysAccess ? "1" : "0");
             const result = await setFolderRolesAction(null, fd);
             if (result && !result.ok) {
               setError(result.error);

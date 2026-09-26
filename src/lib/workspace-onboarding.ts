@@ -5,6 +5,7 @@ export type WorkspaceOnboardingStep =
   | "folder-roles"
   | "folder-hide"
   | "folder-always"
+  | "folder-accessible"
   | "folder-submit"
   | "open-folder"
   | "open-add-task"
@@ -66,6 +67,7 @@ const ALL_STEPS: WorkspaceOnboardingStep[] = [
   "folder-roles",
   "folder-hide",
   "folder-always",
+  "folder-accessible",
   "folder-submit",
   "open-folder",
   "open-add-task",
@@ -98,6 +100,7 @@ const FOLDER_CREATE_STEPS: WorkspaceOnboardingStep[] = [
   "folder-roles",
   "folder-hide",
   "folder-always",
+  "folder-accessible",
   "folder-submit",
 ];
 
@@ -244,7 +247,8 @@ export function nextFolderCreateStep(
   }
   if (current === "folder-roles") return "folder-hide";
   if (current === "folder-hide") return "folder-always";
-  if (current === "folder-always") return "folder-submit";
+  if (current === "folder-always") return "folder-accessible";
+  if (current === "folder-accessible") return "folder-submit";
   return current;
 }
 

@@ -75,6 +75,20 @@ export function CreateFolderForm({
               </span>
             </span>
           </label>
+          <label className="flex cursor-pointer items-start gap-2 text-xs text-[color:var(--rowgon-deep)]">
+            <input
+              type="checkbox"
+              name="alwaysAccessible"
+              value="1"
+              className="mt-0.5"
+            />
+            <span>
+              Always accessible
+              <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--rowgon-deep)]/50">
+                Anyone can open this folder even when roles are set.
+              </span>
+            </span>
+          </label>
         </>
       ) : null}
     </InlineActionForm>
