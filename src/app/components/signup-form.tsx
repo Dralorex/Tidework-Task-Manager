@@ -7,6 +7,7 @@ import type { ActionResult } from "@/app/actions/auth";
 import { EmailVerifyModal } from "@/app/components/email-verify-modal";
 import { PasswordFields } from "@/app/components/password-fields";
 import { SignInDurationFields } from "@/app/components/sign-in-duration-fields";
+import { UsernameField } from "@/app/components/username-field";
 
 type FormAction = (
   prev: ActionResult | null,
@@ -74,16 +75,7 @@ export function SignUpForm({
         {next ? <input type="hidden" name="next" value={next} /> : null}
         {acked ? <input type="hidden" name="noEmailAck" value="true" /> : null}
 
-        <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">
-          Username
-          <input
-            name="username"
-            required
-            autoComplete="username"
-            className="rowgon-input"
-            placeholder="rowgon_rider"
-          />
-        </label>
+        <UsernameField placeholder="rowgon_rider" />
         <label className="flex flex-col gap-1 text-sm font-medium text-[#0A3D45]">
           Nickname{" "}
           <span className="font-normal text-[#0A3D45]/55">(optional)</span>
