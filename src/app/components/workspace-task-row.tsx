@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { InlineActionForm } from "@/app/components/forms";
 import { MenuSurface, menuItemClass } from "@/app/components/menu-surface";
+import { blinkRing } from "@/app/components/onboarding-prompt";
 import {
   TaskUrgencyEdge,
   UrgencyChips,
@@ -14,6 +15,7 @@ import {
 import { AddTaskTagsForm } from "@/app/components/add-task-tags-form";
 import { SendBackTaskControl } from "@/app/components/send-back-task-control";
 import { UnclaimTaskControl } from "@/app/components/unclaim-task-control";
+import { useWorkspaceOnboarding } from "@/app/components/workspace-onboarding-context";
 import {
   addChecklistItemAction,
   assignTaskAction,
@@ -79,9 +81,12 @@ function dueInputValue(due: Date | null) {
 function TaskEditorMenu({
   workspaceId,
   task,
+  highlightMenu = false,
 }: {
   workspaceId: string;
   task: WorkspaceTaskData;
+  /** Blink the ⋮ during onboarding until the user opens it. */
+  highlightMenu?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [panel, setPanel] = useState<"menu" | "edit" | "forceUnclaim">("menu");
@@ -94,6 +99,7 @@ function TaskEditorMenu({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const { active, step, completeOnboarding } = useWorkspaceOnboarding();
 
   useEffect(() => {
     setName(task.name);
@@ -178,11 +184,15 @@ function TaskEditorMenu({
           type="button"
           aria-label="Task options"
           aria-expanded={open}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-lg leading-none text-[#0A3D45]/70 transition hover:bg-[#0A3D45]/8 hover:text-[#0A3D45]"
+          data-onboarding={highlightMenu ? "task-menu" : undefined}
+          className={`inline-flex h-8 w-8 items-center justify-center rounded-md text-lg leading-none text-[#0A3D45]/70 transition hover:bg-[#0A3D45]/8 hover:text-[#0A3D45] ${blinkRing(highlightMenu)}`}
           onClick={() => {
             setOpen((v) => !v);
             setPanel("menu");
             setError(null);
+            if (active && step === "task-menu-info") {
+              completeOnboarding();
+            }
           }}
         >
           ⋮
@@ -420,6 +430,8 @@ export function WorkspaceTaskRow({
   urgencyChips?: UrgencyChipPrefs;
   assignableMembers?: AssignableMember[];
 }) {
+  const { blink } = useWorkspaceOnboarding();
+  const highlightTaskMenu = canEdit && blink("task-menu");
   const isClaimed = Boolean(task.assigneeId);
   const isOpenAssigned = task.status === "OPEN" && Boolean(task.assigneeId);
   const assignedToOther =
@@ -752,7 +764,11 @@ export function WorkspaceTaskRow({
                 </InlineActionForm>
               ) : null}
               {canEdit ? (
-                <TaskEditorMenu workspaceId={workspaceId} task={task} />
+                <TaskEditorMenu
+                  workspaceId={workspaceId}
+                  task={task}
+                  highlightMenu={highlightTaskMenu}
+                />
               ) : null}
             </div>
           ) : null}
@@ -894,7 +910,11 @@ export function WorkspaceTaskRow({
                     </InlineActionForm>
                   ) : null}
                   {canEdit ? (
-                    <TaskEditorMenu workspaceId={workspaceId} task={task} />
+                    <TaskEditorMenu
+                      workspaceId={workspaceId}
+                      task={task}
+                      highlightMenu={highlightTaskMenu}
+                    />
                   ) : null}
                 </div>
               ) : null}

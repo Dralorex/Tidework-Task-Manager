@@ -45,8 +45,7 @@ export function GuidedCreateTaskForm({
   publicTagOptions: string[];
   assignableMembers: Assignable[];
 }) {
-  const { active, step, setStep, blink, track, completeOnboarding } =
-    useWorkspaceOnboarding();
+  const { active, step, setStep, blink, track } = useWorkspaceOnboarding();
   const [taskName, setTaskName] = useState("");
   const [nameClicked, setNameClicked] = useState(false);
   const [description, setDescription] = useState("");
@@ -581,13 +580,6 @@ export function GuidedCreateTaskForm({
           body="After Continue, use the blinking Add Task button when you’re ready. The tip stays away until your task is created."
           onNext={() => setSubmitTipPaused(true)}
           nextLabel="Continue"
-        />
-      ) : null}
-      {active && step === "task-menu-info" ? (
-        <OnboardingPrompt
-          title="Edit or delete a task"
-          body="Your task is in. Open its ⋮ menu beside Claim Task to Rename / Replace the name, description, priority, or due date — or Delete to remove it."
-          onNext={() => completeOnboarding()}
         />
       ) : null}
     </div>

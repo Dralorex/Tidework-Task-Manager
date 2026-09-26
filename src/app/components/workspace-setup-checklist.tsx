@@ -5,12 +5,13 @@ import { OnboardingPrompt } from "@/app/components/onboarding-prompt";
 import { useWorkspaceOnboarding } from "@/app/components/workspace-onboarding-context";
 import { clickOnboardingStep, focusOnboardingStep } from "@/lib/onboarding-targets";
 
-/** Steps where Continue hides the tip until the user opens the tab/folder. */
+/** Steps where Continue hides the tip until the user opens the target. */
 const OPEN_TAB_STEPS = new Set([
   "roles-open",
   "create-folder",
   "open-folder",
   "open-add-task",
+  "task-menu-info",
 ]);
 
 export function WorkspaceSetupChecklist({
@@ -313,6 +314,15 @@ export function WorkspaceSetupChecklist({
         <OnboardingPrompt
           title="Open Add Task"
           body="After Continue, open the blinking Add Task bar (▸ or the empty space) to name your first task."
+          onNext={() => setTipPaused(true)}
+          nextLabel="Continue"
+        />
+      ) : null}
+
+      {step === "task-menu-info" && showOpenTabTip ? (
+        <OnboardingPrompt
+          title="Edit or delete a task"
+          body="Your task is in. After Continue, open the blinking ⋮ menu beside Claim Task for Rename / Replace or Delete."
           onNext={() => setTipPaused(true)}
           nextLabel="Continue"
         />

@@ -275,7 +275,12 @@ export function WorkspaceOnboardingProvider({
 
   const blink = useCallback(
     (target: string) => {
-      if (!active || !track || hasTask) return false;
+      if (!active || !track) return false;
+
+      // After the first task exists, only the ⋮ menu blinks.
+      if (hasTask) {
+        return target === "task-menu" && step === "task-menu-info";
+      }
 
       if (track === "short") {
         const shortMap: Record<string, WorkspaceOnboardingStep[]> = {
@@ -318,6 +323,7 @@ export function WorkspaceOnboardingProvider({
         weekly: ["weekly", "weekly-info"],
         monthly: ["monthly", "monthly-info"],
         submit: ["submit"],
+        "task-menu": ["task-menu-info"],
       };
       return (map[target] ?? []).includes(step);
     },

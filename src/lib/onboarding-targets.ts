@@ -54,7 +54,7 @@ export function selectorForStep(
     monthly: '#workspace-add-task [data-onboarding="cadence-monthly"]',
     "monthly-info":
       '#workspace-add-task [data-onboarding="cadence-monthly"]',
-    "task-menu-info": '#workspace-add-task button[type="submit"]',
+    "task-menu-info": '[data-onboarding="task-menu"]',
     submit: '#workspace-add-task button[type="submit"]',
   };
   return map[step] ?? null;
