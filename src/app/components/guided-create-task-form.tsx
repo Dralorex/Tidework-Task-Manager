@@ -85,7 +85,7 @@ export function GuidedCreateTaskForm({
       />
     ) : null;
 
-  /** Auto-walk cadence chips + info prompts without requiring each click. */
+  /** Skip chip-click gates — jump straight to each cadence info prompt. */
   useEffect(() => {
     if (!active) return;
 
@@ -120,41 +120,6 @@ export function GuidedCreateTaskForm({
     if (step === "monthly-info") setCadence("monthly");
   }, [active, step, setStep]);
 
-  useEffect(() => {
-    if (!active) return;
-    const nextByInfo: Partial<
-      Record<
-        typeof step,
-        "daily-info" | "weekly-info" | "monthly-info" | "task-menu-info"
-      >
-    > = {
-      "one-off-info": "daily-info",
-      "daily-info": "weekly-info",
-      "weekly-info": "monthly-info",
-      "monthly-info": "task-menu-info",
-    };
-    const next = nextByInfo[step];
-    if (!next) return;
-
-    const t = window.setTimeout(() => {
-      if (next === "task-menu-info") {
-        setCadence("");
-        setWeekDays([]);
-        setMonthDays([]);
-      }
-      setStep(next);
-    }, 3200);
-
-    return () => window.clearTimeout(t);
-  }, [active, step, setStep]);
-
-  // After edit/delete tip, move on to Add task
-  useEffect(() => {
-    if (!active || step !== "task-menu-info") return;
-    const t = window.setTimeout(() => setStep("submit"), 4500);
-    return () => window.clearTimeout(t);
-  }, [active, step, setStep]);
-
   function toggleWeek(day: number) {
     setWeekDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort(),
@@ -173,7 +138,7 @@ export function GuidedCreateTaskForm({
     setCadence(value);
     if (value === "daily") setWeekDays([0, 1, 2, 3, 4, 5, 6]);
     if (!active) return;
-    // Manual tap can still skip ahead in the auto tour
+    // Manual chip tap can still skip ahead during the tour
     if (value === "" && (step === "one-off" || step === "one-off-info")) {
       setStep("daily-info");
     }
@@ -184,10 +149,7 @@ export function GuidedCreateTaskForm({
       setStep("monthly-info");
     }
     if (value === "monthly" && (step === "monthly" || step === "monthly-info")) {
-      setCadence("");
-      setWeekDays([]);
-      setMonthDays([]);
-      setStep("task-menu-info");
+      finishCadenceTour();
     }
   }
 
