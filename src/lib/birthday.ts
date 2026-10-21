@@ -57,19 +57,25 @@ async function maybeOfferFriendBirthdayShare(
         status: "PENDING",
       },
     });
+    const shareBody = `Share your birthday with ${personLabel(viewer)}?`;
     await prisma.notification.create({
       data: {
         userId: owner.id,
         type: "BIRTHDAY_SHARE_PROMPT",
         title: "Share your birthday?",
-        body: `Share your birthday with ${personLabel(viewer)}?`,
+        body: shareBody,
         meta: JSON.stringify({
           viewerId: viewer.id,
           kind: "friend",
         }),
       },
     });
-    await pushAlertInboxForUsers([owner.id]);
+    await pushAlertInboxForUsers([owner.id], {
+      title: "Share your birthday?",
+      body: shareBody,
+      url: "/app/notifications",
+      tag: `bday-share-${viewer.id}`,
+    });
     return;
   }
 
@@ -108,16 +114,22 @@ export async function handleBirthdayOnWorkspaceJoin(
   });
 
   if (user.askBeforeShareBirthday) {
+    const wsShareBody = `Add your birthday to “${workspace.name}”? The owner will confirm.`;
     await prisma.notification.create({
       data: {
         userId,
         type: "BIRTHDAY_SHARE_PROMPT",
         title: "Share birthday with workspace?",
-        body: `Add your birthday to “${workspace.name}”? The owner will confirm.`,
+        body: wsShareBody,
         meta: JSON.stringify({ workspaceId, kind: "workspace" }),
       },
     });
-    await pushAlertInboxForUsers([userId]);
+    await pushAlertInboxForUsers([userId], {
+      title: "Share birthday with workspace?",
+      body: wsShareBody,
+      url: "/app/notifications",
+      tag: `bday-ws-${workspaceId}`,
+    });
     return;
   }
 
@@ -156,12 +168,13 @@ export async function requestWorkspaceBirthday(
     update: { status: "PENDING" },
   });
 
+  const bdayReqBody = `${personLabel(subject)} wants their birthday on “${workspace.name}”.`;
   await prisma.notification.create({
     data: {
       userId: workspace.ownerId,
       type: "WORKSPACE_BIRTHDAY_REQUEST",
       title: "Birthday calendar request",
-      body: `${personLabel(subject)} wants their birthday on “${workspace.name}”.`,
+      body: bdayReqBody,
       meta: JSON.stringify({
         requestId: row.id,
         workspaceId,
@@ -169,7 +182,12 @@ export async function requestWorkspaceBirthday(
       }),
     },
   });
-  await pushAlertInboxForUsers([workspace.ownerId]);
+  await pushAlertInboxForUsers([workspace.ownerId], {
+    title: "Birthday calendar request",
+    body: bdayReqBody,
+    url: "/app/notifications",
+    tag: `bday-req-${row.id}`,
+  });
 
   return { ok: true as const };
 }
@@ -243,5 +261,10 @@ export async function syncBirthdayNotifications(userId: string) {
       meta: JSON.stringify({ day: dayKey, names: list }),
     },
   });
-  await pushAlertInboxForUsers([userId]);
+  await pushAlertInboxForUsers([userId], {
+    title: "Birthday",
+    body,
+    url: "/app/calendar",
+    tag: `bday-today-${dayKey}`,
+  });
 }

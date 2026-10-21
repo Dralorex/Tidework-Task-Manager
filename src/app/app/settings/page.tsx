@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { DisplayThemeSettings } from "@/app/components/display-theme-settings";
 import { InterfaceSettings } from "@/app/components/interface-settings";
+import { WebPushSettings } from "@/app/components/web-push-settings";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { parsePersonalInterfacePrefs } from "@/lib/interface-prefs";
@@ -44,6 +45,8 @@ export default async function SettingsPage() {
       </p>
 
       <div className="mt-8 space-y-4">
+        <WebPushSettings />
+
         <InterfaceSettings
           prefs={parsePersonalInterfacePrefs(prefsRow.interfacePrefsJson)}
           showTogglesInWorkspace={prefsRow.showInterfaceTogglesInWorkspace}

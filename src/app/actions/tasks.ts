@@ -571,17 +571,23 @@ export async function createTaskAction(
   });
 
   if (assignedUserId && assignedUsername) {
+    const assignBody = `${personLabel(user)} assigned you “${name}”.`;
     await prisma.notification.create({
       data: {
         userId: assignedUserId,
         type: "TASK_ASSIGNED",
         title: "Task assigned to you",
-        body: `${personLabel(user)} assigned you “${name}”.`,
+        body: assignBody,
         meta: JSON.stringify({ workspaceId, taskId: task.id, folderId }),
       },
     });
     await Promise.all([
-      pushAlertInboxForUsers([assignedUserId]),
+      pushAlertInboxForUsers([assignedUserId], {
+        title: "Task assigned to you",
+        body: assignBody,
+        url: `/app/w/${workspaceId}?folder=${folderId}`,
+        tag: `task-${task.id}`,
+      }),
       pushRefreshForUsers([assignedUserId, user.id], [`/app/w/${workspaceId}`]),
     ]);
   }
@@ -658,12 +664,13 @@ export async function assignTaskAction(
     message: `${personLabel(user)} assigned this to ${personLabel(targetMembership.user)}`,
   });
 
+  const assignBody = `${personLabel(user)} assigned you “${task.name}”.`;
   await prisma.notification.create({
     data: {
       userId: targetMembership.userId,
       type: "TASK_ASSIGNED",
       title: "Task assigned to you",
-      body: `${personLabel(user)} assigned you “${task.name}”.`,
+      body: assignBody,
       meta: JSON.stringify({
         workspaceId,
         taskId,
@@ -673,7 +680,12 @@ export async function assignTaskAction(
   });
 
   await Promise.all([
-    pushAlertInboxForUsers([targetMembership.userId]),
+    pushAlertInboxForUsers([targetMembership.userId], {
+      title: "Task assigned to you",
+      body: assignBody,
+      url: `/app/w/${workspaceId}?folder=${task.folderId}`,
+      tag: `task-${taskId}`,
+    }),
     pushRefreshForUsers(
       [targetMembership.userId, user.id],
       [`/app/w/${workspaceId}`],
@@ -1028,12 +1040,13 @@ export async function forceUnclaimTaskAction(
     message: `${personLabel(user)} force-unclaimed from ${assigneeLabel}: ${reason}`,
   });
 
+  const unclaimBody = `“${task.name}” was force-unclaimed: ${reason}`;
   await prisma.notification.create({
     data: {
       userId: assigneeId,
       type: "TASK_REOPENED",
       title: "Task unclaimed by editor",
-      body: `“${task.name}” was force-unclaimed: ${reason}`,
+      body: unclaimBody,
       meta: JSON.stringify({
         workspaceId,
         taskId,
@@ -1044,7 +1057,12 @@ export async function forceUnclaimTaskAction(
 
   await syncCalendarForTask(taskId);
   await Promise.all([
-    pushAlertInboxForUsers([assigneeId]),
+    pushAlertInboxForUsers([assigneeId], {
+      title: "Task unclaimed by editor",
+      body: unclaimBody,
+      url: `/app/w/${workspaceId}?folder=${task.folderId}`,
+      tag: `task-${taskId}`,
+    }),
     pushRefreshForUsers([assigneeId, user.id], [`/app/w/${workspaceId}`]),
   ]);
   revalidatePath(`/app/w/${workspaceId}`);
@@ -1105,12 +1123,13 @@ export async function completeTaskAction(
     where: { workspaceId, role: { in: ["OWNER", "ADMIN"] } },
   });
 
+  const reviewBody = `${personLabel(user)} finished “${task.name}”: ${comment}`;
   await prisma.notification.createMany({
     data: ownersAndAdmins.map((m) => ({
       userId: m.userId,
       type: "TASK_REVIEW",
       title: "Ready for review",
-      body: `${personLabel(user)} finished “${task.name}”: ${comment}`,
+      body: reviewBody,
       meta: JSON.stringify({
         workspaceId,
         taskId,
@@ -1122,7 +1141,12 @@ export async function completeTaskAction(
   await syncCalendarForTask(taskId);
   const reviewUserIds = ownersAndAdmins.map((m) => m.userId);
   await Promise.all([
-    pushAlertInboxForUsers(reviewUserIds),
+    pushAlertInboxForUsers(reviewUserIds, {
+      title: "Ready for review",
+      body: reviewBody,
+      url: `/app/w/${workspaceId}?folder=${task.folderId}`,
+      tag: `task-review-${taskId}`,
+    }),
     pushRefreshForUsers(
       [...reviewUserIds, user.id],
       [`/app/w/${workspaceId}`],
@@ -1200,18 +1224,22 @@ export async function reviewTaskAction(
     });
   }
 
+  const reviewTitle =
+    decision === "approve" ? "Task approved" : "Needs more work";
+  const reviewDecisionBody =
+    decision === "approve"
+      ? approveComment
+        ? `“${task.name}” was approved: ${approveComment}`
+        : `“${task.name}” was approved.`
+      : `“${task.name}” was sent back: ${reason}`;
+
   if (task.assigneeId) {
     await prisma.notification.create({
       data: {
         userId: task.assigneeId,
         type: decision === "approve" ? "TASK_APPROVED" : "TASK_REOPENED",
-        title: decision === "approve" ? "Task approved" : "Needs more work",
-        body:
-          decision === "approve"
-            ? approveComment
-              ? `“${task.name}” was approved: ${approveComment}`
-              : `“${task.name}” was approved.`
-            : `“${task.name}” was sent back: ${reason}`,
+        title: reviewTitle,
+        body: reviewDecisionBody,
         meta: JSON.stringify({
           workspaceId,
           taskId,
@@ -1225,7 +1253,12 @@ export async function reviewTaskAction(
   const notifyIds = [user.id, task.assigneeId].filter(Boolean) as string[];
   await Promise.all([
     task.assigneeId
-      ? pushAlertInboxForUsers([task.assigneeId])
+      ? pushAlertInboxForUsers([task.assigneeId], {
+          title: reviewTitle,
+          body: reviewDecisionBody,
+          url: `/app/w/${workspaceId}?folder=${task.folderId}`,
+          tag: `task-${taskId}`,
+        })
       : Promise.resolve(),
     pushRefreshForUsers(notifyIds, [`/app/w/${workspaceId}`]),
   ]);

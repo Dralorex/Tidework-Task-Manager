@@ -120,6 +120,7 @@ model User {
   dmRequestsSent        DmRequest[]          @relation("DmFrom")
   dmRequestsReceived    DmRequest[]          @relation("DmTo")
   notifications         Notification[]
+  webPushSubscriptions  WebPushSubscription[]
   groupsCreated         ChatGroup[]          @relation("GroupCreator")
   workspaceRoleSeens    WorkspaceRoleSeen[]
   taskActivities        TaskActivity[]       @relation("TaskActivityActor")
@@ -735,6 +736,22 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
+}
+
+/** Browser Web Push subscription (Chrome/Android + iOS Home Screen PWA). */
+model WebPushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 /**
