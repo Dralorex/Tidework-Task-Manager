@@ -134,8 +134,9 @@ export function WebPushSettings() {
                 : "Enable to get lock-screen alerts even when Rowgon is closed."}
             </p>
             <p className="text-[color:var(--tide-deep)]/55">
-              Tip: chat alerts are skipped if that conversation was open in the
-              last ~2 minutes. Use “Send test” to verify the phone pipe.
+              Tip: chat alerts are skipped only while that conversation is open
+              on screen. Swipe Rowgon away or lock the phone and pushes can fire
+              right away. Use “Send test” to verify the phone pipe.
             </p>
             {!canOfferWebPushPrompt() && status === "off" ? (
               <p className="text-[color:var(--tide-deep)]/55">
