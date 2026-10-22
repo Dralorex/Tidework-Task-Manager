@@ -787,8 +787,13 @@ export async function sendMessageAction(
         if (mode === "MUTE") continue;
         if (mode === "MENTIONS" && !mentioned) continue;
 
-        const lastOpen = m.lastSeenAt ?? m.lastActiveAt;
-        if (lastOpen && now - lastOpen.getTime() < OPEN_THREAD_MS) {
+        // Only lastActiveAt means “thread is open right now”. lastSeenAt stays
+        // for read receipts and must NOT block push after swipe-away / background
+        // (clearChatPresence nulls lastActiveAt immediately on hide).
+        if (
+          m.lastActiveAt &&
+          now - m.lastActiveAt.getTime() < OPEN_THREAD_MS
+        ) {
           continue;
         }
 
@@ -1149,6 +1154,7 @@ export async function clearChatPresenceAction(groupId: string): Promise<void> {
   if (!groupId) return;
   await prisma.chatMember.updateMany({
     where: { groupId, userId: user.id },
+    // Null active so OPEN_THREAD skip ends immediately; keep lastSeenAt for read state.
     data: { lastActiveAt: null, typingAt: null },
   });
   // Ably Presence leave runs in the client (chat-presence / connection close).
