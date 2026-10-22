@@ -11,6 +11,7 @@ import {
   pushChatMessageForUsers,
   pushRefreshForUsers,
 } from "@/lib/ably-server";
+import { sendWebPushMessages, sendWebPushToUsers } from "@/lib/web-push-server";
 import { handleBirthdayOnFriendship } from "@/lib/birthday";
 import type { ChatMessageEvent } from "@/lib/chat-message-events";
 import { derivePresence } from "@/lib/chat-presence";
@@ -78,12 +79,13 @@ export async function sendFriendRequestAction(
     });
   }
 
+  const friendReqBody = `${personLabel(user)} wants to be friends on Rowgon.`;
   await prisma.notification.create({
     data: {
       userId: other.id,
       type: "FRIEND_REQUEST",
       title: "Friend request",
-      body: `${personLabel(user)} wants to be friends on Rowgon.`,
+      body: friendReqBody,
       meta: JSON.stringify({
         fromUserId: user.id,
         friendshipId: friendship.id,
@@ -91,7 +93,12 @@ export async function sendFriendRequestAction(
     },
   });
 
-  await pushAlertInboxForUsers([other.id]);
+  await pushAlertInboxForUsers([other.id], {
+    title: "Friend request",
+    body: friendReqBody,
+    url: "/app/notifications",
+    tag: `friend-req-${friendship.id}`,
+  });
 
   revalidatePath("/app/social");
   revalidatePath("/app/notifications");
@@ -120,12 +127,13 @@ export async function respondFriendRequestAction(
   });
 
   if (accept) {
+    const acceptedBody = `${personLabel(user)} accepted your friend request.`;
     await prisma.notification.create({
       data: {
         userId: friendship.requesterId,
         type: "FRIEND_ACCEPTED",
         title: "Friend request accepted",
-        body: `${personLabel(user)} accepted your friend request.`,
+        body: acceptedBody,
         meta: JSON.stringify({
           friendshipId,
           friendUserId: user.id,
@@ -136,6 +144,12 @@ export async function respondFriendRequestAction(
       friendship.requesterId,
       friendship.addresseeId,
     );
+    await pushAlertInboxForUsers([friendship.requesterId], {
+      title: "Friend request accepted",
+      body: acceptedBody,
+      url: "/app/social",
+      tag: `friend-ok-${friendshipId}`,
+    });
   }
 
   await prisma.notification.updateMany({
@@ -147,9 +161,7 @@ export async function respondFriendRequestAction(
     data: { read: true },
   });
 
-  await pushAlertInboxForUsers(
-    accept ? [friendship.requesterId, user.id] : [user.id],
-  );
+  await pushAlertInboxForUsers([user.id]);
 
   revalidatePath("/app/social");
   revalidatePath("/app/chat");
@@ -223,18 +235,26 @@ async function openOrMessageDirect(
   }
 
   if (firstMessage) {
+    const dmTitle = `Message from ${personLabel(user)}`;
+    const dmBody = firstMessage.slice(0, 140);
     await prisma.notification.create({
       data: {
         userId: other.id,
         type: "CHAT_MESSAGE",
-        title: `Message from ${personLabel(user)}`,
-        body: firstMessage.slice(0, 140),
+        title: dmTitle,
+        body: dmBody,
         meta: JSON.stringify({ groupId, fromUserId: user.id }),
       },
     });
     await Promise.all([
       pushBadgesForUsers([other.id]),
       pushRefreshForUsers([other.id, user.id], ["/app/chat"]),
+      sendWebPushToUsers([other.id], {
+        title: dmTitle,
+        body: dmBody,
+        url: `/app/chat?tab=dms&group=${groupId}`,
+        tag: `chat-${groupId}`,
+      }),
     ]);
   }
 
@@ -295,12 +315,13 @@ export async function requestWorkspaceDmAction(
     },
   });
 
+  const dmReqBody = `${personLabel(user)}: ${firstMessage}`;
   await prisma.notification.create({
     data: {
       userId: other.id,
       type: "DM_REQUEST",
       title: "Chat request",
-      body: `${personLabel(user)}: ${firstMessage}`,
+      body: dmReqBody,
       meta: JSON.stringify({
         fromUserId: user.id,
         requestId: dmRequest.id,
@@ -311,6 +332,12 @@ export async function requestWorkspaceDmAction(
   await Promise.all([
     pushBadgesForUsers([other.id]),
     pushRefreshForUsers([other.id], ["/app/chat"]),
+    sendWebPushToUsers([other.id], {
+      title: "Chat request",
+      body: dmReqBody,
+      url: "/app/chat?tab=dms",
+      tag: `dm-req-${dmRequest.id}`,
+    }),
   ]);
 
   revalidatePath("/app/chat");
@@ -787,7 +814,20 @@ export async function sendMessageAction(
 
       const notified = notificationRows.map((n) => n.userId);
       if (notified.length > 0) {
-        await pushBadgeDeltaForUsers(notified, { chatUnreadDelta: 1 });
+        await Promise.all([
+          pushBadgeDeltaForUsers(notified, { chatUnreadDelta: 1 }),
+          sendWebPushMessages(
+            notificationRows.map((n) => ({
+              userId: n.userId,
+              payload: {
+                title: n.title,
+                body: n.body,
+                url: `/app/chat?${group.isDirect ? "tab=dms" : group.workspaceId ? "tab=workspace-groups" : "tab=groups"}&group=${groupId}`,
+                tag: `chat-${groupId}`,
+              },
+            })),
+          ),
+        ]);
       }
     } catch (err) {
       console.error("[chat] send fan-out failed", err);

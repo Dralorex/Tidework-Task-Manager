@@ -7,6 +7,10 @@ import type { ChatMessageEvent } from "@/lib/chat-message-events";
 import { CHAT_MESSAGE_ABLY } from "@/lib/chat-message-events";
 import { prisma } from "@/lib/db";
 import { getNavBadgeCounts } from "@/lib/nav-badges";
+import {
+  sendWebPushToUsers,
+  type WebPushPayload,
+} from "@/lib/web-push-server";
 
 export function isAblyConfigured(): boolean {
   return Boolean(process.env.ABLY_API_KEY?.trim());
@@ -194,13 +198,18 @@ export async function pushRefreshForUsers(
 
 /**
  * Alerts inbox changed: update nav badge counts and refresh `/app/notifications`
- * if that page is open (no polling).
+ * if that page is open (no polling). Optional `webPush` also hits lock-screen
+ * subscribers (Chrome/Android + iOS Home Screen).
  */
-export async function pushAlertInboxForUsers(userIds: string[]) {
+export async function pushAlertInboxForUsers(
+  userIds: string[],
+  webPush?: WebPushPayload,
+) {
   const unique = [...new Set(userIds.filter(Boolean))];
   if (unique.length === 0) return;
   await Promise.all([
     pushBadgesForUsers(unique),
     pushRefreshForUsers(unique, ["/app/notifications"]),
+    webPush ? sendWebPushToUsers(unique, webPush) : Promise.resolve(),
   ]);
 }
