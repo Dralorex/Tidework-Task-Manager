@@ -8,6 +8,15 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+/**
+ * Chrome Android treats a site as installable only if a controlling SW has a
+ * fetch handler. Pass-through — no offline cache yet; needed for Install /
+ * Add to Home Screen (and for Web Push scope).
+ */
+self.addEventListener("fetch", (event) => {
+  event.respondWith(fetch(event.request));
+});
+
 self.addEventListener("push", (event) => {
   let data = {
     title: "Rowgon",

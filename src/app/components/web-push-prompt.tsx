@@ -5,6 +5,7 @@ import {
   canOfferWebPushPrompt,
   isIosDevice,
   isStandaloneDisplay,
+  registerPushServiceWorker,
   shouldAutoAskPush,
   subscribeWebPush,
   writePushPromptPref,
@@ -22,6 +23,10 @@ export function WebPushPrompt() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    // Register SW early so Chrome can treat Rowgon as installable (Android
+    // Install / Add to Home Screen) even before the user enables push.
+    void registerPushServiceWorker();
 
     // iOS tab: optionally show “Add to Home Screen” tip once (not a permission ask).
     if (isIosDevice() && !isStandaloneDisplay()) {
