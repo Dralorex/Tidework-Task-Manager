@@ -109,12 +109,26 @@ export async function subscribeWebPush(): Promise<
 
   await navigator.serviceWorker.ready;
 
-  let sub = await reg.pushManager.getSubscription();
-  if (!sub) {
+  // Always recreate so we bind the current VAPID public key and re-POST to
+  // the server (Settings can look "on" from a local sub that never saved).
+  const existing = await reg.pushManager.getSubscription();
+  if (existing) {
+    await existing.unsubscribe().catch(() => {});
+  }
+
+  let sub: PushSubscription;
+  try {
     sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(vapid.publicKey),
     });
+  } catch (err) {
+    console.error("[web-push] subscribe failed", err);
+    return {
+      ok: false,
+      error:
+        "Couldn’t create a push subscription. On iPhone, open Rowgon from the Home Screen and try again.",
+    };
   }
 
   const res = await fetch("/api/push/subscribe", {
@@ -124,7 +138,17 @@ export async function subscribeWebPush(): Promise<
     body: JSON.stringify(sub.toJSON()),
   });
   if (!res.ok) {
-    return { ok: false, error: "Couldn’t save this device’s push subscription." };
+    let detail = "";
+    try {
+      const data = (await res.json()) as { error?: string };
+      detail = data.error ? ` ${data.error}` : "";
+    } catch {
+      /* ignore */
+    }
+    return {
+      ok: false,
+      error: `Couldn’t save this device’s push subscription.${detail}`.trim(),
+    };
   }
   writePushPromptPref(null);
   return { ok: true };

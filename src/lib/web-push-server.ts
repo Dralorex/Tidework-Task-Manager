@@ -38,21 +38,35 @@ function ensureVapid() {
   return true;
 }
 
+export type WebPushSendResult = {
+  attempted: number;
+  sent: number;
+  stale: number;
+  failed: number;
+  lastError?: string;
+};
+
 /**
  * Send OS / lock-screen notifications to subscribed browsers.
- * Gone subscriptions (410/404) are deleted. Failures are swallowed.
+ * Gone subscriptions (410/404) are deleted.
  */
 export async function sendWebPushToUsers(
   userIds: string[],
   payload: WebPushPayload,
-): Promise<void> {
+): Promise<WebPushSendResult> {
+  const empty: WebPushSendResult = {
+    attempted: 0,
+    sent: 0,
+    stale: 0,
+    failed: 0,
+  };
   const unique = [...new Set(userIds.filter(Boolean))];
-  if (unique.length === 0 || !ensureVapid()) return;
+  if (unique.length === 0 || !ensureVapid()) return empty;
 
   const subs = await prisma.webPushSubscription.findMany({
     where: { userId: { in: unique } },
   });
-  if (subs.length === 0) return;
+  if (subs.length === 0) return empty;
 
   const body = JSON.stringify({
     title: payload.title,
@@ -62,6 +76,9 @@ export async function sendWebPushToUsers(
   });
 
   const staleIds: string[] = [];
+  let sent = 0;
+  let failed = 0;
+  let lastError: string | undefined;
 
   await Promise.all(
     subs.map(async (sub) => {
@@ -74,6 +91,7 @@ export async function sendWebPushToUsers(
           body,
           { TTL: 60 * 60 * 12, urgency: "normal" },
         );
+        sent += 1;
       } catch (err) {
         const status =
           err && typeof err === "object" && "statusCode" in err
@@ -82,6 +100,13 @@ export async function sendWebPushToUsers(
         if (status === 404 || status === 410) {
           staleIds.push(sub.id);
         } else {
+          failed += 1;
+          lastError =
+            err instanceof Error
+              ? err.message
+              : status
+                ? `HTTP ${status}`
+                : "unknown send error";
           console.error("[web-push] send failed", sub.id, err);
         }
       }
@@ -93,6 +118,14 @@ export async function sendWebPushToUsers(
       where: { id: { in: staleIds } },
     });
   }
+
+  return {
+    attempted: subs.length,
+    sent,
+    stale: staleIds.length,
+    failed,
+    lastError,
+  };
 }
 
 /** Per-user payloads (e.g. chat fan-out with different titles). */
