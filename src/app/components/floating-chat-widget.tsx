@@ -626,7 +626,8 @@ export function FloatingChatWidget({
 
           {view === "thread" && thread ? (
             <>
-              <MarkChatSeen groupId={thread.id} />
+              {/* Don't suppress lock-screen push while floating chat is open on Workspaces/etc. */}
+              <MarkChatSeen groupId={thread.id} countsAsOpenThread={false} />
               <p className="shrink-0 truncate px-3 pt-2 text-[11px] text-[color:var(--tide-deep)]/45">
                 {thread.membersLabel}
                 {thread.closed ? " · closed" : ""}
