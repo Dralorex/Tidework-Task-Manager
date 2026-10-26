@@ -1167,6 +1167,21 @@ export async function clearChatPresenceAction(groupId: string): Promise<void> {
   // Ably Presence leave runs in the client (chat-presence / connection close).
 }
 
+/**
+ * Clear “thread open” on every chat membership. Used when the user is on
+ * Workspaces / Settings / etc. so leftover lastActiveAt can’t block web push.
+ */
+export async function clearAllOpenChatPresenceAction(): Promise<void> {
+  const user = await requireUser();
+  await prisma.chatMember.updateMany({
+    where: {
+      userId: user.id,
+      OR: [{ lastActiveAt: { not: null } }, { typingAt: { not: null } }],
+    },
+    data: { lastActiveAt: null, typingAt: null },
+  });
+}
+
 export async function setChatNotifyModeAction(
   _prev: ActionResult | null,
   formData: FormData,
