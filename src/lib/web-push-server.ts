@@ -8,6 +8,8 @@ export type WebPushPayload = {
   /** Deep link opened when the notification is tapped. */
   url?: string;
   tag?: string;
+  /** Default high — chat alerts should wake the device. */
+  urgency?: "very-low" | "low" | "normal" | "high";
 };
 
 let vapidReady = false;
@@ -61,12 +63,23 @@ export async function sendWebPushToUsers(
     failed: 0,
   };
   const unique = [...new Set(userIds.filter(Boolean))];
-  if (unique.length === 0 || !ensureVapid()) return empty;
+  if (unique.length === 0) return empty;
+  if (!ensureVapid()) {
+    console.error("[web-push] not configured — missing VAPID keys");
+    return { ...empty, lastError: "Web push not configured (missing VAPID keys)." };
+  }
 
   const subs = await prisma.webPushSubscription.findMany({
     where: { userId: { in: unique } },
   });
-  if (subs.length === 0) return empty;
+  if (subs.length === 0) {
+    console.warn(
+      "[web-push] no subscriptions for users",
+      unique.length,
+      unique.slice(0, 3),
+    );
+    return empty;
+  }
 
   const body = JSON.stringify({
     title: payload.title,
@@ -79,6 +92,7 @@ export async function sendWebPushToUsers(
   let sent = 0;
   let failed = 0;
   let lastError: string | undefined;
+  const urgency = payload.urgency ?? "high";
 
   await Promise.all(
     subs.map(async (sub) => {
@@ -89,7 +103,7 @@ export async function sendWebPushToUsers(
             keys: { p256dh: sub.p256dh, auth: sub.auth },
           },
           body,
-          { TTL: 60 * 60 * 12, urgency: "normal" },
+          { TTL: 60 * 60 * 12, urgency },
         );
         sent += 1;
       } catch (err) {
@@ -107,7 +121,8 @@ export async function sendWebPushToUsers(
               : status
                 ? `HTTP ${status}`
                 : "unknown send error";
-          console.error("[web-push] send failed", sub.id, err);
+          // 403 often means VAPID public/private mismatch on the server.
+          console.error("[web-push] send failed", sub.id, status || "", err);
         }
       }
     }),

@@ -255,6 +255,7 @@ async function openOrMessageDirect(
         body: dmBody,
         url: chatThreadHref({ groupId, isDirect: true }),
         tag: `chat-${groupId}`,
+        urgency: "high",
       }),
     ]);
   }
@@ -338,6 +339,7 @@ export async function requestWorkspaceDmAction(
       body: dmReqBody,
       url: "/app/chat?tab=dms",
       tag: `dm-req-${dmRequest.id}`,
+      urgency: "high",
     }),
   ]);
 
@@ -772,12 +774,20 @@ export async function sendMessageAction(
         ? `Message from ${personLabel(user)}`
         : `${group.name}: ${personLabel(user)}`;
 
+      // In-app inbox rows skip when the thread is open on screen.
+      // Web push does NOT — leftover lastActiveAt (force-quit PWA, missed
+      // pagehide) must not block lock-screen alerts. Mute / Mentions still apply.
       const notificationRows: {
         userId: string;
         type: "CHAT_MENTION" | "CHAT_MESSAGE";
         title: string;
         body: string;
         meta: string;
+      }[] = [];
+      const webPushRows: {
+        userId: string;
+        title: string;
+        body: string;
       }[] = [];
 
       for (const m of chatMembers) {
@@ -788,23 +798,23 @@ export async function sendMessageAction(
         if (mode === "MUTE") continue;
         if (mode === "MENTIONS" && !mentioned) continue;
 
-        // Only lastActiveAt means “thread is open right now”. lastSeenAt stays
-        // for read receipts and must NOT block push after swipe-away / background
-        // (clearChatPresence nulls lastActiveAt immediately on hide).
-        if (
-          m.lastActiveAt &&
-          now - m.lastActiveAt.getTime() < OPEN_THREAD_MS
-        ) {
-          continue;
-        }
+        const title = mentioned ? "Mentioned in chat" : titlePrefix;
+        const rowBody = mentioned
+          ? `${personLabel(user)} in ${group.name}: ${preview}`
+          : preview;
+
+        webPushRows.push({ userId: m.userId, title, body: rowBody });
+
+        const threadOpen =
+          m.lastActiveAt != null &&
+          now - m.lastActiveAt.getTime() < OPEN_THREAD_MS;
+        if (threadOpen) continue;
 
         notificationRows.push({
           userId: m.userId,
           type: mentioned ? "CHAT_MENTION" : "CHAT_MESSAGE",
-          title: mentioned ? "Mentioned in chat" : titlePrefix,
-          body: mentioned
-            ? `${personLabel(user)} in ${group.name}: ${preview}`
-            : preview,
+          title,
+          body: rowBody,
           meta: JSON.stringify({
             groupId,
             messageId: message.id,
@@ -819,26 +829,31 @@ export async function sendMessageAction(
       }
 
       const notified = notificationRows.map((n) => n.userId);
-      if (notified.length > 0) {
-        await Promise.all([
-          pushBadgeDeltaForUsers(notified, { chatUnreadDelta: 1 }),
-          sendWebPushMessages(
-            notificationRows.map((n) => ({
-              userId: n.userId,
-              payload: {
-                title: n.title,
-                body: n.body,
-                url: chatThreadHref({
-                  groupId,
-                  isDirect: group.isDirect,
-                  workspaceId: group.workspaceId,
-                }),
-                tag: `chat-${groupId}`,
-              },
-            })),
-          ),
-        ]);
-      }
+      const pushUrl = chatThreadHref({
+        groupId,
+        isDirect: group.isDirect,
+        workspaceId: group.workspaceId,
+      });
+
+      await Promise.all([
+        notified.length > 0
+          ? pushBadgeDeltaForUsers(notified, { chatUnreadDelta: 1 })
+          : Promise.resolve(),
+        webPushRows.length > 0
+          ? sendWebPushMessages(
+              webPushRows.map((n) => ({
+                userId: n.userId,
+                payload: {
+                  title: n.title,
+                  body: n.body,
+                  url: pushUrl,
+                  tag: `chat-${groupId}`,
+                  urgency: "high" as const,
+                },
+              })),
+            )
+          : Promise.resolve(),
+      ]);
     } catch (err) {
       console.error("[chat] send fan-out failed", err);
     }
@@ -1223,7 +1238,8 @@ export async function touchChatSeenAction(
   const [, cleared] = await Promise.all([
     prisma.chatMember.update({
       where: { id: member.id },
-      data: { lastSeenAt: now, lastActiveAt: now },
+      // Read receipts only — never open-thread suppress via this path.
+      data: { lastSeenAt: now },
     }),
     prisma.notification.updateMany({
       where: {
@@ -1253,9 +1269,11 @@ export async function setTypingAction(groupId: string): Promise<ActionResult> {
   if (!member) return { ok: false, error: "You’re not in this chat." };
 
   const now = new Date();
+  // Do not set lastActiveAt here — that flag is only for the open-thread
+  // heartbeat (pulseChatPresence). Typing alone must not suppress alerts.
   await prisma.chatMember.update({
     where: { id: member.id },
-    data: { typingAt: now, lastSeenAt: now, lastActiveAt: now },
+    data: { typingAt: now, lastSeenAt: now },
   });
   // Live typing fan-out: client setLocalChatTyping → Ably Presence update.
   return { ok: true };

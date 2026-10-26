@@ -11,9 +11,8 @@ import { useActivePolling } from "@/lib/use-active-polling";
 /**
  * Marks the thread read while mounted.
  * When `countsAsOpenThread` is true (full Chat page only), also heartbeats
- * lastActiveAt so web push is suppressed for that conversation.
- * Floating chat must pass countsAsOpenThread={false} so Workspaces / other
- * tabs still get lock-screen notifications.
+ * lastActiveAt so in-app chat notification rows are skipped for that thread.
+ * Lock-screen web push is sent regardless (see sendMessageAction).
  */
 export function MarkChatSeen({
   groupId,

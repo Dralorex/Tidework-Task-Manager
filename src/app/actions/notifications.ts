@@ -44,13 +44,18 @@ export async function markNotificationReadAction(
   return { ok: true };
 }
 
+export type TestWebPushResult =
+  | { ok: true; sent: number; attempted: number; subscriptionCount: number }
+  | { ok: false; error: string; subscriptionCount?: number };
+
 /** Send one lock-screen push to the current user’s saved subscriptions. */
-export async function sendTestWebPushAction(): Promise<ActionResult> {
+export async function sendTestWebPushAction(): Promise<TestWebPushResult> {
   const user = await requireUser();
   if (!isWebPushConfigured()) {
     return {
       ok: false,
       error: "Web push isn’t configured on the server (missing VAPID keys).",
+      subscriptionCount: 0,
     };
   }
 
@@ -61,7 +66,8 @@ export async function sendTestWebPushAction(): Promise<ActionResult> {
     return {
       ok: false,
       error:
-        "No push subscription saved for your account yet. Tap Enable notifications again on this device.",
+        "No push subscription saved on the server for your account. On this phone’s Home Screen app, tap Enable / Re-save, then try again.",
+      subscriptionCount: 0,
     };
   }
 
@@ -70,17 +76,26 @@ export async function sendTestWebPushAction(): Promise<ActionResult> {
     body: "Push is working on this device.",
     url: "/app/settings",
     tag: "rowgon-test",
+    urgency: "high",
   });
 
   if (result.sent === 0) {
     return {
       ok: false,
+      subscriptionCount: count,
       error:
         result.failed > 0
-          ? `Push provider rejected the send${result.lastError ? ` (${result.lastError})` : ""}. Confirm WEB_PUSH_VAPID_PUBLIC_KEY and PRIVATE_KEY are a matching pair on Vercel, then redeploy and tap Enable again.`
-          : "No active subscriptions to send to. Tap Enable notifications again.",
+          ? `Push provider rejected the send (${result.attempted} device(s)${result.lastError ? `: ${result.lastError}` : ""}). Confirm WEB_PUSH_VAPID_PUBLIC_KEY and PRIVATE_KEY are a matching pair on Vercel, then redeploy and tap Re-save on this device.`
+          : result.stale > 0
+            ? "Saved subscriptions were stale and removed. Tap Re-save on this device, then Send test again."
+            : "No active subscriptions to send to. Tap Enable notifications again.",
     };
   }
 
-  return { ok: true };
+  return {
+    ok: true,
+    sent: result.sent,
+    attempted: result.attempted,
+    subscriptionCount: count,
+  };
 }

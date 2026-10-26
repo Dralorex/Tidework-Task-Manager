@@ -13,14 +13,45 @@ import {
 
 type Status = "loading" | "unsupported" | "ios-tab" | "off" | "on" | "denied";
 
-export function WebPushSettings() {
+type ServerPushStatus = {
+  configured: boolean;
+  subscriptionCount: number;
+};
+
+export function WebPushSettings({
+  initialServerSubscriptionCount = 0,
+}: {
+  initialServerSubscriptionCount?: number;
+}) {
   const [status, setStatus] = useState<Status>("loading");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [server, setServer] = useState<ServerPushStatus>({
+    configured: true,
+    subscriptionCount: initialServerSubscriptionCount,
+  });
+
+  async function refreshServerStatus() {
+    try {
+      const res = await fetch("/api/push/status", { credentials: "same-origin" });
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        configured?: boolean;
+        subscriptionCount?: number;
+      };
+      setServer({
+        configured: Boolean(data.configured),
+        subscriptionCount: Number(data.subscriptionCount ?? 0),
+      });
+    } catch {
+      /* ignore */
+    }
+  }
 
   useEffect(() => {
     void (async () => {
+      void refreshServerStatus();
       if (!("Notification" in window) || !("serviceWorker" in navigator)) {
         setStatus("unsupported");
         return;
@@ -48,6 +79,7 @@ export function WebPushSettings() {
     setMessage(null);
     setError(null);
     const result = await subscribeWebPush();
+    await refreshServerStatus();
     setBusy(false);
     if (!result.ok) {
       setError(result.error);
@@ -65,6 +97,7 @@ export function WebPushSettings() {
     setMessage(null);
     setError(null);
     await unsubscribeWebPush();
+    await refreshServerStatus();
     setBusy(false);
     setStatus("off");
     setMessage("Phone notifications turned off on this device.");
@@ -80,17 +113,19 @@ export function WebPushSettings() {
     if (!sub.ok) {
       setBusy(false);
       setError(sub.error);
+      await refreshServerStatus();
       return;
     }
     setStatus("on");
     const result = await sendTestWebPushAction();
+    await refreshServerStatus();
     setBusy(false);
     if (!result?.ok) {
       setError(result?.error ?? "Test send failed.");
       return;
     }
     setMessage(
-      "Test sent. Lock the phone or leave Rowgon — you should see “Rowgon test” within a few seconds.",
+      `Test sent to ${result.sent} of ${result.attempted} device(s) (server has ${result.subscriptionCount} saved). Lock the phone or leave Rowgon — you should see “Rowgon test” within a few seconds.`,
     );
   }
 
@@ -99,6 +134,9 @@ export function WebPushSettings() {
     setMessage("We’ll ask again next time you’re eligible.");
     setError(null);
   }
+
+  const browserOnServerOff =
+    status === "on" && server.configured && server.subscriptionCount === 0;
 
   return (
     <details className="tide-panel p-5" open>
@@ -134,9 +172,24 @@ export function WebPushSettings() {
                 : "Enable to get lock-screen alerts even when Rowgon is closed."}
             </p>
             <p className="text-[color:var(--tide-deep)]/55">
-              Tip: chat alerts are skipped only while that conversation is open
-              on screen. Swipe Rowgon away or lock the phone and pushes can fire
-              right away. Use “Send test” to verify the phone pipe.
+              Server:{" "}
+              {!server.configured
+                ? "push not configured (missing VAPID keys)."
+                : server.subscriptionCount === 0
+                  ? "no devices saved for your account yet."
+                  : `${server.subscriptionCount} device${server.subscriptionCount === 1 ? "" : "s"} saved for your account.`}
+            </p>
+            {browserOnServerOff ? (
+              <p className="rounded-lg bg-[#E85D4C]/12 px-3 py-2 text-[#9b2f22]">
+                This browser looks “on”, but the server has no subscription saved —
+                chat pushes can’t reach you. Tap <strong>Re-save this device</strong>{" "}
+                or <strong>Send test</strong>.
+              </p>
+            ) : null}
+            <p className="text-[color:var(--tide-deep)]/55">
+              Tip: open Rowgon from the Home Screen app on iPhone (not Safari or
+              Chrome tabs). Use “Send test” first — if that fails, chat pushes
+              won’t work either.
             </p>
             {!canOfferWebPushPrompt() && status === "off" ? (
               <p className="text-[color:var(--tide-deep)]/55">

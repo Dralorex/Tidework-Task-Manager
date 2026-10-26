@@ -58,4 +58,5 @@ export function highlightMentions(body: string): { text: string; isMention: bool
  * Heartbeat is ~45s; keep a short grace so a missed clear doesn't spam,
  * but leaving the thread / Chat tab clears lastActiveAt immediately.
  */
+/** How long lastActiveAt counts as “thread open” for in-app inbox skip. */
 export const OPEN_THREAD_MS = 1000 * 45;
