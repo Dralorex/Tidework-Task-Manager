@@ -19,13 +19,16 @@ export default async function SettingsPage() {
     { migratedV2: cookieStore.get(THEME_MIGRATION_COOKIE)?.value === "1" },
   );
 
-  const prefsRow = await prisma.user.findUniqueOrThrow({
-    where: { id: user.id },
-    select: {
-      interfacePrefsJson: true,
-      showInterfaceTogglesInWorkspace: true,
-    },
-  });
+  const [prefsRow, pushSubCount] = await Promise.all([
+    prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: {
+        interfacePrefsJson: true,
+        showInterfaceTogglesInWorkspace: true,
+      },
+    }),
+    prisma.webPushSubscription.count({ where: { userId: user.id } }),
+  ]);
 
   return (
     <main className="mx-auto max-w-lg px-4 py-10">
@@ -45,7 +48,7 @@ export default async function SettingsPage() {
       </p>
 
       <div className="mt-8 space-y-4">
-        <WebPushSettings />
+        <WebPushSettings initialServerSubscriptionCount={pushSubCount} />
 
         <InterfaceSettings
           prefs={parsePersonalInterfacePrefs(prefsRow.interfacePrefsJson)}
