@@ -13,6 +13,7 @@ import {
 } from "@/lib/ably-server";
 import { sendWebPushMessages, sendWebPushToUsers } from "@/lib/web-push-server";
 import { handleBirthdayOnFriendship } from "@/lib/birthday";
+import { chatThreadHref } from "@/lib/chat-deep-link";
 import type { ChatMessageEvent } from "@/lib/chat-message-events";
 import { derivePresence } from "@/lib/chat-presence";
 import { prisma } from "@/lib/db";
@@ -252,7 +253,7 @@ async function openOrMessageDirect(
       sendWebPushToUsers([other.id], {
         title: dmTitle,
         body: dmBody,
-        url: `/app/chat?tab=dms&group=${groupId}`,
+        url: chatThreadHref({ groupId, isDirect: true }),
         tag: `chat-${groupId}`,
       }),
     ]);
@@ -827,7 +828,11 @@ export async function sendMessageAction(
               payload: {
                 title: n.title,
                 body: n.body,
-                url: `/app/chat?${group.isDirect ? "tab=dms" : group.workspaceId ? "tab=workspace-groups" : "tab=groups"}&group=${groupId}`,
+                url: chatThreadHref({
+                  groupId,
+                  isDirect: group.isDirect,
+                  workspaceId: group.workspaceId,
+                }),
                 tag: `chat-${groupId}`,
               },
             })),
