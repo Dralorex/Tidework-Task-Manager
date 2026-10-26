@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { IosHomescreenHelp } from "@/app/components/ios-homescreen-help";
 import {
   canOfferWebPushPrompt,
   isIosDevice,
@@ -12,32 +13,23 @@ import {
 } from "@/lib/web-push-client";
 
 /**
- * Soft prompt for Web Push. Skips iPhone Safari tabs (Home Screen only).
- * Choices: Allow · Ask again in 7 days · Don’t ask again.
+ * Soft prompt for Web Push (Android / desktop / iOS Home Screen app).
+ * On iPhone browser tabs, shows IosHomescreenHelp instead.
  */
 export function WebPushPrompt() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [iosHint, setIosHint] = useState(false);
+  const [iosBrowserHelp, setIosBrowserHelp] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Register SW early so Chrome can treat Rowgon as installable (Android
-    // Install / Add to Home Screen) even before the user enables push.
     void registerPushServiceWorker();
 
-    // iOS tab: optionally show “Add to Home Screen” tip once (not a permission ask).
+    // iPhone / iPad Safari (or other) tab — guided Home Screen / notif help.
     if (isIosDevice() && !isStandaloneDisplay()) {
-      try {
-        const key = "rowgon_ios_homescreen_tip_v1";
-        if (!localStorage.getItem(key)) {
-          setIosHint(true);
-        }
-      } catch {
-        /* ignore */
-      }
+      setIosBrowserHelp(true);
       return;
     }
 
@@ -73,35 +65,8 @@ export function WebPushPrompt() {
     setOpen(false);
   }
 
-  function dismissIosHint() {
-    try {
-      localStorage.setItem("rowgon_ios_homescreen_tip_v1", "1");
-    } catch {
-      /* ignore */
-    }
-    setIosHint(false);
-  }
-
-  if (iosHint) {
-    return (
-      <div className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-md animate-tide-rise sm:inset-x-auto sm:right-4 sm:bottom-4">
-        <div className="tide-panel border border-[#0A3D45]/15 p-4 shadow-lg">
-          <p className="font-semibold text-[#0A3D45]">Want phone notifications?</p>
-          <p className="mt-1 text-sm text-[#0A3D45]/70">
-            On iPhone, add Rowgon to your Home Screen first (Share → Add to Home
-            Screen). We’ll ask about notifications the next time you open it from
-            there.
-          </p>
-          <button
-            type="button"
-            onClick={dismissIosHint}
-            className="tide-btn-primary mt-3 w-full"
-          >
-            Got it
-          </button>
-        </div>
-      </div>
-    );
+  if (iosBrowserHelp) {
+    return <IosHomescreenHelp />;
   }
 
   if (!open) return null;
