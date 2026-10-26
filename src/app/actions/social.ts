@@ -1121,9 +1121,11 @@ export async function markChatNotificationsReadAction(
   if (!member) return;
 
   const seenAt = new Date();
+  // lastSeenAt = read receipts / “seen”. Do NOT set lastActiveAt here — that
+  // flag suppresses web push and must only be set by the full Chat page pulse.
   await prisma.chatMember.update({
     where: { id: member.id },
-    data: { lastActiveAt: seenAt, lastSeenAt: seenAt },
+    data: { lastSeenAt: seenAt },
   });
 
   await prisma.notification.updateMany({
@@ -1163,6 +1165,21 @@ export async function clearChatPresenceAction(groupId: string): Promise<void> {
     data: { lastActiveAt: null, typingAt: null },
   });
   // Ably Presence leave runs in the client (chat-presence / connection close).
+}
+
+/**
+ * Clear “thread open” on every chat membership. Used when the user is on
+ * Workspaces / Settings / etc. so leftover lastActiveAt can’t block web push.
+ */
+export async function clearAllOpenChatPresenceAction(): Promise<void> {
+  const user = await requireUser();
+  await prisma.chatMember.updateMany({
+    where: {
+      userId: user.id,
+      OR: [{ lastActiveAt: { not: null } }, { typingAt: { not: null } }],
+    },
+    data: { lastActiveAt: null, typingAt: null },
+  });
 }
 
 export async function setChatNotifyModeAction(
