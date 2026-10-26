@@ -9,10 +9,11 @@ import {
 import { useActivePolling } from "@/lib/use-active-polling";
 
 /**
- * While this exact thread is open: heartbeat presence + clear unread.
- * On background / swipe-away / leave: clear active presence immediately so
- * web push is not suppressed by the open-thread window.
- * Heartbeats pause while the tab is hidden or the user is idle.
+ * While this exact thread is open and visible: heartbeat presence + clear unread.
+ * Leaving the thread, switching Chat tabs, backgrounding, or swipe-away clears
+ * lastActiveAt immediately so web push can fire for that chat again.
+ * (Being elsewhere in the app — Settings, Workspaces, chat list — does not
+ * suppress pushes for a thread you’re not viewing.)
  */
 export function MarkChatSeen({ groupId }: { groupId: string }) {
   const ranFor = useRef<string | null>(null);

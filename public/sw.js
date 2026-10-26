@@ -54,6 +54,7 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const target = event.notification.data?.url || "/app/notifications";
   const url = new URL(target, self.location.origin).href;
+  const pathWithQuery = `${new URL(url).pathname}${new URL(url).search}${new URL(url).hash}`;
 
   event.waitUntil(
     (async () => {
@@ -61,19 +62,29 @@ self.addEventListener("notificationclick", (event) => {
         type: "window",
         includeUncontrolled: true,
       });
+
+      // Prefer an already-open Rowgon window (app open) and deep-link into the thread.
       for (const client of all) {
-        if ("focus" in client && client.url.startsWith(self.location.origin)) {
-          await client.focus();
+        if (!client.url.startsWith(self.location.origin)) continue;
+        if (!("focus" in client)) continue;
+        await client.focus();
+        try {
           if ("navigate" in client) {
-            try {
-              await client.navigate(url);
-            } catch {
-              /* older browsers */
-            }
+            await client.navigate(url);
+            return;
           }
+        } catch {
+          /* fall through to postMessage */
+        }
+        try {
+          client.postMessage({ type: "rowgon-navigate", url: pathWithQuery });
           return;
+        } catch {
+          /* try next client */
         }
       }
+
+      // App closed / no window — open the deep link fresh.
       if (self.clients.openWindow) {
         await self.clients.openWindow(url);
       }

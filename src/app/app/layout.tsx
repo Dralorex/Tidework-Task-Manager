@@ -4,6 +4,7 @@ import { AppNav } from "@/app/components/app-nav";
 import { FloatingChatWidget } from "@/app/components/floating-chat-widget";
 import { LiveRefresh } from "@/app/components/live-refresh";
 import { RealtimeProvider } from "@/app/components/realtime-provider";
+import { PushNavigateListener } from "@/app/components/push-navigate-listener";
 import { WebPushPrompt } from "@/app/components/web-push-prompt";
 import { isAblyConfigured } from "@/lib/ably-server";
 import { getAccountRosterPublic } from "@/lib/account-roster";
@@ -49,6 +50,7 @@ export default async function AppSectionLayout({
         />
         {children}
         <FloatingChatWidget chatUnreadCount={chatUnreadCount} />
+        <PushNavigateListener />
         <WebPushPrompt />
       </RealtimeProvider>
     </div>
