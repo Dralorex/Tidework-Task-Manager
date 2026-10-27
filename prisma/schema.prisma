@@ -755,6 +755,20 @@ model WebPushSubscription {
 }
 
 /**
+ * Optional VAPID override (singleton). Used when Vercel env public/private
+ * keys don’t match — sends fail with 403 and no device gets lock-screen alerts.
+ * Prefer fixing Vercel; this lets an owner repair without a redeploy.
+ */
+model WebPushVapidConfig {
+  id         String   @id @default("default")
+  publicKey  String
+  privateKey String
+  subject    String   @default("mailto:noreply@rowgon.com")
+  updatedAt  DateTime @updatedAt
+  updatedById String?
+}
+
+/**
  * Infra + Phase 1 monetization models.
  * Virus scanning intentionally deferred. Downgrade wizards = Phase 2.
  */

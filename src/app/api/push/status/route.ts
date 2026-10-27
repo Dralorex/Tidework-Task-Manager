@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import {
-  getWebPushPublicKey,
-  isWebPushConfigured,
-} from "@/lib/web-push-server";
+import { getWebPushVapidStatus } from "@/lib/web-push-server";
 
 export const dynamic = "force-dynamic";
 
@@ -13,14 +10,14 @@ export const dynamic = "force-dynamic";
  * Browser "on" ≠ saved subscription — this is the source of truth for sends.
  */
 export async function GET() {
-  const configured = isWebPushConfigured();
+  const vapid = await getWebPushVapidStatus();
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({
-      configured,
-      publicKeyPrefix: configured
-        ? (getWebPushPublicKey()?.slice(0, 12) ?? null)
-        : null,
+      configured: vapid.configured,
+      pairValid: vapid.pairValid,
+      source: vapid.source,
+      publicKeyPrefix: vapid.publicKeyPrefix,
       authenticated: false,
       subscriptionCount: 0,
     });
@@ -31,10 +28,10 @@ export async function GET() {
   });
 
   return NextResponse.json({
-    configured,
-    publicKeyPrefix: configured
-      ? (getWebPushPublicKey()?.slice(0, 12) ?? null)
-      : null,
+    configured: vapid.configured,
+    pairValid: vapid.pairValid,
+    source: vapid.source,
+    publicKeyPrefix: vapid.publicKeyPrefix,
     authenticated: true,
     subscriptionCount,
   });
