@@ -391,6 +391,8 @@ model Task {
   assigneeId        String?
   createdById       String
   completionComment String?
+  /** Set when status becomes DONE; cleared if sent back. */
+  completedAt       DateTime?
   claimedAt         DateTime?
   lastUnclaimReason String?
   lastUnclaimWorkNote String?
