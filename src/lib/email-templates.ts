@@ -109,6 +109,36 @@ export function paymentFailedEmail(opts: {
   };
 }
 
+export function emailCodeLockAlertEmail(opts: {
+  username: string;
+  reason: "attempts" | "resends";
+  lockMinutes: number;
+}) {
+  const reasonHtml =
+    opts.reason === "attempts"
+      ? "several incorrect verification codes were entered"
+      : "a verification code was resent too many times";
+  const reasonText =
+    opts.reason === "attempts"
+      ? "several incorrect verification codes were entered"
+      : "a verification code was resent too many times";
+  return {
+    subject: "Rowgon temporarily locked email verification",
+    ...shell(
+      "Verification paused",
+      `<p style="margin:0 0 12px;font-size:16px;line-height:1.5;color:rgba(10,61,69,0.85);">
+        Hi @${escapeHtml(opts.username)}, we paused email verification on your Rowgon
+        account because ${reasonHtml}.
+      </p>
+      <p style="margin:0;font-size:16px;line-height:1.5;color:rgba(10,61,69,0.85);">
+        You can try again in about <strong>${opts.lockMinutes} minutes</strong>.
+        If this wasn’t you, change your password after you regain access.
+      </p>`,
+      `Hi @${opts.username}, we paused email verification because ${reasonText}. Try again in about ${opts.lockMinutes} minutes. If this wasn’t you, change your password after you regain access.`,
+    ),
+  };
+}
+
 export function passwordResetEmail(opts: { username: string; code: string }) {
   return {
     subject: "Your Rowgon password reset code",
