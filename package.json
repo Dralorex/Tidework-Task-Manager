@@ -15,6 +15,7 @@
     "smoke:r2": "tsx scripts/smoke-r2.ts",
     "postinstall": "prisma generate",
     "test:e2e": "playwright test",
+    "prune:previews": "node scripts/prune-vercel-previews.mjs",
     "load-test:seed": "tsx scripts/load-test/seed.ts",
     "load-test:run": "tsx scripts/load-test/run.ts",
     "load-test:cleanup": "tsx scripts/load-test/cleanup.ts"
@@ -43,6 +44,7 @@
     "resend": "^4.8.0",
     "server-only": "^0.0.1",
     "stripe": "^23.0.0",
+    "web-push": "^3.6.7",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -51,6 +53,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "playwright": "^1.63.0",

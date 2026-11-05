@@ -86,5 +86,24 @@ export async function syncDeadlineNotifications(userId: string) {
     }),
   });
 
-  await pushAlertInboxForUsers([userId]);
+  const first = toCreate[0];
+  const days = daysUntilDue(first.dueDate, now);
+  const when =
+    days === null
+      ? "due soon"
+      : days < 0
+        ? "overdue"
+        : days === 0
+          ? "due today"
+          : days <= 2
+            ? "due within 2 days"
+            : "due soon";
+  const more =
+    toCreate.length > 1 ? ` (+${toCreate.length - 1} more)` : "";
+  await pushAlertInboxForUsers([userId], {
+    title: "Deadline getting close",
+    body: `“${first.name}” is ${when}.${more}`,
+    url: `/app/w/${first.workspaceId}?folder=${first.folderId}`,
+    tag: `deadline-${userId}`,
+  });
 }

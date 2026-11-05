@@ -53,4 +53,10 @@ export function highlightMentions(body: string): { text: string; isMention: bool
   return parts.length ? parts : [{ text: body, isMention: false }];
 }
 
-export const OPEN_THREAD_MS = 1000 * 60 * 2;
+/**
+ * Skip chat alerts only while that exact thread is actively open.
+ * Heartbeat is ~45s; keep a short grace so a missed clear doesn't spam,
+ * but leaving the thread / Chat tab clears lastActiveAt immediately.
+ */
+/** How long lastActiveAt counts as “thread open” for in-app inbox skip. */
+export const OPEN_THREAD_MS = 1000 * 45;

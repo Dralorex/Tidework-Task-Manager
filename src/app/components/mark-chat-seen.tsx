@@ -9,11 +9,19 @@ import {
 import { useActivePolling } from "@/lib/use-active-polling";
 
 /**
- * While this exact thread is open: heartbeat presence + clear unread.
- * On leave: clear presence so list/hub tabs still get notifications.
- * Heartbeats pause while the tab is hidden or the user is idle.
+ * Marks the thread read while mounted.
+ * When `countsAsOpenThread` is true (full Chat page only), also heartbeats
+ * lastActiveAt so in-app chat notification rows are skipped for that thread.
+ * Lock-screen web push is sent regardless (see sendMessageAction).
  */
-export function MarkChatSeen({ groupId }: { groupId: string }) {
+export function MarkChatSeen({
+  groupId,
+  countsAsOpenThread = true,
+}: {
+  groupId: string;
+  /** When false, clear unread only — do not suppress web push. */
+  countsAsOpenThread?: boolean;
+}) {
   const ranFor = useRef<string | null>(null);
   const active = useActivePolling();
 
@@ -21,14 +29,37 @@ export function MarkChatSeen({ groupId }: { groupId: string }) {
     if (!groupId) return;
     if (ranFor.current !== groupId) {
       ranFor.current = groupId;
-      // Badge push happens server-side; no full router.refresh.
       void markChatNotificationsReadAction(groupId);
     }
   }, [groupId]);
 
   useEffect(() => {
-    if (!groupId || !active) {
-      if (groupId && !active) void clearChatPresenceAction(groupId);
+    if (!groupId || !countsAsOpenThread) return;
+
+    const clearNow = () => {
+      void clearChatPresenceAction(groupId);
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") clearNow();
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", clearNow);
+    window.addEventListener("freeze", clearNow);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", clearNow);
+      window.removeEventListener("freeze", clearNow);
+      clearNow();
+    };
+  }, [groupId, countsAsOpenThread]);
+
+  useEffect(() => {
+    if (!countsAsOpenThread || !groupId) return;
+    if (!active) {
+      void clearChatPresenceAction(groupId);
       return;
     }
     void pulseChatPresenceAction(groupId);
@@ -37,9 +68,8 @@ export function MarkChatSeen({ groupId }: { groupId: string }) {
     }, 45_000);
     return () => {
       window.clearInterval(id);
-      void clearChatPresenceAction(groupId);
     };
-  }, [groupId, active]);
+  }, [groupId, active, countsAsOpenThread]);
 
   return null;
 }

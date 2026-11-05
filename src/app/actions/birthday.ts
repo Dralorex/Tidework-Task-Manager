@@ -301,14 +301,16 @@ export async function respondWorkspaceBirthdayRequestAction(
     data: { status: accept ? "ACTIVE" : "DECLINED" },
   });
 
+  const decisionTitle = accept ? "Birthday added" : "Birthday not added";
+  const decisionBody = accept
+    ? `Your birthday was added to “${request.workspace.name}”.`
+    : `Your birthday was not added to “${request.workspace.name}”.`;
   await prisma.notification.create({
     data: {
       userId: request.subjectId,
       type: "WORKSPACE_BIRTHDAY_DECISION",
-      title: accept ? "Birthday added" : "Birthday not added",
-      body: accept
-        ? `Your birthday was added to “${request.workspace.name}”.`
-        : `Your birthday was not added to “${request.workspace.name}”.`,
+      title: decisionTitle,
+      body: decisionBody,
       meta: JSON.stringify({
         workspaceId: request.workspaceId,
         accepted: accept,
@@ -324,7 +326,13 @@ export async function respondWorkspaceBirthdayRequestAction(
     });
   }
 
-  await pushAlertInboxForUsers([request.subjectId, user.id]);
+  await pushAlertInboxForUsers([request.subjectId], {
+    title: decisionTitle,
+    body: decisionBody,
+    url: "/app/notifications",
+    tag: `bday-decision-${requestId}`,
+  });
+  await pushAlertInboxForUsers([user.id]);
 
   revalidatePath("/app/notifications");
   revalidatePath("/app/calendar");

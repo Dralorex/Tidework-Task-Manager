@@ -1,7 +1,8 @@
 import { format } from "date-fns";
 import { AppLink } from "@/app/components/app-link";
 import { InlineActionForm } from "@/app/components/forms";
-import { ChatMessageBody } from "@/app/components/chat-composer";import { ChatPresenceStrip } from "@/app/components/chat-presence";
+import { ChatMessageBody } from "@/app/components/chat-composer";
+import { ChatPresencePanel } from "@/app/components/chat-presence-panel";
 import { ChatRowMenu } from "@/app/components/chat-row-menu";
 import { ChatThreadView } from "@/app/components/chat-thread-view";
 import { MarkChatSeen } from "@/app/components/mark-chat-seen";
@@ -49,16 +50,26 @@ export default async function ChatPage({
 
   let tab: Tab = "hub";
 
+  const userLabelSelect = {
+    id: true,
+    username: true,
+    nickname: true,
+    deletedAt: true,
+    deletedUsername: true,
+  } as const;
+
   const memberships = await prisma.chatMember.findMany({
     where: { userId },
     include: {
       group: {
         include: {
-          members: { include: { user: true } },
+          members: { include: { user: { select: userLabelSelect } } },
           messages: {
             orderBy: { createdAt: "desc" },
             take: 1,
-            include: { sender: true },
+            include: {
+              sender: { select: userLabelSelect },
+            },
           },
         },
       },
@@ -117,7 +128,7 @@ export default async function ChatPage({
         where: { groupId: active.id },
         orderBy: { createdAt: "asc" },
         take: 120,
-        include: { sender: true },
+        include: { sender: { select: userLabelSelect } },
       })
     : [];
 
@@ -151,19 +162,53 @@ export default async function ChatPage({
       ]
     : [];
 
+  const activeMemberIds = active?.members.map((m) => m.user.id) ?? [];
+  const workspaceMemberRoles =
+    active?.workspaceId && activeMemberIds.length > 0
+      ? await prisma.membership.findMany({
+          where: {
+            workspaceId: active.workspaceId,
+            userId: { in: activeMemberIds },
+          },
+          select: {
+            userId: true,
+            role: true,
+            customRoles: {
+              select: { role: { select: { name: true } } },
+              take: 2,
+            },
+          },
+        })
+      : [];
+  const roleByUserId = new Map(
+    workspaceMemberRoles.map((m) => {
+      const custom = m.customRoles.map((c) => c.role.name).filter(Boolean);
+      const base =
+        m.role === "OWNER"
+          ? "Owner"
+          : m.role === "ADMIN"
+            ? "Admin"
+            : m.role === "EDITOR"
+              ? "Editor"
+              : "Member";
+      return [
+        m.userId,
+        {
+          roleKey: m.role,
+          roleLabel: custom.length ? `${base} · ${custom.join(", ")}` : base,
+        },
+      ] as const;
+    }),
+  );
+
   const canElevatedMentions = active
     ? active.workspaceId
-      ? await (async () => {
-          const mem = await prisma.membership.findUnique({
-            where: {
-              workspaceId_userId: {
-                workspaceId: active.workspaceId!,
-                userId,
-              },
-            },
-          });
-          return Boolean(mem && canManagePeople(mem.role));
-        })()
+      ? Boolean(
+          workspaceMemberRoles.find((m) => m.userId === userId) &&
+            canManagePeople(
+              workspaceMemberRoles.find((m) => m.userId === userId)!.role,
+            ),
+        )
       : true
     : false;
 
@@ -214,14 +259,45 @@ export default async function ChatPage({
     ]),
   );
 
-  const unreadByGroup = await prisma.notification.findMany({
-    where: {
-      userId: user.id,
-      type: { in: ["CHAT_MESSAGE", "CHAT_MENTION"] },
-      read: false,
-    },
-    select: { meta: true },
-  });
+  const [
+    unreadByGroup,
+    dmRequests,
+    adminWorkspaces,
+    allWorkspaces,
+    acceptedFriendships,
+  ] = await Promise.all([
+    prisma.notification.findMany({
+      where: {
+        userId: user.id,
+        type: { in: ["CHAT_MESSAGE", "CHAT_MENTION"] },
+        read: false,
+      },
+      select: { meta: true },
+    }),
+    prisma.dmRequest.findMany({
+      where: { toUserId: user.id, status: "PENDING" },
+      include: { fromUser: { select: userLabelSelect } },
+    }),
+    prisma.membership.findMany({
+      where: { userId: user.id, role: { in: ["OWNER", "ADMIN"] } },
+      include: { workspace: { select: { id: true, name: true } } },
+    }),
+    prisma.membership.findMany({
+      where: { userId: user.id },
+      include: { workspace: { select: { id: true, name: true } } },
+    }),
+    prisma.friendship.findMany({
+      where: {
+        status: "ACCEPTED",
+        OR: [{ requesterId: user.id }, { addresseeId: user.id }],
+      },
+      include: {
+        requester: { select: userLabelSelect },
+        addressee: { select: userLabelSelect },
+      },
+    }),
+  ]);
+
   const unreadCounts = new Map<string, number>();
   for (const n of unreadByGroup) {
     if (!n.meta) continue;
@@ -235,21 +311,6 @@ export default async function ChatPage({
     }
   }
 
-  const dmRequests = await prisma.dmRequest.findMany({
-    where: { toUserId: user.id, status: "PENDING" },
-    include: { fromUser: true },
-  });
-
-  const adminWorkspaces = await prisma.membership.findMany({
-    where: { userId: user.id, role: { in: ["OWNER", "ADMIN"] } },
-    include: { workspace: true },
-  });
-
-  const allWorkspaces = await prisma.membership.findMany({
-    where: { userId: user.id },
-    include: { workspace: true },
-  });
-
   const adminWorkspaceIds = new Set(adminWorkspaces.map((m) => m.workspaceId));
 
   const allWorkspaceIds = allWorkspaces.map((m) => m.workspaceId);
@@ -257,7 +318,7 @@ export default async function ChatPage({
     allWorkspaceIds.length > 0
       ? await prisma.membership.findMany({
           where: { workspaceId: { in: allWorkspaceIds } },
-          include: { user: true },
+          include: { user: { select: userLabelSelect } },
         })
       : [];
 
@@ -289,14 +350,6 @@ export default async function ChatPage({
   for (const wsId of adminWorkspaceIds) {
     adminMembersByWorkspace[wsId] = membersByWorkspace[wsId] ?? [];
   }
-
-  const acceptedFriendships = await prisma.friendship.findMany({
-    where: {
-      status: "ACCEPTED",
-      OR: [{ requesterId: user.id }, { addresseeId: user.id }],
-    },
-    include: { requester: true, addressee: true },
-  });
 
   const friendOptions = acceptedFriendships.map((row) => {
     const friend = row.requesterId === user.id ? row.addressee : row.requester;
@@ -343,6 +396,21 @@ export default async function ChatPage({
     return "groups";
   }
 
+  const showPresencePanel = Boolean(active && !active.isDirect);
+  const presenceMembers =
+    active && showPresencePanel
+      ? active.members.map((m) => {
+          const role = roleByUserId.get(m.user.id);
+          return {
+            userId: m.user.id,
+            username: m.user.username,
+            label: personLabel(m.user),
+            roleKey: role?.roleKey ?? null,
+            roleLabel: role?.roleLabel ?? null,
+          };
+        })
+      : [];
+
   const listItems =
     tab === "dms"
       ? dms
@@ -367,7 +435,13 @@ export default async function ChatPage({
         : "No workspace groups yet.";
 
   return (
-    <main className="mx-auto grid max-w-6xl items-start gap-6 px-4 py-8 lg:grid-cols-[280px_1fr]">
+    <main
+      className={`mx-auto grid items-start gap-6 px-4 py-8 ${
+        showPresencePanel
+          ? "max-w-7xl lg:grid-cols-[240px_minmax(0,1fr)_13.5rem]"
+          : "max-w-6xl lg:grid-cols-[280px_1fr]"
+      }`}
+    >
       <aside className="space-y-4 self-start">
         {dmRequests.length > 0 ? (
           <div className="tide-panel p-4">
@@ -587,7 +661,7 @@ export default async function ChatPage({
           <>
             <MarkChatSeen groupId={active.id} />
             <div className="flex shrink-0 items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <AppLink
                   href={listHref(listKindForGroup(active))}
                   className="inline-flex items-center gap-1 text-sm text-[#0A3D45]/60 hover:underline"
@@ -601,16 +675,11 @@ export default async function ChatPage({
                     : active.name}
                 </h1>
                 <p className="text-xs text-[#0A3D45]/55">
-                  {active.members.map((m) => personLabel(m.user)).join(", ")}
+                  {active.isDirect
+                    ? active.members.map((m) => personLabel(m.user)).join(", ")
+                    : `${active.members.length} member${active.members.length === 1 ? "" : "s"}`}
                   {active.closedAt ? " · closed" : ""}
                 </p>
-                <ChatPresenceStrip
-                  groupId={active.id}
-                  memberUsernames={active.members.map((m) => ({
-                    userId: m.user.id,
-                    username: m.user.username,
-                  }))}
-                />
               </div>
               <ChatRowMenu
                 groupId={active.id}
@@ -643,8 +712,8 @@ export default async function ChatPage({
               />
             </div>
             {active.closedAt ? (
-              <>
-                <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto">
+              <div className="mt-4 flex min-h-0 flex-1 flex-col">
+                <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
                   {threadMessages.map((msg) => (
                     <div key={msg.id} className="text-sm">
                       <span className="font-semibold text-[#0A3D45]">
@@ -657,16 +726,18 @@ export default async function ChatPage({
                     </div>
                   ))}
                   {threadMessages.length === 0 ? (
-                    <p className="text-sm text-[#0A3D45]/55">No messages yet.</p>
+                    <p className="text-sm text-[#0A3D45]/55">
+                      No messages yet.
+                    </p>
                   ) : null}
                 </div>
                 <div className="mt-3 shrink-0 border-t border-[#0A3D45]/10 pt-3">
                   <p className="rounded-md bg-[#0A3D45]/[0.05] px-3 py-2 text-sm text-[#0A3D45]/70">
-                    This chat was closed. You can still read it, but messaging is
-                    off. Start a new DM with them to chat again.
+                    This chat was closed. You can still read it, but messaging
+                    is off. Start a new DM with them to chat again.
                   </p>
                 </div>
-              </>
+              </div>
             ) : myMembership ? (
               <ChatThreadView
                 groupId={active.id}
@@ -676,7 +747,9 @@ export default async function ChatPage({
                   body: msg.body,
                   createdAt: msg.createdAt.toISOString(),
                   senderLabel:
-                    msg.senderId === userId ? "You" : personLabel(msg.sender),
+                    msg.senderId === userId
+                      ? "You"
+                      : personLabel(msg.sender),
                   senderId: msg.senderId,
                 }))}
                 taskMap={taskMap}
@@ -687,11 +760,20 @@ export default async function ChatPage({
                   username: m.user.username,
                 }))}
                 notifyMode={myMembership.notifyMode}
+                showTypingLine={active.isDirect}
               />
             ) : null}
           </>
         ) : null}
       </section>
+
+      {showPresencePanel && active ? (
+        <ChatPresencePanel
+          groupId={active.id}
+          mode={active.workspaceId ? "workspace" : "friends"}
+          members={presenceMembers}
+        />
+      ) : null}
     </main>
   );
 }

@@ -184,12 +184,13 @@ export async function inviteMemberAction(
   });
 
   if (invitee) {
+    const inviteBody = `${personLabel(user)} invited you to “${workspace.name}” as ${role.toLowerCase()}.`;
     await prisma.notification.create({
       data: {
         userId: invitee.id,
         type: "WORKSPACE_INVITE",
         title: "Workspace invite",
-        body: `${personLabel(user)} invited you to “${workspace.name}” as ${role.toLowerCase()}.`,
+        body: inviteBody,
         meta: JSON.stringify({
           inviteId: invite.id,
           token: invite.token,
@@ -197,7 +198,12 @@ export async function inviteMemberAction(
         }),
       },
     });
-    await pushAlertInboxForUsers([invitee.id]);
+    await pushAlertInboxForUsers([invitee.id], {
+      title: "Workspace invite",
+      body: inviteBody,
+      url: "/app/notifications",
+      tag: `invite-${invite.id}`,
+    });
   }
 
   revalidatePath(`/app/w/${workspaceId}`);
@@ -421,17 +427,23 @@ export async function updateMemberRoleAction(
     select: { name: true },
   });
 
+  const roleBody = `You’re now ${role.toLowerCase()} in “${workspace?.name ?? "a workspace"}”.`;
   await prisma.notification.create({
     data: {
       userId: memberUserId,
       type: "ROLE_CHANGED",
       title: "Role updated",
-      body: `You’re now ${role.toLowerCase()} in “${workspace?.name ?? "a workspace"}”.`,
+      body: roleBody,
       meta: JSON.stringify({ workspaceId, role }),
     },
   });
 
-  await pushAlertInboxForUsers([memberUserId]);
+  await pushAlertInboxForUsers([memberUserId], {
+    title: "Role updated",
+    body: roleBody,
+    url: `/app/w/${workspaceId}`,
+    tag: `role-${workspaceId}`,
+  });
 
   revalidatePath("/app");
   revalidatePath(`/app/w/${workspaceId}`);

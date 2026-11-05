@@ -63,8 +63,29 @@ If the build says the connection URL is empty, the env vars were not applied to 
 | `npm run build` | Production build (no migrate) |
 | `npm run vercel-build` | Migrate, seed, and build (used on Vercel) |
 | `npm run db:seed` | Seed demo user + sample workspace |
+| `npm run prune:previews` | Delete oldest Vercel Preview deploys (keep 5) |
 | `npx prisma migrate deploy` | Apply migrations |
 | `npx prisma studio` | Browse data |
+
+### Prune Vercel Preview deployments
+
+Preview slots are limited (often ~8). The workflow **Prune Vercel previews** keeps the **5 newest** Preview deployments and deletes the rest, **oldest first**.
+
+1. Create a Vercel token: [vercel.com/account/tokens](https://vercel.com/account/tokens)
+2. GitHub repo → **Settings → Secrets and variables → Actions**, add:
+   - `VERCEL_TOKEN` (required)
+   - `VERCEL_PROJECT_ID` (recommended — Project Settings → General)
+   - `VERCEL_ORG_ID` (team id, if the project is under a team)
+3. Run **Actions → Prune Vercel previews → Run workflow** once to clear existing extras (`keep=5`).
+4. After that it also runs on each successful Preview deployment and on a 6-hour schedule.
+
+Local one-shot (same env vars):
+
+```bash
+PREVIEW_KEEP=5 npm run prune:previews
+# or dry-run:
+DRY_RUN=1 npm run prune:previews
+```
 
 ## Infra + Phase 1 monetization (payments, files, cron, SSO)
 

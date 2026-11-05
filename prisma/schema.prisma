@@ -120,6 +120,7 @@ model User {
   dmRequestsSent        DmRequest[]          @relation("DmFrom")
   dmRequestsReceived    DmRequest[]          @relation("DmTo")
   notifications         Notification[]
+  webPushSubscriptions  WebPushSubscription[]
   groupsCreated         ChatGroup[]          @relation("GroupCreator")
   workspaceRoleSeens    WorkspaceRoleSeen[]
   taskActivities        TaskActivity[]       @relation("TaskActivityActor")
@@ -155,14 +156,18 @@ model PasswordResetToken {
 }
 
 model EmailVerification {
-  id         String   @id @default(cuid())
-  userId     String
-  email      String
-  code       String
-  expiresAt  DateTime
-  attempts   Int      @default(0)
-  lastSentAt DateTime @default(now())
-  createdAt  DateTime @default(now())
+  id          String    @id @default(cuid())
+  userId      String
+  email       String
+  code        String
+  expiresAt   DateTime
+  attempts    Int       @default(0)
+  /** Successful resends after the first issue (not the initial send). */
+  resendCount Int       @default(0)
+  /** When set and in the future, verify + resend are blocked. */
+  lockedUntil DateTime?
+  lastSentAt  DateTime  @default(now())
+  createdAt   DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -172,19 +177,23 @@ model EmailVerification {
 
 /** Signup with email: account is created only after the code is verified. */
 model PendingSignup {
-  id             String   @id @default(cuid())
-  username       String   @unique
+  id             String    @id @default(cuid())
+  username       String    @unique
   passwordHash   String
   email          String
   /** Optional display nickname applied when the account is created. */
   nickname       String?
   code           String
-  attempts       Int      @default(0)
+  attempts       Int       @default(0)
+  /** Successful resends after the first issue (not the initial send). */
+  resendCount    Int       @default(0)
+  /** When set and in the future, verify + resend are blocked. */
+  lockedUntil    DateTime?
   /** Parsed by parseSignInDuration — session | 7 | 30 | 180 | 365 | forever */
-  signInDuration String   @default("session")
+  signInDuration String    @default("session")
   expiresAt      DateTime
-  lastSentAt     DateTime @default(now())
-  createdAt      DateTime @default(now())
+  lastSentAt     DateTime  @default(now())
+  createdAt      DateTime  @default(now())
 
   @@index([email])
 }
@@ -390,6 +399,8 @@ model Task {
   assigneeId        String?
   createdById       String
   completionComment String?
+  /** Set when status becomes DONE; cleared if sent back. */
+  completedAt       DateTime?
   claimedAt         DateTime?
   lastUnclaimReason String?
   lastUnclaimWorkNote String?
@@ -735,6 +746,36 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
+}
+
+/** Browser Web Push subscription (Chrome/Android + iOS Home Screen PWA). */
+model WebPushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/**
+ * Optional VAPID override (singleton). Used when Vercel env public/private
+ * keys don’t match — sends fail with 403 and no device gets lock-screen alerts.
+ * Prefer fixing Vercel; this lets an owner repair without a redeploy.
+ */
+model WebPushVapidConfig {
+  id         String   @id @default("default")
+  publicKey  String
+  privateKey String
+  subject    String   @default("mailto:noreply@rowgon.com")
+  updatedAt  DateTime @updatedAt
+  updatedById String?
 }
 
 /**

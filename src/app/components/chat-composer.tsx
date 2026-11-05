@@ -11,7 +11,10 @@ import {
   setChatNotifyModeAction,
   setTypingAction,
 } from "@/app/actions/social";
-import { ChatTypingLine } from "@/app/components/chat-presence";
+import {
+  ChatTypingLine,
+  setLocalChatTyping,
+} from "@/app/components/chat-presence";
 import { highlightMessageParts, type TaskLinkInfo } from "@/lib/task-links";
 
 export type OptimisticThreadMessage = {
@@ -86,6 +89,7 @@ export function ChatComposer({
   memberUsernames = [],
   notifyMode,
   currentUserId,
+  showTypingLine = true,
   onOptimisticAppend,
   onOptimisticConfirm,
   onOptimisticFail,
@@ -96,6 +100,8 @@ export function ChatComposer({
   memberUsernames?: { userId: string; username: string }[];
   notifyMode: "ALL" | "MENTIONS" | "MUTE";
   currentUserId?: string;
+  /** When false, typing lives in the members panel instead. */
+  showTypingLine?: boolean;
   onOptimisticAppend?: (msg: OptimisticThreadMessage) => void;
   onOptimisticConfirm?: (
     tempId: string,
@@ -169,13 +175,16 @@ export function ChatComposer({
       const now = Date.now();
       if (now - lastTypingSent.current > 2000) {
         lastTypingSent.current = now;
+        setLocalChatTyping(groupId, true);
         void setTypingAction(groupId);
       }
       if (typingTimer.current) window.clearTimeout(typingTimer.current);
       typingTimer.current = window.setTimeout(() => {
+        setLocalChatTyping(groupId, false);
         void clearTypingAction(groupId);
       }, 3500);
     } else {
+      setLocalChatTyping(groupId, false);
       void clearTypingAction(groupId);
     }
   }
@@ -183,6 +192,7 @@ export function ChatComposer({
   useEffect(() => {
     return () => {
       if (typingTimer.current) window.clearTimeout(typingTimer.current);
+      setLocalChatTyping(groupId, false);
       void clearTypingAction(groupId);
     };
   }, [groupId]);
@@ -214,6 +224,7 @@ export function ChatComposer({
     setSendError(null);
     setBody("");
     setPicker(null);
+    setLocalChatTyping(groupId, false);
     void clearTypingAction(groupId);
 
     onOptimisticAppend?.({
@@ -264,7 +275,9 @@ export function ChatComposer({
 
   return (
     <div className="mt-4 space-y-2">
-      <ChatTypingLine groupId={groupId} memberUsernames={memberUsernames} />
+      {showTypingLine ? (
+        <ChatTypingLine groupId={groupId} memberUsernames={memberUsernames} />
+      ) : null}
       <form
         onSubmit={onSubmit}
         className="relative flex flex-col gap-2 sm:flex-row sm:items-end"

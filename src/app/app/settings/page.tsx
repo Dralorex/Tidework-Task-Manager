@@ -2,9 +2,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { DisplayThemeSettings } from "@/app/components/display-theme-settings";
 import { InterfaceSettings } from "@/app/components/interface-settings";
+import { WebPushSettings } from "@/app/components/web-push-settings";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { parsePersonalInterfacePrefs } from "@/lib/interface-prefs";
+import { getWebPushVapidStatus } from "@/lib/web-push-server";
 import { THEME_COOKIE, LEGACY_THEME_COOKIE, THEME_MIGRATION_COOKIE, parseDisplayTheme } from "@/lib/theme";
 import { AppLink } from "@/app/components/app-link";
 
@@ -18,13 +20,17 @@ export default async function SettingsPage() {
     { migratedV2: cookieStore.get(THEME_MIGRATION_COOKIE)?.value === "1" },
   );
 
-  const prefsRow = await prisma.user.findUniqueOrThrow({
-    where: { id: user.id },
-    select: {
-      interfacePrefsJson: true,
-      showInterfaceTogglesInWorkspace: true,
-    },
-  });
+  const [prefsRow, pushSubCount, vapid] = await Promise.all([
+    prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: {
+        interfacePrefsJson: true,
+        showInterfaceTogglesInWorkspace: true,
+      },
+    }),
+    prisma.webPushSubscription.count({ where: { userId: user.id } }),
+    getWebPushVapidStatus(),
+  ]);
 
   return (
     <main className="mx-auto max-w-lg px-4 py-10">
@@ -44,6 +50,14 @@ export default async function SettingsPage() {
       </p>
 
       <div className="mt-8 space-y-4">
+        <WebPushSettings
+          initialServerSubscriptionCount={pushSubCount}
+          initialConfigured={vapid.configured}
+          initialPairValid={vapid.pairValid}
+          initialPublicKey={vapid.publicKey ?? ""}
+          initialSource={vapid.source}
+        />
+
         <InterfaceSettings
           prefs={parsePersonalInterfacePrefs(prefsRow.interfacePrefsJson)}
           showTogglesInWorkspace={prefsRow.showInterfaceTogglesInWorkspace}

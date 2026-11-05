@@ -11,10 +11,11 @@ import {
   pushChatMessageForUsers,
   pushRefreshForUsers,
 } from "@/lib/ably-server";
+import { sendWebPushMessages, sendWebPushToUsers } from "@/lib/web-push-server";
 import { handleBirthdayOnFriendship } from "@/lib/birthday";
+import { chatThreadHref } from "@/lib/chat-deep-link";
 import type { ChatMessageEvent } from "@/lib/chat-message-events";
 import { derivePresence } from "@/lib/chat-presence";
-import { publishChatPresence } from "@/lib/chat-presence-bus";
 import { prisma } from "@/lib/db";
 import { OPEN_THREAD_MS, parseMentions } from "@/lib/mentions";
 import {
@@ -79,12 +80,13 @@ export async function sendFriendRequestAction(
     });
   }
 
+  const friendReqBody = `${personLabel(user)} wants to be friends on Rowgon.`;
   await prisma.notification.create({
     data: {
       userId: other.id,
       type: "FRIEND_REQUEST",
       title: "Friend request",
-      body: `${personLabel(user)} wants to be friends on Rowgon.`,
+      body: friendReqBody,
       meta: JSON.stringify({
         fromUserId: user.id,
         friendshipId: friendship.id,
@@ -92,7 +94,12 @@ export async function sendFriendRequestAction(
     },
   });
 
-  await pushAlertInboxForUsers([other.id]);
+  await pushAlertInboxForUsers([other.id], {
+    title: "Friend request",
+    body: friendReqBody,
+    url: "/app/notifications",
+    tag: `friend-req-${friendship.id}`,
+  });
 
   revalidatePath("/app/social");
   revalidatePath("/app/notifications");
@@ -121,12 +128,13 @@ export async function respondFriendRequestAction(
   });
 
   if (accept) {
+    const acceptedBody = `${personLabel(user)} accepted your friend request.`;
     await prisma.notification.create({
       data: {
         userId: friendship.requesterId,
         type: "FRIEND_ACCEPTED",
         title: "Friend request accepted",
-        body: `${personLabel(user)} accepted your friend request.`,
+        body: acceptedBody,
         meta: JSON.stringify({
           friendshipId,
           friendUserId: user.id,
@@ -137,6 +145,12 @@ export async function respondFriendRequestAction(
       friendship.requesterId,
       friendship.addresseeId,
     );
+    await pushAlertInboxForUsers([friendship.requesterId], {
+      title: "Friend request accepted",
+      body: acceptedBody,
+      url: "/app/social",
+      tag: `friend-ok-${friendshipId}`,
+    });
   }
 
   await prisma.notification.updateMany({
@@ -148,9 +162,7 @@ export async function respondFriendRequestAction(
     data: { read: true },
   });
 
-  await pushAlertInboxForUsers(
-    accept ? [friendship.requesterId, user.id] : [user.id],
-  );
+  await pushAlertInboxForUsers([user.id]);
 
   revalidatePath("/app/social");
   revalidatePath("/app/chat");
@@ -224,18 +236,27 @@ async function openOrMessageDirect(
   }
 
   if (firstMessage) {
+    const dmTitle = `Message from ${personLabel(user)}`;
+    const dmBody = firstMessage.slice(0, 140);
     await prisma.notification.create({
       data: {
         userId: other.id,
         type: "CHAT_MESSAGE",
-        title: `Message from ${personLabel(user)}`,
-        body: firstMessage.slice(0, 140),
+        title: dmTitle,
+        body: dmBody,
         meta: JSON.stringify({ groupId, fromUserId: user.id }),
       },
     });
     await Promise.all([
       pushBadgesForUsers([other.id]),
       pushRefreshForUsers([other.id, user.id], ["/app/chat"]),
+      sendWebPushToUsers([other.id], {
+        title: dmTitle,
+        body: dmBody,
+        url: chatThreadHref({ groupId, isDirect: true }),
+        tag: `chat-${groupId}`,
+        urgency: "high",
+      }),
     ]);
   }
 
@@ -296,12 +317,13 @@ export async function requestWorkspaceDmAction(
     },
   });
 
+  const dmReqBody = `${personLabel(user)}: ${firstMessage}`;
   await prisma.notification.create({
     data: {
       userId: other.id,
       type: "DM_REQUEST",
       title: "Chat request",
-      body: `${personLabel(user)}: ${firstMessage}`,
+      body: dmReqBody,
       meta: JSON.stringify({
         fromUserId: user.id,
         requestId: dmRequest.id,
@@ -312,6 +334,13 @@ export async function requestWorkspaceDmAction(
   await Promise.all([
     pushBadgesForUsers([other.id]),
     pushRefreshForUsers([other.id], ["/app/chat"]),
+    sendWebPushToUsers([other.id], {
+      title: "Chat request",
+      body: dmReqBody,
+      url: "/app/chat?tab=dms",
+      tag: `dm-req-${dmRequest.id}`,
+      urgency: "high",
+    }),
   ]);
 
   revalidatePath("/app/chat");
@@ -604,7 +633,7 @@ export async function sendMessageAction(
   }
 
   const nowDate = new Date();
-  // Clear typing + mark seen; don't block return on presence bus.
+  // Clear typing + mark seen on Neon; Ably typing cleared client-side on send.
   const clearTyping = prisma.chatMember.update({
     where: { id: member.id },
     data: {
@@ -732,21 +761,33 @@ export async function sendMessageAction(
     .map((m) => m.userId)
     .filter((id) => id !== user.id);
 
-  // Fan-out after the response — keep send path to auth + insert.
+  // Live delivery first (before notifications). Clients dedupe by message id.
+  // Keep this inside after() so serverless doesn't freeze the isolate early,
+  // but run Ably push before slower notification writes.
   after(async () => {
     try {
+      await pushChatMessageForUsers(otherMemberIds, payload);
+
       const now = Date.now();
       const preview = body.length > 120 ? `${body.slice(0, 117)}…` : body;
       const titlePrefix = group.isDirect
         ? `Message from ${personLabel(user)}`
         : `${group.name}: ${personLabel(user)}`;
 
+      // In-app inbox rows skip when the thread is open on screen.
+      // Web push does NOT — leftover lastActiveAt (force-quit PWA, missed
+      // pagehide) must not block lock-screen alerts. Mute / Mentions still apply.
       const notificationRows: {
         userId: string;
         type: "CHAT_MENTION" | "CHAT_MESSAGE";
         title: string;
         body: string;
         meta: string;
+      }[] = [];
+      const webPushRows: {
+        userId: string;
+        title: string;
+        body: string;
       }[] = [];
 
       for (const m of chatMembers) {
@@ -757,18 +798,23 @@ export async function sendMessageAction(
         if (mode === "MUTE") continue;
         if (mode === "MENTIONS" && !mentioned) continue;
 
-        const lastOpen = m.lastSeenAt ?? m.lastActiveAt;
-        if (lastOpen && now - lastOpen.getTime() < OPEN_THREAD_MS) {
-          continue;
-        }
+        const title = mentioned ? "Mentioned in chat" : titlePrefix;
+        const rowBody = mentioned
+          ? `${personLabel(user)} in ${group.name}: ${preview}`
+          : preview;
+
+        webPushRows.push({ userId: m.userId, title, body: rowBody });
+
+        const threadOpen =
+          m.lastActiveAt != null &&
+          now - m.lastActiveAt.getTime() < OPEN_THREAD_MS;
+        if (threadOpen) continue;
 
         notificationRows.push({
           userId: m.userId,
           type: mentioned ? "CHAT_MENTION" : "CHAT_MESSAGE",
-          title: mentioned ? "Mentioned in chat" : titlePrefix,
-          body: mentioned
-            ? `${personLabel(user)} in ${group.name}: ${preview}`
-            : preview,
+          title,
+          body: rowBody,
           meta: JSON.stringify({
             groupId,
             messageId: message.id,
@@ -783,17 +829,31 @@ export async function sendMessageAction(
       }
 
       const notified = notificationRows.map((n) => n.userId);
+      const pushUrl = chatThreadHref({
+        groupId,
+        isDirect: group.isDirect,
+        workspaceId: group.workspaceId,
+      });
 
-      // chat:message already dispatches list refresh on clients; skip full
-      // `refresh` + getNavBadgeCounts recount on the hot send path.
       await Promise.all([
-        pushChatMessageForUsers(otherMemberIds, payload),
         notified.length > 0
           ? pushBadgeDeltaForUsers(notified, { chatUnreadDelta: 1 })
           : Promise.resolve(),
+        webPushRows.length > 0
+          ? sendWebPushMessages(
+              webPushRows.map((n) => ({
+                userId: n.userId,
+                payload: {
+                  title: n.title,
+                  body: n.body,
+                  url: pushUrl,
+                  tag: `chat-${groupId}`,
+                  urgency: "high" as const,
+                },
+              })),
+            )
+          : Promise.resolve(),
       ]);
-
-      publishChatPresence(groupId);
     } catch (err) {
       console.error("[chat] send fan-out failed", err);
     }
@@ -1076,9 +1136,11 @@ export async function markChatNotificationsReadAction(
   if (!member) return;
 
   const seenAt = new Date();
+  // lastSeenAt = read receipts / “seen”. Do NOT set lastActiveAt here — that
+  // flag suppresses web push and must only be set by the full Chat page pulse.
   await prisma.chatMember.update({
     where: { id: member.id },
-    data: { lastActiveAt: seenAt, lastSeenAt: seenAt },
+    data: { lastSeenAt: seenAt },
   });
 
   await prisma.notification.updateMany({
@@ -1105,7 +1167,7 @@ export async function pulseChatPresenceAction(groupId: string): Promise<void> {
     where: { groupId, userId: user.id },
     data: { lastActiveAt: now, lastSeenAt: now },
   });
-  publishChatPresence(groupId);
+  // Live online/typing fan-out is Ably Presence on the browser connection.
 }
 
 /** Clear presence when leaving a thread so list/hub tabs still get notifications. */
@@ -1114,9 +1176,25 @@ export async function clearChatPresenceAction(groupId: string): Promise<void> {
   if (!groupId) return;
   await prisma.chatMember.updateMany({
     where: { groupId, userId: user.id },
-    data: { lastActiveAt: null },
+    // Null active so OPEN_THREAD skip ends immediately; keep lastSeenAt for read state.
+    data: { lastActiveAt: null, typingAt: null },
   });
-  publishChatPresence(groupId);
+  // Ably Presence leave runs in the client (chat-presence / connection close).
+}
+
+/**
+ * Clear “thread open” on every chat membership. Used when the user is on
+ * Workspaces / Settings / etc. so leftover lastActiveAt can’t block web push.
+ */
+export async function clearAllOpenChatPresenceAction(): Promise<void> {
+  const user = await requireUser();
+  await prisma.chatMember.updateMany({
+    where: {
+      userId: user.id,
+      OR: [{ lastActiveAt: { not: null } }, { typingAt: { not: null } }],
+    },
+    data: { lastActiveAt: null, typingAt: null },
+  });
 }
 
 export async function setChatNotifyModeAction(
@@ -1160,7 +1238,8 @@ export async function touchChatSeenAction(
   const [, cleared] = await Promise.all([
     prisma.chatMember.update({
       where: { id: member.id },
-      data: { lastSeenAt: now, lastActiveAt: now },
+      // Read receipts only — never open-thread suppress via this path.
+      data: { lastSeenAt: now },
     }),
     prisma.notification.updateMany({
       where: {
@@ -1177,7 +1256,6 @@ export async function touchChatSeenAction(
     if (cleared.count > 0) {
       await pushBadgesForUsers([user.id]);
     }
-    publishChatPresence(groupId);
   });
 
   return { ok: true };
@@ -1191,11 +1269,13 @@ export async function setTypingAction(groupId: string): Promise<ActionResult> {
   if (!member) return { ok: false, error: "You’re not in this chat." };
 
   const now = new Date();
+  // Do not set lastActiveAt here — that flag is only for the open-thread
+  // heartbeat (pulseChatPresence). Typing alone must not suppress alerts.
   await prisma.chatMember.update({
     where: { id: member.id },
-    data: { typingAt: now, lastSeenAt: now, lastActiveAt: now },
+    data: { typingAt: now, lastSeenAt: now },
   });
-  publishChatPresence(groupId);
+  // Live typing fan-out: client setLocalChatTyping → Ably Presence update.
   return { ok: true };
 }
 
@@ -1210,7 +1290,6 @@ export async function clearTypingAction(groupId: string): Promise<ActionResult> 
     where: { id: member.id },
     data: { typingAt: null },
   });
-  publishChatPresence(groupId);
   return { ok: true };
 }
 
@@ -1237,6 +1316,58 @@ export async function fetchChatPresence(groupId: string) {
   );
 
   return { ok: true as const, presence, selfId: user.id };
+}
+
+/** Lightweight poll for open threads when Ably is down / reconnecting. */
+export async function fetchChatMessagesSinceAction(
+  groupId: string,
+  afterCreatedAt?: string | null,
+) {
+  const user = await requireUser();
+  if (!groupId) return { ok: false as const, error: "Missing chat." };
+
+  const member = await prisma.chatMember.findUnique({
+    where: { groupId_userId: { groupId, userId: user.id } },
+    select: { id: true },
+  });
+  if (!member) return { ok: false as const, error: "You’re not in this chat." };
+
+  const afterDate =
+    afterCreatedAt && !Number.isNaN(Date.parse(afterCreatedAt))
+      ? new Date(afterCreatedAt)
+      : null;
+
+  const rows = await prisma.message.findMany({
+    where: {
+      groupId,
+      ...(afterDate ? { createdAt: { gt: afterDate } } : {}),
+    },
+    orderBy: { createdAt: "asc" },
+    take: afterDate ? 50 : 40,
+    include: {
+      sender: {
+        select: {
+          id: true,
+          username: true,
+          nickname: true,
+          deletedAt: true,
+          deletedUsername: true,
+        },
+      },
+    },
+  });
+
+  return {
+    ok: true as const,
+    messages: rows.map((msg) => ({
+      id: msg.id,
+      body: msg.body,
+      createdAt: msg.createdAt.toISOString(),
+      senderId: msg.senderId,
+      senderLabel:
+        msg.senderId === user.id ? "You" : personLabel(msg.sender),
+    })),
+  };
 }
 
 export async function updateFriendProfileAction(
