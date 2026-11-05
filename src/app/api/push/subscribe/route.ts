@@ -11,9 +11,13 @@ type Body = {
 };
 
 export async function POST(request: Request) {
-  if (!isWebPushConfigured()) {
+  if (!(await isWebPushConfigured())) {
     return NextResponse.json(
-      { ok: false, error: "Web push is not configured." },
+      {
+        ok: false,
+        error:
+          "Web push isn’t configured (missing or mismatched VAPID keys). Fix keys in Settings or Vercel.",
+      },
       { status: 503 },
     );
   }
