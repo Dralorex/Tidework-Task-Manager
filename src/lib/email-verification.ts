@@ -42,6 +42,7 @@ export async function issueEmailVerification(opts: {
 
   // Persist the pending code first; only bump lastSentAt after a successful send
   // so a Resend failure doesn’t start the 30s cooldown.
+  // New codes always reset the guess counter so resend recovers from near-lockout.
   await prisma.emailVerification.upsert({
     where: { userId: opts.userId },
     create: {
@@ -49,12 +50,14 @@ export async function issueEmailVerification(opts: {
       email,
       code,
       expiresAt,
+      attempts: 0,
       lastSentAt: existing?.lastSentAt ?? new Date(0),
     },
     update: {
       email,
       code,
       expiresAt,
+      attempts: 0,
     },
   });
 
@@ -120,6 +123,7 @@ export async function issuePendingSignup(opts: {
   const nickname =
     opts.nickname !== undefined ? opts.nickname : existing?.nickname ?? null;
 
+  // Issuing a new code (including resend) resets the guess counter.
   const pending = existing
     ? await prisma.pendingSignup.update({
         where: { id: existing.id },
@@ -129,6 +133,7 @@ export async function issuePendingSignup(opts: {
           nickname,
           code,
           expiresAt,
+          attempts: 0,
           ...(opts.signInDuration?.trim()
             ? { signInDuration: opts.signInDuration.trim() }
             : {}),
@@ -142,6 +147,7 @@ export async function issuePendingSignup(opts: {
           nickname,
           code,
           expiresAt,
+          attempts: 0,
           signInDuration,
           lastSentAt: new Date(0),
         },

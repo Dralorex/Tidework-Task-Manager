@@ -68,7 +68,18 @@ export async function confirmAccountDeletionAction(
   if (pending.expiresAt < new Date()) {
     return { ok: false, error: "That code expired. Resend a new one." };
   }
+  if (pending.attempts >= 5) {
+    await prisma.emailVerification.delete({ where: { id: pending.id } });
+    return {
+      ok: false,
+      error: "Too many incorrect attempts. Request a new deletion code.",
+    };
+  }
   if (pending.code !== code) {
+    await prisma.emailVerification.update({
+      where: { id: pending.id },
+      data: { attempts: { increment: 1 } },
+    });
     return { ok: false, error: "That code doesn’t match. Try again." };
   }
 
