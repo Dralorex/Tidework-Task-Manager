@@ -59,6 +59,7 @@ export type WorkspaceTaskData = {
   status: TaskStatus;
   dueDate: Date | null;
   createdAt: Date;
+  completedAt: Date | null;
   folderId: string;
   assigneeId: string | null;
   completionComment: string | null;
@@ -536,6 +537,10 @@ export function WorkspaceTaskRow({
   const [historyOpen, setHistoryOpen] = useState(false);
   const checklist = task.checklistItems ?? [];
   const activities = task.activities ?? [];
+  const isDone = task.status === "DONE";
+  const completedLabel = task.completedAt
+    ? `Completed ${format(task.completedAt, "MMM d, yyyy")}`
+    : "Completed";
   const { blink } = useWorkspaceOnboarding();
   const highlightTaskMenu = canEdit && blink("task-menu");
 
@@ -623,11 +628,24 @@ export function WorkspaceTaskRow({
             <h3 className="min-w-0 break-words text-lg font-semibold text-[#0A3D45]">
               {task.name}
             </h3>
-            <UrgencyChips
-              priority={task.priority}
-              dueDate={task.dueDate}
-              prefs={urgencyChips}
-            />
+            {isDone ? (
+              <span
+                className="urgency-chip urgency-chip-neutral rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
+                title={
+                  task.completedAt
+                    ? format(task.completedAt, "MMM d, yyyy · h:mm a")
+                    : undefined
+                }
+              >
+                {completedLabel}
+              </span>
+            ) : (
+              <UrgencyChips
+                priority={task.priority}
+                dueDate={task.dueDate}
+                prefs={urgencyChips}
+              />
+            )}
             {showRecurrenceChip && task.recurrenceCadence ? (
               <span className="rounded-md bg-[#1a7a82]/12 px-2 py-0.5 text-[11px] font-semibold capitalize text-[#0A3D45]/75">
                 ↻ {task.recurrenceCadence}
@@ -668,6 +686,15 @@ export function WorkspaceTaskRow({
 
           {expanded ? (
             <>
+              {isDone ? (
+                <div className="mt-2">
+                  <UrgencyChips
+                    priority={task.priority}
+                    dueDate={task.dueDate}
+                    prefs={urgencyChips}
+                  />
+                </div>
+              ) : null}
               {isRoot && task.folder ? (
                 <p className="mt-2 text-xs text-[#0A3D45]/55">
                   In{" "}

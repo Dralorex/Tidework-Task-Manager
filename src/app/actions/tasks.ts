@@ -1200,6 +1200,7 @@ export async function reviewTaskAction(
     data: {
       status: decision === "approve" ? "DONE" : "CLAIMED",
       completionComment: decision === "approve" ? task.completionComment : null,
+      completedAt: decision === "approve" ? new Date() : null,
       lastSendBackReason: decision === "reopen" ? reason : null,
       lastSentBackById: decision === "reopen" ? user.id : null,
     },

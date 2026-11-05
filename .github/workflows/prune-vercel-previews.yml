@@ -1,0 +1,44 @@
+# Keep ≤5 Vercel Preview deployments (delete oldest first) so preview slots
+# stay under the usual ~8 cap.
+name: Prune Vercel previews
+
+on:
+  # After any deployment finishes — free a slot when a new preview lands.
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: "How many newest previews to keep"
+        required: false
+        default: "5"
+      dry_run:
+        description: "Set to 1 to only print deletions"
+        required: false
+        default: "0"
+  schedule:
+    # Safety net if deployment_status is missed
+    - cron: "15 */6 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  prune:
+    if: >
+      github.event_name != 'deployment_status' ||
+      (github.event.deployment_status.state == 'success' &&
+       github.event.deployment.environment == 'Preview')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prune oldest preview deployments
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_NAME: ${{ vars.VERCEL_PROJECT_NAME || 'rowgon-task-manager' }}
+          PREVIEW_KEEP: ${{ github.event.inputs.keep || '5' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
+        run: node scripts/prune-vercel-previews.mjs
