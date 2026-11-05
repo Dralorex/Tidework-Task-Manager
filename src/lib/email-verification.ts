@@ -1,13 +1,181 @@
 import { prisma } from "@/lib/db";
-import { emailVerificationCodeEmail } from "@/lib/email-templates";
+import {
+  emailCodeLockAlertEmail,
+  emailVerificationCodeEmail,
+} from "@/lib/email-templates";
 import { sendEmail } from "@/lib/mail";
 import { randomInt } from "crypto";
 
 export const EMAIL_CODE_TTL_MS = 1000 * 60 * 15;
 export const EMAIL_RESEND_COOLDOWN_MS = 1000 * 30;
+/** Hard ceiling — record is cleared after this many wrong guesses. */
+export const EMAIL_CODE_MAX_ATTEMPTS = 5;
+/** Soft lock one before max (4 of 5). */
+export const EMAIL_CODE_SOFT_LOCK_ATTEMPTS = EMAIL_CODE_MAX_ATTEMPTS - 1;
+/** Lock after this many successful resends (not counting the first issue). */
+export const EMAIL_CODE_RESEND_LOCK_COUNT = 3;
+export const EMAIL_CODE_LOCK_MS = 1000 * 60 * 10;
+export const EMAIL_CODE_LOCK_MINUTES = 10;
 
 export function generateEmailCode() {
   return String(randomInt(0, 1_000_000)).padStart(6, "0");
+}
+
+export type CodeLockBlock = {
+  ok: false;
+  error: string;
+  retryAfterSec: number;
+};
+
+export function activeLockRetryAfterSec(
+  lockedUntil: Date | null | undefined,
+): number | null {
+  if (!lockedUntil) return null;
+  const waitMs = lockedUntil.getTime() - Date.now();
+  if (waitMs <= 0) return null;
+  return Math.max(1, Math.ceil(waitMs / 1000));
+}
+
+export function codeLockBlock(lockedUntil: Date): CodeLockBlock {
+  const retryAfterSec =
+    activeLockRetryAfterSec(lockedUntil) ?? EMAIL_CODE_LOCK_MINUTES * 60;
+  return {
+    ok: false,
+    error: `Verification is locked. Try again in ${Math.ceil(retryAfterSec / 60)} min.`,
+    retryAfterSec,
+  };
+}
+
+async function notifyCodeLock(opts: {
+  email: string;
+  username: string;
+  reason: "attempts" | "resends";
+}) {
+  const content = emailCodeLockAlertEmail({
+    username: opts.username,
+    reason: opts.reason,
+    lockMinutes: EMAIL_CODE_LOCK_MINUTES,
+  });
+  try {
+    await sendEmail({
+      to: opts.email,
+      subject: content.subject,
+      html: content.html,
+      text: content.text,
+    });
+  } catch (err) {
+    console.error("[rowgon:email-code-lock]", err);
+  }
+}
+
+/** Apply a 10-minute lock (idempotent while already locked) and alert the email. */
+export async function lockPendingSignup(opts: {
+  id: string;
+  email: string;
+  username: string;
+  reason: "attempts" | "resends";
+  currentLockedUntil?: Date | null;
+}): Promise<Date> {
+  const existingRetry = activeLockRetryAfterSec(opts.currentLockedUntil);
+  if (existingRetry && opts.currentLockedUntil) {
+    return opts.currentLockedUntil;
+  }
+  const lockedUntil = new Date(Date.now() + EMAIL_CODE_LOCK_MS);
+  await prisma.pendingSignup.update({
+    where: { id: opts.id },
+    data: { lockedUntil },
+  });
+  await notifyCodeLock({
+    email: opts.email,
+    username: opts.username,
+    reason: opts.reason,
+  });
+  return lockedUntil;
+}
+
+export async function lockEmailVerification(opts: {
+  id: string;
+  userId: string;
+  email: string;
+  username: string;
+  reason: "attempts" | "resends";
+  currentLockedUntil?: Date | null;
+}): Promise<Date> {
+  const existingRetry = activeLockRetryAfterSec(opts.currentLockedUntil);
+  if (existingRetry && opts.currentLockedUntil) {
+    return opts.currentLockedUntil;
+  }
+  const lockedUntil = new Date(Date.now() + EMAIL_CODE_LOCK_MS);
+  await prisma.emailVerification.update({
+    where: { id: opts.id },
+    data: { lockedUntil },
+  });
+  await notifyCodeLock({
+    email: opts.email,
+    username: opts.username,
+    reason: opts.reason,
+  });
+  return lockedUntil;
+}
+
+/**
+ * Record a wrong guess. Soft-locks at 4 attempts (1 before max) and emails
+ * the connected address. Returns the updated attempt count + optional lock.
+ */
+export async function registerPendingSignupFailedAttempt(opts: {
+  id: string;
+  email: string;
+  username: string;
+  lockedUntil?: Date | null;
+}): Promise<{ attempts: number; lockedUntil: Date | null; lockBlock?: CodeLockBlock }> {
+  const updated = await prisma.pendingSignup.update({
+    where: { id: opts.id },
+    data: { attempts: { increment: 1 } },
+  });
+  if (updated.attempts >= EMAIL_CODE_SOFT_LOCK_ATTEMPTS) {
+    const lockedUntil = await lockPendingSignup({
+      id: opts.id,
+      email: opts.email,
+      username: opts.username,
+      reason: "attempts",
+      currentLockedUntil: opts.lockedUntil ?? updated.lockedUntil,
+    });
+    return {
+      attempts: updated.attempts,
+      lockedUntil,
+      lockBlock: codeLockBlock(lockedUntil),
+    };
+  }
+  return { attempts: updated.attempts, lockedUntil: updated.lockedUntil };
+}
+
+export async function registerEmailVerificationFailedAttempt(opts: {
+  id: string;
+  userId: string;
+  email: string;
+  username: string;
+  lockedUntil?: Date | null;
+}): Promise<{ attempts: number; lockedUntil: Date | null; lockBlock?: CodeLockBlock }> {
+  const updated = await prisma.emailVerification.update({
+    where: { id: opts.id },
+    data: { attempts: { increment: 1 } },
+  });
+  if (updated.attempts >= EMAIL_CODE_SOFT_LOCK_ATTEMPTS) {
+    const lockedUntil = await lockEmailVerification({
+      id: opts.id,
+      userId: opts.userId,
+      email: opts.email,
+      username: opts.username,
+      reason: "attempts",
+      currentLockedUntil: opts.lockedUntil ?? updated.lockedUntil,
+    });
+    return {
+      attempts: updated.attempts,
+      lockedUntil,
+      lockBlock: codeLockBlock(lockedUntil),
+    };
+  }
+  return { attempts: updated.attempts, lockedUntil: updated.lockedUntil };
 }
 
 export async function issueEmailVerification(opts: {
@@ -24,6 +192,11 @@ export async function issueEmailVerification(opts: {
     where: { userId: opts.userId },
   });
 
+  const lockRetry = activeLockRetryAfterSec(existing?.lockedUntil);
+  if (lockRetry && existing?.lockedUntil) {
+    return codeLockBlock(existing.lockedUntil);
+  }
+
   if (existing && opts.forceResend) {
     const waitMs =
       EMAIL_RESEND_COOLDOWN_MS - (Date.now() - existing.lastSentAt.getTime());
@@ -39,6 +212,8 @@ export async function issueEmailVerification(opts: {
   const code = generateEmailCode();
   const expiresAt = new Date(Date.now() + EMAIL_CODE_TTL_MS);
   const now = new Date();
+  const nextResendCount =
+    existing && opts.forceResend ? existing.resendCount + 1 : 0;
 
   // Persist the pending code first; only bump lastSentAt after a successful send
   // so a Resend failure doesn’t start the 30s cooldown.
@@ -51,6 +226,8 @@ export async function issueEmailVerification(opts: {
       code,
       expiresAt,
       attempts: 0,
+      resendCount: 0,
+      lockedUntil: null,
       lastSentAt: existing?.lastSentAt ?? new Date(0),
     },
     update: {
@@ -58,6 +235,9 @@ export async function issueEmailVerification(opts: {
       code,
       expiresAt,
       attempts: 0,
+      resendCount: nextResendCount,
+      // Clear an expired lock when issuing a fresh code after the window.
+      lockedUntil: null,
     },
   });
 
@@ -77,10 +257,21 @@ export async function issueEmailVerification(opts: {
     return { ok: false, error: sent.error };
   }
 
-  await prisma.emailVerification.update({
+  const row = await prisma.emailVerification.update({
     where: { userId: opts.userId },
     data: { lastSentAt: now },
   });
+
+  if (nextResendCount >= EMAIL_CODE_RESEND_LOCK_COUNT) {
+    await lockEmailVerification({
+      id: row.id,
+      userId: opts.userId,
+      email,
+      username: opts.username,
+      reason: "resends",
+      currentLockedUntil: null,
+    });
+  }
 
   return { ok: true, email, mocked: sent.mocked };
 }
@@ -103,6 +294,11 @@ export async function issuePendingSignup(opts: {
     ? await prisma.pendingSignup.findUnique({ where: { id: opts.pendingId } })
     : await prisma.pendingSignup.findUnique({ where: { username: opts.username } });
 
+  const lockRetry = activeLockRetryAfterSec(existing?.lockedUntil);
+  if (lockRetry && existing?.lockedUntil) {
+    return codeLockBlock(existing.lockedUntil);
+  }
+
   if (existing && opts.forceResend) {
     const waitMs =
       EMAIL_RESEND_COOLDOWN_MS - (Date.now() - existing.lastSentAt.getTime());
@@ -122,6 +318,8 @@ export async function issuePendingSignup(opts: {
     opts.signInDuration?.trim() || existing?.signInDuration || "session";
   const nickname =
     opts.nickname !== undefined ? opts.nickname : existing?.nickname ?? null;
+  const nextResendCount =
+    existing && opts.forceResend ? existing.resendCount + 1 : 0;
 
   // Issuing a new code (including resend) resets the guess counter.
   const pending = existing
@@ -134,6 +332,8 @@ export async function issuePendingSignup(opts: {
           code,
           expiresAt,
           attempts: 0,
+          resendCount: nextResendCount,
+          lockedUntil: null,
           ...(opts.signInDuration?.trim()
             ? { signInDuration: opts.signInDuration.trim() }
             : {}),
@@ -148,6 +348,8 @@ export async function issuePendingSignup(opts: {
           code,
           expiresAt,
           attempts: 0,
+          resendCount: 0,
+          lockedUntil: null,
           signInDuration,
           lastSentAt: new Date(0),
         },
@@ -173,6 +375,16 @@ export async function issuePendingSignup(opts: {
     where: { id: pending.id },
     data: { lastSentAt: now },
   });
+
+  if (nextResendCount >= EMAIL_CODE_RESEND_LOCK_COUNT) {
+    await lockPendingSignup({
+      id: pending.id,
+      email,
+      username: opts.username,
+      reason: "resends",
+      currentLockedUntil: null,
+    });
+  }
 
   return { ok: true, email, pendingId: pending.id, mocked: sent.mocked };
 }

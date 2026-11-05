@@ -4,7 +4,13 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { destroySession, requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { issueEmailVerification } from "@/lib/email-verification";
+import {
+  EMAIL_CODE_MAX_ATTEMPTS,
+  activeLockRetryAfterSec,
+  codeLockBlock,
+  issueEmailVerification,
+  registerEmailVerificationFailedAttempt,
+} from "@/lib/email-verification";
 import type { ActionResult } from "@/app/actions/auth";
 
 /** Step 1: email a 6-digit code confirming account deletion. */
@@ -68,18 +74,26 @@ export async function confirmAccountDeletionAction(
   if (pending.expiresAt < new Date()) {
     return { ok: false, error: "That code expired. Resend a new one." };
   }
-  if (pending.attempts >= 5) {
+  if (pending.attempts >= EMAIL_CODE_MAX_ATTEMPTS) {
     await prisma.emailVerification.delete({ where: { id: pending.id } });
     return {
       ok: false,
       error: "Too many incorrect attempts. Request a new deletion code.",
     };
   }
+  // Correct code always succeeds, even during a soft lock.
   if (pending.code !== code) {
-    await prisma.emailVerification.update({
-      where: { id: pending.id },
-      data: { attempts: { increment: 1 } },
+    if (activeLockRetryAfterSec(pending.lockedUntil) && pending.lockedUntil) {
+      return codeLockBlock(pending.lockedUntil);
+    }
+    const failed = await registerEmailVerificationFailedAttempt({
+      id: pending.id,
+      userId: user.id,
+      email: pending.email,
+      username: user.username,
+      lockedUntil: pending.lockedUntil,
     });
+    if (failed.lockBlock) return failed.lockBlock;
     return { ok: false, error: "That code doesn’t match. Try again." };
   }
 
