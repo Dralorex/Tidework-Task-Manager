@@ -74,7 +74,7 @@ export function AvatarCropper({
 
     // Dim outside crop zone
     ctx.save();
-    ctx.fillStyle = "rgba(10, 61, 69, 0.55)";
+    ctx.fillStyle = "rgba(168, 168, 168, 0.55)";
     ctx.fillRect(0, 0, view, view);
     ctx.globalCompositeOperation = "destination-out";
     const pad = 28;
