@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { updateProfileAction } from "@/app/actions/profile";
 import { requestEmailChangeAction } from "@/app/actions/email-verification";
 import { EmailVerifyModal } from "@/app/components/email-verify-modal";
+import { ProfileAvatarPanel } from "@/app/components/profile-avatar-panel";
 
 function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
@@ -21,10 +22,18 @@ function SubmitButton({ label }: { label: string }) {
 }
 
 export function ProfileSettingsForm({
+  userId,
+  label,
+  avatarShape,
+  avatarStatus,
   username,
   nickname,
   email,
 }: {
+  userId: string;
+  label: string;
+  avatarShape: string;
+  avatarStatus: string;
   username: string;
   nickname: string;
   email: string | null;
@@ -52,7 +61,14 @@ export function ProfileSettingsForm({
 
   return (
     <div className="space-y-8">
-      <form className="flex flex-col gap-4" action={profileAction}>
+      <ProfileAvatarPanel
+        userId={userId}
+        label={label}
+        shape={avatarShape}
+        status={avatarStatus}
+      />
+
+      <form className="flex flex-col gap-4 border-t border-[#0A3D45]/10 pt-6" action={profileAction}>
         <label className="block text-sm text-[#0A3D45]">
           <span className="mb-1 block font-medium">Username</span>
           <input

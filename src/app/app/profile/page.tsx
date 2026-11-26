@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BirthdaySettingsForm } from "@/app/components/birthday-settings-form";
 import { DeleteAccountPanel } from "@/app/components/delete-account-panel";
-import { ProfileAvatarPanel } from "@/app/components/profile-avatar-panel";
 import { ProfileSettingsForm } from "@/app/components/profile-settings-form";
 import { getCurrentUser } from "@/lib/auth";
 import { isPlatformAdmin } from "@/lib/platform-admin";
@@ -23,20 +22,15 @@ export default async function ProfilePage() {
       </p>
 
       <div className="tide-panel mt-8 space-y-8 p-5">
-        <ProfileAvatarPanel
+        <ProfileSettingsForm
           userId={user.id}
           label={personLabel(user)}
-          shape={user.avatarShape}
-          status={user.avatarStatus}
+          avatarShape={user.avatarShape}
+          avatarStatus={user.avatarStatus}
+          username={user.username}
+          nickname={user.nickname ?? ""}
+          email={user.email}
         />
-
-        <div className="border-t border-[#0A3D45]/10 pt-6">
-          <ProfileSettingsForm
-            username={user.username}
-            nickname={user.nickname ?? ""}
-            email={user.email}
-          />
-        </div>
 
         <div className="border-t border-[#0A3D45]/10 pt-6">
           <BirthdaySettingsForm
