@@ -165,6 +165,10 @@ export async function confirmAccountDeletionAction(
         nickname: null,
         birthday: null,
         passwordHash: `deleted:${user.id}`,
+        avatarKey: null,
+        avatarStatus: "none",
+        avatarReviewedAt: null,
+        avatarReviewNote: null,
       },
     });
   });
