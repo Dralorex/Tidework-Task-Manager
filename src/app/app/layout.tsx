@@ -45,6 +45,9 @@ export default async function AppSectionLayout({
       >
         <AppNav
           displayLabel={personLabel(user)}
+          avatarUserId={user.id}
+          avatarShape={user.avatarShape}
+          avatarStatus={user.avatarStatus}
           unreadCount={unreadCount}
           chatUnreadCount={chatUnreadCount}
           accounts={accounts}

@@ -10,6 +10,7 @@ import {
 } from "@/app/components/account-nav-controls";
 import { BrandLockup } from "@/app/components/brand-mark";
 import { useLiveBadges } from "@/app/components/realtime-provider";
+import { UserAvatar } from "@/app/components/user-avatar";
 
 type NavKey =
   | "home"
@@ -153,11 +154,17 @@ function NavTabLink({
 
 export function AppNav({
   displayLabel,
+  avatarUserId,
+  avatarShape,
+  avatarStatus,
   unreadCount = 0,
   chatUnreadCount = 0,
   accounts = [],
 }: {
   displayLabel: string;
+  avatarUserId?: string;
+  avatarShape?: string;
+  avatarStatus?: string;
   unreadCount?: number;
   chatUnreadCount?: number;
   accounts?: NavAccount[];
@@ -189,6 +196,15 @@ export function AppNav({
 
   const accountCluster = (compact: boolean) => (
     <div className="flex min-w-0 items-center gap-1.5">
+      {avatarUserId ? (
+        <UserAvatar
+          userId={avatarUserId}
+          label={displayLabel}
+          shape={avatarShape}
+          status={avatarStatus}
+          size={compact ? 28 : 32}
+        />
+      ) : null}
       <AccountSwitcher
         displayLabel={displayLabel}
         accounts={accounts}

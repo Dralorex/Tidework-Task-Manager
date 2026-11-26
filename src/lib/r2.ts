@@ -133,3 +133,29 @@ export async function deleteObject(key: string) {
   if (!client) throw new Error("R2 is not configured.");
   await client.send(new DeleteObjectCommand({ Bucket: bucket(), Key: key }));
 }
+
+/** Avatar object key: avatars/{userId}/{objectId}.png */
+export function buildAvatarKey(userId: string, objectId: string) {
+  const safeUser = userId.replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0, 64);
+  const safeId = objectId.replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0, 64);
+  return `avatars/${safeUser}/${safeId || "avatar"}.png`;
+}
+
+export const AVATAR_MAX_BYTES = 2 * 1024 * 1024; // 2 MB cropped PNG
+
+export async function putObjectBytes(opts: {
+  key: string;
+  contentType: string;
+  body: Buffer | Uint8Array;
+}) {
+  const client = getClient();
+  if (!client) throw new Error("R2 is not configured.");
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket(),
+      Key: opts.key,
+      ContentType: opts.contentType,
+      Body: opts.body,
+    }),
+  );
+}

@@ -1,8 +1,11 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BirthdaySettingsForm } from "@/app/components/birthday-settings-form";
 import { DeleteAccountPanel } from "@/app/components/delete-account-panel";
+import { ProfileAvatarPanel } from "@/app/components/profile-avatar-panel";
 import { ProfileSettingsForm } from "@/app/components/profile-settings-form";
 import { getCurrentUser } from "@/lib/auth";
+import { isPlatformAdmin } from "@/lib/platform-admin";
 import { personLabel } from "@/lib/utils";
 
 export default async function ProfilePage() {
@@ -20,11 +23,20 @@ export default async function ProfilePage() {
       </p>
 
       <div className="tide-panel mt-8 space-y-8 p-5">
-        <ProfileSettingsForm
-          username={user.username}
-          nickname={user.nickname ?? ""}
-          email={user.email}
+        <ProfileAvatarPanel
+          userId={user.id}
+          label={personLabel(user)}
+          shape={user.avatarShape}
+          status={user.avatarStatus}
         />
+
+        <div className="border-t border-[#0A3D45]/10 pt-6">
+          <ProfileSettingsForm
+            username={user.username}
+            nickname={user.nickname ?? ""}
+            email={user.email}
+          />
+        </div>
 
         <div className="border-t border-[#0A3D45]/10 pt-6">
           <BirthdaySettingsForm
@@ -35,6 +47,17 @@ export default async function ProfilePage() {
           />
         </div>
       </div>
+
+      {isPlatformAdmin(user) ? (
+        <p className="mt-4 text-sm text-[#0A3D45]/70">
+          <Link
+            href="/app/moderation/avatars"
+            className="underline underline-offset-2"
+          >
+            Review pending avatars
+          </Link>
+        </p>
+      ) : null}
 
       <div className="mt-8">
         <DeleteAccountPanel />

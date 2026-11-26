@@ -85,6 +85,16 @@ model User {
   /** Soft-delete: username is freed; chats keep history labeled with deletedUsername. */
   deletedAt             DateTime?
   deletedUsername       String?
+  /** Site-wide role for moderation tools: member | admin | owner */
+  platformRole          String   @default("member")
+  /** R2 object key for cropped profile PNG (private; served via signed URL). */
+  avatarKey             String?
+  /** circle | rounded */
+  avatarShape           String   @default("circle")
+  /** none | pending | approved | rejected */
+  avatarStatus          String   @default("none")
+  avatarReviewedAt      DateTime?
+  avatarReviewNote      String?
   /** Stripe Customer id (test/live) — billing scaffold; no plan enforcement yet. */
   stripeCustomerId      String?  @unique
   /** WorkOS User id — SSO scaffold only; password auth remains primary. */
@@ -126,8 +136,29 @@ model User {
   taskActivities        TaskActivity[]       @relation("TaskActivityActor")
   messageMentions       MessageMention[]     @relation("MentionedUser")
   storedObjects         StoredObject[]
+  avatarModerationEvents AvatarModerationEvent[]
 
   @@index([deletedAt])
+  @@index([platformRole])
+  @@index([avatarStatus])
+}
+
+/** Audit trail for avatar NSFW auto-scan + human review. */
+model AvatarModerationEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  actorId   String?
+  /** approved | rejected | pending | blocked */
+  verdict   String
+  /** auto | human */
+  source    String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([verdict, createdAt])
 }
 
 model Session {
